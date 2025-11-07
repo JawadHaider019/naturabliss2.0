@@ -592,8 +592,17 @@ const Product = () => {
     );
   }
 
-  const discountPrice = productData.discount 
-    ? productData.price * (1 - productData.discount / 100) 
+  // FIXED: Use the correct property name 'discountprice' (lowercase p)
+  const hasDiscount = productData.discountprice !== undefined && 
+                     productData.discountprice !== null && 
+                     productData.discountprice !== productData.price;
+  
+  const actualPrice = hasDiscount ? productData.discountprice : productData.price;
+  const originalPrice = hasDiscount ? productData.price : null;
+  
+  // Calculate discount percentage for badge
+  const discountPercentage = hasDiscount 
+    ? Math.round(((productData.price - productData.discountprice) / productData.price) * 100)
     : null;
 
   return (
@@ -619,9 +628,9 @@ const Product = () => {
           {/* Main Image */}
           <div className="relative w-full sm:w-4/5">
             {/* Discount Badge */}
-            {productData.discount && (
-              <div className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs font-medium text-white">
-                {productData.discount}% OFF
+            {discountPercentage && (
+              <div className="absolute right-2 top-2 rounded-full bg-black px-2 py-1 text-xs font-medium text-white">
+                {discountPercentage}% OFF
               </div>
             )}
             <img
@@ -642,16 +651,19 @@ const Product = () => {
             <p className="pl-2">{averageRating.toFixed(1)}</p>
             <span className="text-sm text-gray-500">({reviews.length} reviews)</span>
           </div>
+          
+          {/* PRICE DISPLAY - FIXED */}
           <div className="mt-5 flex items-center gap-4">
             <p className="text-3xl font-medium">
-              {currency} {discountPrice ? discountPrice.toFixed(2) : productData.price.toFixed(2)}
+              {currency} {actualPrice.toFixed(2)}
             </p>
-            {discountPrice && (
+            {originalPrice && originalPrice !== actualPrice && (
               <p className="text-sm text-gray-500 line-through">
-                {currency} {productData.price.toFixed(2)}
+                {currency} {originalPrice.toFixed(2)}
               </p>
             )}
           </div>
+          
           <p className="mt-5 text-gray-500 md:w-4/5">{productData.description}</p>
           
           <div className="my-8 flex items-center gap-4">
@@ -715,16 +727,16 @@ const Product = () => {
           </button>
           
           <hr className="mt-8 sm:w-4/5" />
-        <ul className="mt-5 flex flex-col gap-1 text-sm text-gray-700 leading-relaxed list-disc list-inside">
-   <li>Made with pure, natural, and organic ingredients.</li>
-    <li>Free from harsh chemicals, parabens, and artificial fragrances.</li>
-    <li>Handcrafted in Pakistan with care and love for your well-being.</li>
-</ul>
-
+          <ul className="mt-5 flex flex-col gap-1 text-sm text-gray-700 leading-relaxed list-disc list-inside">
+            <li>Made with pure, natural, and organic ingredients.</li>
+            <li>Free from harsh chemicals, parabens, and artificial fragrances.</li>
+            <li>Handcrafted in Pakistan with care and love for your well-being.</li>
+          </ul>
         </div>
       </div>
 
-      {/* Customer Reviews Section - Made Responsive */}
+      {/* Rest of your component remains the same... */}
+      {/* Customer Reviews Section */}
       <div className="mt-20">
         <h2 className="text-2xl font-medium">Customer Reviews</h2>
         <div className="mt-4 flex flex-col items-center gap-6 rounded-lg border p-4 sm:p-6 lg:flex-row">
@@ -788,7 +800,7 @@ const Product = () => {
           </div>
         )}
 
-        {/* Reviews Tab Content - Made Responsive */}
+        {/* Reviews Tab Content */}
         {activeTab === 'reviews' && (
           <div className="border p-4 sm:p-6">
             {/* Review Form */}
@@ -850,7 +862,7 @@ const Product = () => {
               )}
             </div>
 
-            {/* Display Existing Reviews - Made Responsive */}
+            {/* Display Existing Reviews */}
             <div className="mt-8">
               <h3 className="text-lg font-medium">Customer Reviews</h3>
               {loadingReviews ? (
