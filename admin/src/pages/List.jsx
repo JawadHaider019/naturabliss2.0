@@ -548,9 +548,9 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                       src={item.image[0]} 
                       alt={item.name} 
                     />
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 flex-wrap min-w-0">
                       <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{item.name}</h3>
-                      <p className="text-gray-500 text-xs mb-2 line-clamp-1">
+                      <p className="text-gray-500 text-xs mb-2 line-clamp-2 break-words max-w-full">
                         {item.description || 'No description available'}
                       </p>
                       
@@ -608,7 +608,69 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
         )}
       </div>
 
-    
+      {/* Tablet Grid View */}
+      <div className="hidden lg:block xl:hidden">
+        {products.length === 0 ? (
+          <EmptyState type="products" />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {products.map((item) => (
+              <div key={item._id} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4">
+                  <div className="flex items-start space-x-4">
+                    <img 
+                      className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" 
+                      src={item.image[0]} 
+                      alt={item.name} 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{item.name}</h3>
+                      <p className="text-gray-500 text-xs mb-3 line-clamp-2 break-words max-w-full">
+                        {item.description || 'No description available'}
+                      </p>
+                      
+                      <div className="flex items-center justify-between text-xs mb-3">
+                        <span className="font-medium text-green-600">{currency}{item.discountprice}</span>
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
+                          {getCategoryName(item.category)}
+                        </span>
+                        <StockIndicator quantity={item.quantity} />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <StatusDropdown 
+                          currentStatus={item.status || 'draft'} 
+                          onStatusChange={(status) => onStatusChange(item._id, status)}
+                        />
+                        <div className="flex space-x-1">
+                          <ActionButton
+                            onClick={() => onView(item)}
+                            variant="primary"
+                            icon="view"
+                            size="xs"
+                          />
+                          <ActionButton
+                            onClick={() => onEdit(item)}
+                            variant="secondary"
+                            icon="edit"
+                            size="xs"
+                          />
+                          <ActionButton
+                            onClick={() => onDelete(item._id)}
+                            variant="danger"
+                            icon="delete"
+                            size="xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Desktop Table View */}
       <div className="hidden xl:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -642,9 +704,9 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                           src={item.image[0]} 
                           alt={item.name} 
                         />
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 max-w-xs">
                           <p className="font-medium text-gray-900 text-sm truncate">{item.name}</p>
-                          <p className="text-gray-500 text-xs line-clamp-1 mt-0.5">
+                          <p className="text-gray-500 text-xs line-clamp-2 break-words mt-0.5">
                             {item.description || 'No description available'}
                           </p>
                         </div>
@@ -815,6 +877,9 @@ const DealListView = ({ deals, onView, onEdit, onDelete, onStatusChange }) => {
                           <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">
                             {item.dealName || 'Unnamed Deal'}
                           </h3>
+                          <p className="text-gray-500 text-xs mb-2 line-clamp-2 break-words">
+                            {item.dealDescription || 'No description'}
+                          </p>
                           
                           {/* Quick Info */}
                           <div className="space-y-1 text-xs">
@@ -890,8 +955,100 @@ const DealListView = ({ deals, onView, onEdit, onDelete, onStatusChange }) => {
             </div>
           </div>
 
+          {/* Tablet Grid View */}
+          <div className="hidden lg:block xl:hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {deals.map((item) => {
+                const dealPrice = getDealPrice(item);
+                const dealTypeName = getDealTypeName(item);
+                const dateInfo = getDateStatus(item);
+                const DateStatusIcon = dateInfo.icon;
+                
+                return (
+                  <div key={item._id} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="p-4">
+                      <div className="flex items-start space-x-4">
+                        <img 
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" 
+                          src={item.dealImages?.[0] || '/placeholder-image.jpg'} 
+                          alt={item.dealName || 'Deal Image'}
+                          onError={(e) => {
+                            e.target.src = '/placeholder-image.jpg';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">
+                            {item.dealName || 'Unnamed Deal'}
+                          </h3>
+                          <p className="text-gray-500 text-xs mb-3 line-clamp-2 break-words">
+                            {item.dealDescription || 'No description'}
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                            <div>
+                              <span className="text-gray-500">Type:</span>
+                              <span className="font-medium bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full capitalize ml-1">
+                                {dealTypeName}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Price:</span>
+                              <span className="font-semibold text-green-600 ml-1">
+                                {currency}{dealPrice.toFixed(2)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Products:</span>
+                              <span className="font-medium ml-1">
+                                {item.dealProducts?.length || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <DateStatusIcon className={`w-3 h-3 ${dateInfo.color} mr-1`} />
+                              <span className={`font-medium ${dateInfo.color}`}>
+                                {dateInfo.label}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <DealStatusDropdown 
+                              currentStatus={item.status || 'draft'} 
+                              onStatusChange={(status) => onStatusChange(item._id, status)}
+                              deal={item}
+                            />
+                            <div className="flex space-x-1">
+                              <ActionButton
+                                onClick={() => onView(item)}
+                                variant="primary"
+                                icon="view"
+                                size="xs"
+                              />
+                              <ActionButton
+                                onClick={() => onEdit(item)}
+                                variant="secondary"
+                                icon="edit"
+                                size="xs"
+                              />
+                              <ActionButton
+                                onClick={() => onDelete(item._id)}
+                                variant="danger"
+                                icon="delete"
+                                size="xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Desktop Table View */}
-          <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="hidden xl:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -924,11 +1081,11 @@ const DealListView = ({ deals, onView, onEdit, onDelete, onStatusChange }) => {
                                 e.target.src = '/placeholder-image.jpg';
                               }}
                             />
-                            <div className="min-w-0">
+                            <div className="min-w-0 max-w-xs">
                               <p className="font-medium text-gray-900 text-sm truncate">
                                 {item.dealName || 'Unnamed Deal'}
                               </p>
-                              <p className="text-gray-500 text-xs truncate">
+                              <p className="text-gray-500 text-xs line-clamp-2 break-words">
                                 {item.dealDescription || 'No description'}
                               </p>
                             </div>

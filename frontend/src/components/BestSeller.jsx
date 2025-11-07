@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo } from "react";
+import { useContext, useState, useEffect, useMemo, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from "./Title";
 import ProductItem from "./ProductItem";
@@ -12,40 +12,80 @@ const BestSeller = () => {
   const [bestSeller, setBestSeller] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const sliderRef = useRef(null);
 
   // Use useMemo to filter and process bestseller products
   const processedBestSellers = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
 
     try {
-      // Try different possible property names for bestseller
-      const bestProducts = products.filter((item) => {
-        // Check multiple possible property names
-        const isBestSeller = 
-          item.bestseller || 
-          item.bestSeller ||
-          item.best_seller ||
-          item.isBestseller ||
-          item.isBestSeller ||
-          item.featured || // sometimes featured products are considered best sellers
-          item.bestseller === true ||
-          item.bestseller === "true" ||
-          item.bestseller === 1;
-
-        return isBestSeller;
+      console.log('=== BESTSELLER FILTERING DEBUG ===');
+      console.log('Total products:', products.length);
+      
+      // Filter out draft products and only show published products
+      const publishedProducts = products.filter(product => {
+        const isPublished = product.status === 'published' || !product.status;
+        if (!isPublished) {
+          console.log('Filtering out draft product:', {
+            id: product._id,
+            name: product.name,
+            status: product.status
+          });
+        }
+        return isPublished;
       });
 
-      // If no best sellers found, use fallback (highest rated products)
+      console.log('Published products found:', publishedProducts.length);
+
+      // STRICT filtering - only products explicitly marked as bestsellers
+      const bestProducts = publishedProducts.filter((item) => {
+        // Check each possible bestseller field explicitly
+        const isExplicitBestSeller = 
+          (item.bestseller === true || item.bestseller === "true") ||
+          (item.bestSeller === true || item.bestSeller === "true") ||
+          (item.best_seller === true || item.best_seller === "true") ||
+          (item.isBestseller === true || item.isBestseller === "true") ||
+          (item.isBestSeller === true || item.isBestSeller === "true");
+
+        return isExplicitBestSeller;
+      });
+
+      console.log('Explicit bestsellers found:', bestProducts.length);
+      console.log('Explicit bestseller products:', bestProducts.map(p => ({
+        id: p._id,
+        name: p.name,
+        bestseller: p.bestseller
+      })));
+
+      // If no explicit best sellers found, show empty state or use alternative logic
       if (bestProducts.length === 0) {
-        const fallbackBestSellers = [...products]
-          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-          .slice(0, 10);
-        return fallbackBestSellers;
+        console.log('No products are explicitly marked as bestsellers in the database');
+        
+        // Option 1: Return empty array (show "No best sellers" message)
+        return [];
+        
+        // Option 2: Use top-selling products as fallback (uncomment if you want this)
+        /*
+        const topSellingProducts = publishedProducts
+          .sort((a, b) => {
+            const aSales = a.totalSales || a.salesCount || 0;
+            const bSales = b.totalSales || b.salesCount || 0;
+            return bSales - aSales;
+          })
+          .slice(0, 8);
+        console.log('Using top-selling products as fallback:', topSellingProducts.length);
+        return topSellingProducts;
+        */
       }
 
-      return bestProducts.slice(0, 10);
+      // Limit to 10 bestseller products
+      const finalBestSellers = bestProducts.slice(0, 10);
+
+      console.log('Final bestsellers to display:', finalBestSellers.length);
+      return finalBestSellers;
 
     } catch (err) {
+      console.error('Error processing bestsellers:', err);
       return [];
     }
   }, [products]);
@@ -54,35 +94,29 @@ const BestSeller = () => {
     setBestSeller(processedBestSellers);
   }, [processedBestSellers]);
 
-  // Custom Next Arrow Component
-  const NextArrow = (props) => {
-    const { className, style, onClick } = props;
+  // Custom Next Arrow Component - Hide on mobile
+  const NextArrow = ({ onClick }) => {
     return (
-      <div
-        className={`${className} custom-arrow next-arrow`}
-        style={{ ...style, display: "block", right: "10px" }}
+      <button
+        className="absolute right-2 top-1/2 z-10 -translate-y-1/2 bg-black/90 hover:bg-black text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
         onClick={onClick}
+        aria-label="Next products"
       >
-        <div className="bg-black/90 hover:bg-black text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20">
-          <FaChevronRight size={16} />
-        </div>
-      </div>
+        <FaChevronRight size={14} className="md:w-4 md:h-4" />
+      </button>
     );
   };
 
-  // Custom Previous Arrow Component
-  const PrevArrow = (props) => {
-    const { className, style, onClick } = props;
+  // Custom Previous Arrow Component - Hide on mobile
+  const PrevArrow = ({ onClick }) => {
     return (
-      <div
-        className={`${className} custom-arrow prev-arrow`}
-        style={{ ...style, display: "block", left: "10px", zIndex: 1 }}
+      <button
+        className="absolute left-2 top-1/2 z-10 -translate-y-1/2 bg-black/90 hover:bg-black text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
         onClick={onClick}
+        aria-label="Previous products"
       >
-        <div className="bg-black/90 hover:bg-black text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20">
-          <FaChevronLeft size={16} />
-        </div>
-      </div>
+        <FaChevronLeft size={14} className="md:w-4 md:h-4" />
+      </button>
     );
   };
 
@@ -96,68 +130,127 @@ const BestSeller = () => {
     return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
   };
 
-  // Slick Slider settings - Show 4 products
+  // Enhanced Slick Slider settings for better mobile experience
   const sliderSettings = {
     dots: true,
-    infinite: bestSeller.length >= 4,
+    infinite: bestSeller.length > 1,
     speed: 500,
-    slidesToShow: 4,
+    slidesToShow: Math.min(4, bestSeller.length),
     slidesToScroll: 1,
-    autoplay: bestSeller.length >= 4,
-    autoplaySpeed: 3000,
+    autoplay: bestSeller.length > Math.min(4, bestSeller.length),
+    autoplaySpeed: 4000,
     pauseOnHover: true,
-    arrows: bestSeller.length >= 4,
-    nextArrow: bestSeller.length >= 4 ? <NextArrow /> : undefined,
-    prevArrow: bestSeller.length >= 4 ? <PrevArrow /> : undefined,
+    swipe: true,
+    swipeToSlide: true,
+    touchThreshold: 10,
+    arrows: false,
     responsive: [
       {
-        breakpoint: 1280,
+        breakpoint: 1280, // Desktop
         settings: {
-          slidesToShow: 4,
+          slidesToShow: Math.min(4, bestSeller.length),
           slidesToScroll: 1,
+          infinite: bestSeller.length > 4,
+          autoplay: bestSeller.length > 4,
         }
       },
       {
-        breakpoint: 1024,
+        breakpoint: 1024, // Small desktop/Tablet landscape
         settings: {
-          slidesToShow: 3,
+          slidesToShow: Math.min(3, bestSeller.length),
           slidesToScroll: 1,
+          infinite: bestSeller.length > 3,
+          autoplay: bestSeller.length > 3,
         }
       },
       {
-        breakpoint: 768,
+        breakpoint: 768, // Tablet
         settings: {
-          slidesToShow: 2,
+          slidesToShow: Math.min(2, bestSeller.length),
           slidesToScroll: 1,
+          infinite: bestSeller.length > 2,
+          autoplay: bestSeller.length > 2,
+          dots: true
         }
       },
       {
-        breakpoint: 640,
+        breakpoint: 640, // Mobile
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
+          infinite: bestSeller.length > 1,
+          autoplay: bestSeller.length > 1,
+          dots: bestSeller.length > 1,
           arrows: false,
-          dots: bestSeller.length > 1
+          swipe: true,
+          touchMove: true,
+          adaptiveHeight: true
+        }
+      },
+      {
+        breakpoint: 480, // Small mobile
+        settings: {
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          infinite: bestSeller.length > 1,
+          autoplay: bestSeller.length > 1,
+          dots: bestSeller.length > 1,
+          arrows: false,
+          centerMode: false,
+          swipe: true,
+          touchMove: true,
+          adaptiveHeight: true
         }
       }
     ],
     appendDots: dots => (
-      <div className="mt-8">
-        <ul className="flex justify-center space-x-2"> {dots} </ul>
+      <div className="mt-6 md:mt-8">
+        <ul className="flex justify-center space-x-1 md:space-x-2"> {dots} </ul>
       </div>
     ),
     customPaging: i => (
-      <button className="w-3 h-3 rounded-full bg-gray-300 transition-all duration-300 hover:bg-gray-400 focus:outline-none"></button>
+      <button 
+        className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-300 transition-all duration-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        aria-label={`Go to slide ${i + 1}`}
+      />
     )
   };
 
-  // Show slider only if we have at least 4 products
-  const showSlider = bestSeller.length >= 4;
+  // Determine if we should show slider based on current screen size logic
+  // Show slider when there are more products than what can be shown on screen
+  const shouldShowSlider = () => {
+    // For mobile (less than 768px): show slider if more than 1 product
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return bestSeller.length > 1;
+    }
+    // For tablet (768px - 1024px): show slider if more than 2 products
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      return bestSeller.length > 2;
+    }
+    // For desktop (1024px+): show slider if more than 4 products
+    return bestSeller.length > 4;
+  };
+
+  const [showSlider, setShowSlider] = useState(false);
+
+  // Update slider visibility on mount and resize
+  useEffect(() => {
+    const updateSliderVisibility = () => {
+      setShowSlider(shouldShowSlider());
+    };
+
+    updateSliderVisibility();
+    window.addEventListener('resize', updateSliderVisibility);
+    
+    return () => {
+      window.removeEventListener('resize', updateSliderVisibility);
+    };
+  }, [bestSeller.length]);
 
   if (loading) {
     return (
-      <div className="my-24">
-        <div className="py-2 text-center text-3xl">
+      <div className="my-16 md:my-24">
+        <div className="py-2 text-center text-2xl md:text-3xl">
           <Title text1={"BEST"} text2={"SELLERS"} />
         </div>
         <div className="text-center text-gray-500 py-8">
@@ -169,11 +262,11 @@ const BestSeller = () => {
 
   if (error) {
     return (
-      <div className="my-24">
-        <div className="py-4 text-center text-3xl">
+      <div className="my-16 md:my-24">
+        <div className="py-4 text-center text-2xl md:text-3xl">
           <Title text1={"BEST"} text2={"SELLERS"} />
-                 <p className="text-[16px] text-gray-600 font-light">
-            From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+          <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4">
+From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
@@ -184,59 +277,50 @@ const BestSeller = () => {
   }
 
   return (
-    <div className="my-24">
-      <div className="py-4 text-center text-3xl">
+    <div className="my-16 md:my-24">
+      <div className="py-4 text-center text-2xl md:text-3xl">
         <Title text1={"BEST"} text2={"SELLERS"} />
-            <p className="text-[16px] text-gray-600  font-light">
-            From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
-          </p>
+        <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
+From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+        </p>
       </div>
 
       {bestSeller.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">
-          No best sellers available at the moment.
+        <div className="text-center text-gray-500 py-8 px-4">
+          No best sellers available at the moment. Check back soon!
         </div>
       ) : showSlider ? (
-        // Show slider when we have 4 or more products
-        <div className="relative px-4">
-          {/* Add custom CSS to ensure proper arrow styling */}
-          <style jsx>{`
-            .slick-prev, .slick-next {
-              width: 40px;
-              height: 40px;
-            }
-            .slick-prev:before, .slick-next:before {
-              content: none !important;
-            }
-            .custom-arrow {
-              z-index: 10;
-            }
-            .slick-slide {
-              padding: 0 8px;
-            }
-            .slick-list {
-              margin: 0 -8px;
-            }
-          `}</style>
-          
-          <Slider {...sliderSettings}>
+        // Show slider when we have more products than can be shown on screen
+        <div className="relative px-2 sm:px-4">
+          <Slider ref={sliderRef} {...sliderSettings}>
             {bestSeller.map((item) => (
-              <div key={item._id || item.id} className="px-2">
-                <ProductItem
-                  id={item._id || item.id}
-                  image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-                  name={item.name || "Unnamed Product"}
-                  price={item.price || 0}
-                  discount={item.discountprice || item.discountPrice || 0}
-                  rating={item.rating || 0}
-                />
+              <div key={item._id || item.id} className="px-1 sm:px-2">
+                <div className="mx-1">
+                  <ProductItem
+                    id={item._id || item.id}
+                    image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
+                    name={item.name || "Unnamed Product"}
+                    price={item.price || 0}
+                    discount={item.discountprice || item.discountPrice || 0}
+                    rating={item.rating || 0}
+                    status={item.status}
+                  />
+                </div>
               </div>
             ))}
           </Slider>
+          
+          {/* Add custom arrows outside the slider - hidden on mobile */}
+          {bestSeller.length > Math.min(4, bestSeller.length) && (
+            <>
+              <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
+              <NextArrow onClick={() => sliderRef.current?.slickNext()} />
+            </>
+          )}
         </div>
       ) : (
-        // Show regular grid when we have less than 4 products - using the same grid system
-        <div className={`grid ${getGridColumns()} gap-4 gap-y-6 px-4`}>
+        // Show regular grid when we have less products than can be shown on screen
+        <div className={`grid ${getGridColumns()} gap-3 sm:gap-4 gap-y-6 px-2 sm:px-4`}>
           {bestSeller.map((item) => (
             <ProductItem
               key={item._id || item.id}
@@ -246,6 +330,7 @@ const BestSeller = () => {
               price={item.price || 0}
               discount={item.discountprice || item.discountPrice || 0}
               rating={item.rating || 0}
+              status={item.status}
             />
           ))}
         </div>

@@ -218,7 +218,7 @@ const DealCollection = () => {
           </div>
           {/* Added small line of text below heading */}
           <p className="text-[16px] text-gray-600 my-3 font-light">
-     Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
+    Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
           </p>
         </div>
         
@@ -237,7 +237,7 @@ const DealCollection = () => {
         </div>
         {/* Added small line of text below heading */}
         <p className="text-lg text-gray-600 font-light">
-Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
+Grab Pure Clay’s special deals — organic goodness, proudly made in Pakistan
         </p>
         <div className="text-center text-gray-500 py-4 text-sm">
           Check your connection
@@ -254,7 +254,7 @@ Trending Skincare Deals — Discover Organic Products Handcrafted with Care and 
         </div>
         {/* Added small line of text below heading */}
         <p className="text-[16px] text-gray-600  font-light">
- Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
+ Grab Pure Clay’s special deals — organic goodness, proudly made in Pakistan
         </p>
       </div>
 
