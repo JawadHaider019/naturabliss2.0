@@ -62,21 +62,19 @@ const addProduct = async (req, res) => {
 };
 
 // ------------------- LIST PRODUCTS -------------------
+
 const listProducts = async (req, res) => {
   try {
-    const { status = 'published' } = req.query;
+    const { status = 'all' } = req.query; // Default to 'all'
     
-    // Build query - default to only published products for public access
+    // Build query
     let query = {};
     
-    // If no specific status requested, default to published
-    if (!req.query.status) {
-      query.status = 'published';
-    } else if (status !== 'all') {
-      // If specific status requested (and it's not 'all'), use that status
+    // If status is specified and not 'all', apply status filter
+    if (status && status !== 'all') {
       query.status = status;
     }
-    // If status is 'all', no status filter will be applied
+    // If status is 'all' or not provided, no status filter (get all products)
     
     const products = await productModel.find(query);
     
