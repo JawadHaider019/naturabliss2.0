@@ -285,7 +285,7 @@ const Hero = () => {
   // ALWAYS SHOW CONTENT - Never show "not found" or empty states to users
   const displayBanners = banners.length > 0 ? banners : [{
     _id: 'default-banner',
-    imageUrl: '', // Empty for gradient fallback
+    imageUrl: 'banner1', // Empty for gradient fallback
     headingLine1: 'NATURA BLISS',
     headingLine2: 'Pure Organic Beauty',
     subtext: 'Discover the essence of natural skincare',
