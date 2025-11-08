@@ -83,33 +83,45 @@ const BestSeller = () => {
     );
   };
 
-  // Calculate grid columns for non-slider view (when less than 4 products)
+  // Fixed grid columns with consistent sizing
   const getGridColumns = () => {
     const count = bestSeller.length;
-    if (count === 1) return "grid-cols-1 max-w-md mx-auto";
+    if (count === 1) return "grid-cols-1 max-w-sm mx-auto";
     if (count === 2) return "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto";
     if (count === 3) return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto";
     if (count === 4) return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
-    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 max-w-7xl mx-auto";
   };
 
-  // Enhanced Slick Slider settings for better mobile experience
+  // Enhanced Slick Slider settings with consistent sizing
   const sliderSettings = {
     dots: true,
     infinite: bestSeller.length > 1,
     speed: 500,
-    slidesToShow: Math.min(4, bestSeller.length),
+    slidesToShow: Math.min(5, bestSeller.length),
     slidesToScroll: 1,
-    autoplay: bestSeller.length > Math.min(4, bestSeller.length),
+    autoplay: bestSeller.length > Math.min(5, bestSeller.length),
     autoplaySpeed: 4000,
     pauseOnHover: true,
     swipe: true,
     swipeToSlide: true,
     touchThreshold: 10,
     arrows: false,
+    variableWidth: false,
+    centerMode: false,
+    adaptiveHeight: false,
     responsive: [
       {
-        breakpoint: 1280, // Desktop
+        breakpoint: 1536,
+        settings: {
+          slidesToShow: Math.min(5, bestSeller.length),
+          slidesToScroll: 1,
+          infinite: bestSeller.length > 5,
+          autoplay: bestSeller.length > 5,
+        }
+      },
+      {
+        breakpoint: 1280,
         settings: {
           slidesToShow: Math.min(4, bestSeller.length),
           slidesToScroll: 1,
@@ -118,7 +130,7 @@ const BestSeller = () => {
         }
       },
       {
-        breakpoint: 1024, // Small desktop/Tablet landscape
+        breakpoint: 1024,
         settings: {
           slidesToShow: Math.min(3, bestSeller.length),
           slidesToScroll: 1,
@@ -127,7 +139,7 @@ const BestSeller = () => {
         }
       },
       {
-        breakpoint: 768, // Tablet
+        breakpoint: 768,
         settings: {
           slidesToShow: Math.min(2, bestSeller.length),
           slidesToScroll: 1,
@@ -137,7 +149,7 @@ const BestSeller = () => {
         }
       },
       {
-        breakpoint: 640, // Mobile
+        breakpoint: 640,
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
@@ -147,22 +159,7 @@ const BestSeller = () => {
           arrows: false,
           swipe: true,
           touchMove: true,
-          adaptiveHeight: true
-        }
-      },
-      {
-        breakpoint: 480, // Small mobile
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-          infinite: bestSeller.length > 1,
-          autoplay: bestSeller.length > 1,
-          dots: bestSeller.length > 1,
-          arrows: false,
-          centerMode: false,
-          swipe: true,
-          touchMove: true,
-          adaptiveHeight: true
+          adaptiveHeight: false
         }
       }
     ],
@@ -180,17 +177,13 @@ const BestSeller = () => {
   };
 
   // Determine if we should show slider based on current screen size logic
-  // Show slider when there are more products than what can be shown on screen
   const shouldShowSlider = () => {
-    // For mobile (less than 768px): show slider if more than 1 product
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return bestSeller.length > 1;
     }
-    // For tablet (768px - 1024px): show slider if more than 2 products
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       return bestSeller.length > 2;
     }
-    // For desktop (1024px+): show slider if more than 4 products
     return bestSeller.length > 4;
   };
 
@@ -241,7 +234,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
 
   return (
     <div className="my-16 md:my-24">
-      <div className="py-4 text-center text-2xl md:text-3xl">
+      <div className="py-2 text-center text-2xl md:text-3xl">
         <Title text1={"BEST"} text2={"SELLERS"} />
         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
 From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
@@ -253,27 +246,28 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
           No best sellers available at the moment. Check back soon!
         </div>
       ) : showSlider ? (
-        // Show slider when we have more products than can be shown on screen
         <div className="relative px-2 sm:px-4">
           <Slider ref={sliderRef} {...sliderSettings}>
             {bestSeller.map((item) => (
               <div key={item._id || item.id} className="px-1 sm:px-2">
-                <div className="mx-1">
-                  <ProductItem
-                    id={item._id || item.id}
-                    image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-                    name={item.name || "Unnamed Product"}
-                    price={item.price || 0}
-                    discount={item.discountprice || item.discountPrice || 0}
-                    rating={item.rating || 0}
-                    status={item.status}
-                  />
+                <div className="mx-1 h-full">
+                  <div className="h-full flex">
+                    <ProductItem
+                      id={item._id || item.id}
+                      image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
+                      name={item.name || "Unnamed Product"}
+                      price={item.price || 0}
+                      discount={item.discountprice || item.discountPrice || 0}
+                      rating={item.rating || 0}
+                      status={item.status}
+                      className="h-full w-full"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </Slider>
           
-          {/* Add custom arrows outside the slider - hidden on mobile */}
           {bestSeller.length > Math.min(4, bestSeller.length) && (
             <>
               <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
@@ -282,22 +276,38 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
           )}
         </div>
       ) : (
-        // Show regular grid when we have less products than can be shown on screen
-        <div className={`grid ${getGridColumns()} gap-3 sm:gap-4 gap-y-6 px-2 sm:px-4`}>
+        <div className={`grid ${getGridColumns()} gap-4 sm:gap-6 gap-y-8 px-4 sm:px-6`}>
           {bestSeller.map((item) => (
-            <ProductItem
-              key={item._id || item.id}
-              id={item._id || item.id}
-              image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-              name={item.name || "Unnamed Product"}
-              price={item.price || 0}
-              discount={item.discountprice || item.discountPrice || 0}
-              rating={item.rating || 0}
-              status={item.status}
-            />
+            <div key={item._id || item.id} className="flex justify-center">
+              <ProductItem
+                id={item._id || item.id}
+                image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
+                name={item.name || "Unnamed Product"}
+                price={item.price || 0}
+                discount={item.discountprice || item.discountPrice || 0}
+                rating={item.rating || 0}
+                status={item.status}
+                className="w-full max-w-xs sm:max-w-sm"
+              />
+            </div>
           ))}
         </div>
       )}
+      
+      {/* Fixed style tag without jsx attribute */}
+      <style>
+        {`
+          .slick-slide > div {
+            height: 100%;
+          }
+          .slick-track {
+            display: flex !important;
+          }
+          .slick-slide {
+            height: inherit !important;
+          }
+        `}
+      </style>
     </div>
   );
 };
