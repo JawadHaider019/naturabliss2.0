@@ -3,91 +3,115 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { IoIosArrowForward } from "react-icons/io";
 import { Link } from 'react-router-dom';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const Hero = () => {
   const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
   const sliderRef = useRef(null);
-
-  // Refs for animation elements
-  const headlineRef = useRef(null);
-  const subtextRef = useRef(null);
-  const buttonRef = useRef(null);
-  const blogCardRef = useRef(null);
+  const mountedRef = useRef(true);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // Optimized fetch with caching
+  // Ultra-fast fetch with immediate cache-first approach
   const fetchBanners = useCallback(async () => {
-    const cacheKey = 'banners-cache';
+    const cacheKey = 'hero-banners-v3';
     const cacheTimeKey = `${cacheKey}-time`;
-    const CACHE_DURATION = 30000;
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
+    // 1. IMMEDIATE: Try cache first (synchronous)
     try {
       const cached = sessionStorage.getItem(cacheKey);
       const cacheTime = sessionStorage.getItem(cacheTimeKey);
-
-      if (cached && cacheTime && Date.now() - parseInt(cacheTime) < CACHE_DURATION) {
-        setBanners(JSON.parse(cached));
-        setLoading(false);
-        return;
+      
+      if (cached && cacheTime) {
+        const isFresh = Date.now() - parseInt(cacheTime) < CACHE_DURATION;
+        if (isFresh) {
+          const parsedData = JSON.parse(cached);
+          if (mountedRef.current && parsedData.length > 0) {
+            setBanners(parsedData);
+            setIsUsingFallback(false);
+            return; // Exit early if we have fresh cache
+          }
+        }
       }
     } catch (error) {
-      console.warn('Cache read failed:', error);
+      // Silent cache failure
     }
 
-    try {
+    // 2. Only show loading if no cache exists
+    if (mountedRef.current && banners.length === 0) {
       setLoading(true);
-      setError(null);
+    }
 
+    // 3. ASYNC: Fetch fresh data in background
+    try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
       const response = await fetch(`${backendUrl}/api/banners/active`, {
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 
+          'Accept': 'application/json',
         },
       });
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.success && Array.isArray(data.data)) {
-        setBanners(data.data);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
-          sessionStorage.setItem(cacheTimeKey, Date.now().toString());
-        } catch (error) {
-          console.warn('Cache write failed:', error);
+        if (data.success && Array.isArray(data.data)) {
+          const validBanners = data.data.filter(banner => 
+            banner.imageUrl && banner.headingLine1
+          );
+          
+          if (mountedRef.current && validBanners.length > 0) {
+            setBanners(validBanners);
+            setIsUsingFallback(false);
+            
+            // Cache the new data
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(validBanners));
+              sessionStorage.setItem(cacheTimeKey, Date.now().toString());
+            } catch (cacheError) {
+              // Silent cache failure
+            }
+          }
         }
-      } else {
-        throw new Error('Invalid response format');
       }
     } catch (err) {
-      console.error('Banner fetch error:', err);
-      setError(err.name === 'AbortError' ? 'Request timeout' : 'Failed to load banners');
+      // Silent failure - we'll use cached data or show default
+      if (!mountedRef.current) return;
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [backendUrl]);
 
-  // Fetch banners on mount
+  // Fetch data on mount
   useEffect(() => {
-    fetchBanners();
+    mountedRef.current = true;
+    
+    // Immediate fetch without blocking render
+    const timer = setTimeout(() => {
+      fetchBanners();
+    }, 0);
+
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+    };
   }, [fetchBanners]);
 
-  // Handle button click to prevent slider interference
+  // Handle button click
   const handleButtonClick = useCallback((e) => {
     e.stopPropagation();
   }, []);
 
-  // Custom dots component using Tailwind - UPDATED FOR MOBILE
+  // Static dots components
   const CustomDots = ({ dots }) => (
     <div className="absolute left-4 md:left-16 bottom-10 md:bottom-20 z-20 flex flex-col gap-1">
       <ul className="flex flex-col gap-1 m-0 p-0 md:flex-col md:gap-1">
@@ -96,7 +120,6 @@ const Hero = () => {
     </div>
   );
 
-  // Mobile Custom dots component
   const MobileCustomDots = ({ dots }) => (
     <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20">
       <ul className="flex flex-row gap-2 m-0 p-0">
@@ -105,26 +128,33 @@ const Hero = () => {
     </div>
   );
 
-  // Slider settings with custom dots using Tailwind
-  const settings = useMemo(() => ({
+  // Static slider settings
+  const settings = {
     dots: true,
-    infinite: true,
-    speed: 800,
+    infinite: banners.length > 1,
+    speed: 400,
     slidesToShow: 1,
     slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 5000,
-    pauseOnHover: true,
+    autoplay: banners.length > 1,
+    autoplaySpeed: 8000,
+    pauseOnHover: false,
     arrows: false,
     fade: true,
     lazyLoad: 'progressive',
     cssEase: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     adaptiveHeight: false,
-    touchThreshold: 10,
+    touchThreshold: 15,
     swipe: true,
+    swipeToSlide: true,
+    accessibility: true,
+    focusOnSelect: false,
+    waitForAnimate: true,
     appendDots: dots => <CustomDots dots={dots} />,
     customPaging: i => (
-      <button className="w-2 h-2 rounded-full bg-white/50 transition-all duration-300 hover:bg-white/80 hover:scale-110 focus:outline-none" />
+      <button 
+        className="w-2 h-2 rounded-full bg-white/50 transition-all duration-300 hover:bg-white/80 hover:scale-110 focus:outline-none"
+        aria-label={`Go to slide ${i + 1}`}
+      />
     ),
     dotsClass: "slick-dots !flex !flex-col !static !w-auto !m-0",
     responsive: [
@@ -135,121 +165,143 @@ const Hero = () => {
           dots: true,
           appendDots: dots => <MobileCustomDots dots={dots} />,
           customPaging: i => (
-            <button className="w-2 h-2 rounded-full bg-white/50 transition-all duration-300 hover:bg-white/80 hover:scale-110 focus:outline-none" />
+            <button 
+              className="w-2 h-2 rounded-full bg-white/50 transition-all duration-300 hover:bg-white/80 hover:scale-110 focus:outline-none"
+              aria-label={`Go to slide ${i + 1}`}
+            />
           ),
           dotsClass: "slick-dots !flex !flex-row !static !w-auto !m-0 justify-center"
         }
       }
     ]
-  }), []);
+  };
 
-  // Banner Item Component
-  const BannerItem = useCallback(({ banner, index }) => (
-    <section className="relative w-full h-[90vh] overflow-hidden bg-black">
-      {/* Background Image */}
-      <img
-        src={banner.imageUrl}
-        alt={banner.headingLine1 || "Natura Bliss Banner"}
-        className="w-full h-full object-cover"
-        loading={index === 0 ? "eager" : "lazy"}
-        decoding="async"
-        width="1920"
-        height="1080"
-      />
+  // Optimized Banner Item with progressive loading
+  const BannerItem = ({ banner, index }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    
+    // Preload next images silently
+    useEffect(() => {
+      if (index < banners.length - 1) {
+        const img = new Image();
+        img.src = banners[index + 1].imageUrl;
+      }
+    }, [index, banners]);
 
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/50 z-2"></div>
-
-      {/* Main Headline - Responsive */}
-      <h1
-        ref={headlineRef}
-        className="text-oswald absolute top-10 md:top-25 left-4 md:left-16 text-5xl sm:text-5xl md:text-6xl lg:text-8xl font-extrabold text-white uppercase leading-none tracking-tighter z-10"
+    return (
+      <section 
+        className="relative w-full h-[90vh] overflow-hidden bg-black"
+        role="group"
+        aria-roledescription="slide"
+        aria-label={`${index + 1} of ${banners.length}`}
       >
-        {banner.headingLine1}
-        {banner.headingLine2 && (
-          <>
-            <br />
-            <span className="md:pl-10 pl-0 mb-2 text-oswald text-holo">{banner.headingLine2}</span>
-          </>
-        )}
-      </h1>
+        {/* Background Image with priority loading */}
+        <div className="absolute inset-0 bg-black">
+          <img
+            src={banner.imageUrl}
+            alt={banner.headingLine1 || "Natura Bliss Banner"}
+            className="w-full h-full object-cover transition-opacity duration-500"
+            loading={index === 0 ? "eager" : "lazy"}
+            decoding="async"
+            width="1920"
+            height="1080"
+            onLoad={(e) => {
+              setImageLoaded(true);
+              e.target.style.opacity = '1';
+            }}
+            onError={(e) => {
+              // Silent fail - keep background black
+              e.target.style.display = 'none';
+              setImageLoaded(true); // Still show content
+            }}
+            style={{ 
+              opacity: imageLoaded ? 1 : 0,
+            }}
+          />
+        </div>
 
-      <div className="absolute bottom-20 md:bottom-10 right-4 md:right-10 text-white z-10 mx-2 mt-2">
-        {banner.subtext && (
-          <p className="font-mono text-sm uppercase max-w-60 md:max-w-80 border-y border-white/70 py-2 text-white/90">
-            {banner.subtext}
-          </p>
-        )}
-
-        {/* Button - Responsive */}
-        {banner.buttonText && banner.redirectUrl && (
-          <div
-            ref={buttonRef}
-            className="text-right relative z-30"
-          >
-            <Link
-              to={banner.redirectUrl}
-              onClick={handleButtonClick}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm md:text-base font-semibold text-white lowercase transition-all duration-300 hover:text-gray-100 hover:scale-105 relative z-30 pointer-events-auto"
-              aria-label={`${banner.buttonText} - ${banner.headingLine1}`}
-            >
-              {banner.buttonText}
-              <span className="inline-flex items-center justify-center w-4 h-4 bg-white text-black rounded-full">
-                <IoIosArrowForward size={16} />
-              </span>
-            </Link>
-          </div>
-        )}
-      </div>
-    </section>
-  ), [handleButtonClick]);
-
-  // Loading skeleton
-  if (loading) {
-    return (
-      <section className="relative w-full h-screen overflow-hidden bg-black">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse"></div>
+        {/* Dark Overlay - shows immediately for better UX */}
         <div className="absolute inset-0 bg-black/50 z-2"></div>
-      </section>
-    );
-  }
 
-  // Error state
-  if (error) {
-    return (
-      <section className="relative w-full h-screen overflow-hidden bg-black">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200"></div>
-        <div className="absolute inset-0 bg-black/20 z-2"></div>
-        <div className="relative z-10 h-full flex items-center justify-center text-center text-gray-800 px-6">
-          <div>
-            <p className="text-xl mb-6 font-medium">{error}</p>
-            <button
-              onClick={fetchBanners}
-              className="px-8 py-3 text-base font-medium text-white bg-black rounded-lg transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
-              aria-label="Retry loading banners"
-            >
-              Try Again
-            </button>
+        {/* Content that shows immediately */}
+        <div className="absolute inset-0 z-10">
+          {/* Main Headline - Centered horizontally on mobile only */}
+          <h1 className="text-oswald absolute top-10 left-1/2 transform -translate-x-1/2 md:left-16 md:transform-none text-6xl xs:text-6xl sm:text-6xl md:text-6xl lg:text-8xl font-extrabold text-white uppercase leading-none tracking-tighter text-center md:text-left w-full md:w-auto px-4 md:px-0">
+            {banner.headingLine1}
+            {banner.headingLine2 && (
+              <>
+                <br />
+                <span className="pl-0 md:pl-[50px] mb-2 text-oswald text-holo block md:inline">
+                  {banner.headingLine2}
+                </span>
+              </>
+            )}
+          </h1>
+
+          <div className="absolute bottom-20 md:bottom-10 right-4 md:right-10 text-white mx-2 mt-2">
+            {banner.subtext && (
+              <p className="font-mono text-sm uppercase max-w-60 md:max-w-80 border-y border-white/70 py-2 text-white/90">
+                {banner.subtext}
+              </p>
+            )}
+
+            {banner.buttonText && banner.redirectUrl && (
+              <div className="text-right relative z-30">
+                <Link
+                  to={banner.redirectUrl}
+                  onClick={handleButtonClick}
+                  className="inline-flex items-center gap-2 px-6 py-3 text-sm md:text-base font-semibold text-white lowercase transition-all duration-300 hover:text-gray-100 hover:scale-105 relative z-30 pointer-events-auto"
+                  aria-label={`${banner.buttonText} - ${banner.headingLine1}`}
+                  tabIndex={0}
+                >
+                  {banner.buttonText}
+                  <span className="inline-flex items-center justify-center w-4 h-4 bg-white text-black rounded-full">
+                    <IoIosArrowForward size={16} />
+                  </span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Loading indicator for individual banner */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center z-5">
+            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          </div>
+        )}
+
+        {isUsingFallback && index === 0 && (
+          <div className="absolute top-4 right-4 z-20">
+            <div className="bg-yellow-500/90 text-black text-xs px-2 py-1 rounded-full font-medium">
+              Cached
+            </div>
+          </div>
+        )}
       </section>
     );
-  }
+  };
 
-  // Empty state
-  if (banners.length === 0) {
+  // ALWAYS SHOW CONTENT - Never show "not found" or empty states to users
+  const displayBanners = banners.length > 0 ? banners : [{
+    _id: 'default-banner',
+    imageUrl: '', // Empty for gradient fallback
+    headingLine1: 'NATURA BLISS',
+    headingLine2: 'Pure Organic Beauty',
+    subtext: 'Discover the essence of natural skincare',
+    buttonText: 'Explore Collection',
+    redirectUrl: '/collection'
+  }];
+
+  // Minimal loading state that doesn't block content
+  if (loading && banners.length === 0) {
     return (
-      <section className="relative w-full h-screen overflow-hidden bg-black">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200"></div>
-        <div className="h-full flex items-center justify-center text-center text-gray-600 px-6">
-          <div>
-            <p className="text-xl font-medium mb-4">No banners available</p>
-            <button
-              onClick={fetchBanners}
-              className="px-6 py-2 text-gray-600 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Refresh
-            </button>
+      <section className="relative w-full h-[90vh] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="w-12 h-12 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
+            <p className="text-sm text-white/70">Loading...</p>
           </div>
         </div>
       </section>
@@ -257,15 +309,26 @@ const Hero = () => {
   }
 
   return (
-    <div className="relative w-full overflow-hidden" aria-label="Featured banners">
-      {/* Global styles for active dot state with responsive classes */}
+    <div 
+      className="relative w-full overflow-hidden" 
+      aria-label="Featured banners"
+      role="region"
+      aria-roledescription="carousel"
+    >
+      {isUsingFallback && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
+          <div className="bg-yellow-500 text-black text-sm px-3 py-1 rounded-full font-medium shadow-lg">
+            Offline Mode
+          </div>
+        </div>
+      )}
+
+      {/* Inline critical styles */}
       <style>{`
         .slick-dots li.slick-active button {
           background: white !important;
           transform: scale(1.2);
         }
-        
-        /* Mobile-specific dot positioning */
         @media (max-width: 768px) {
           .slick-dots {
             display: flex !important;
@@ -278,11 +341,23 @@ const Hero = () => {
             width: auto !important;
           }
         }
+        .slick-slider, .slick-list, .slick-track {
+          height: 100%;
+        }
+        .slick-slide > div {
+          height: 100%;
+        }
+        .slick-slide[aria-hidden="true"] {
+          visibility: hidden;
+        }
+        .slick-slide:not([aria-hidden="true"]) {
+          visibility: visible;
+        }
       `}</style>
       
       <Slider ref={sliderRef} {...settings}>
-        {banners.map((banner, index) => (
-          <BannerItem key={banner._id || banner.imageUrl} banner={banner} index={index} />
+        {displayBanners.map((banner, index) => (
+          <BannerItem key={`${banner._id}-${index}`} banner={banner} index={index} />
         ))}
       </Slider>
     </div>

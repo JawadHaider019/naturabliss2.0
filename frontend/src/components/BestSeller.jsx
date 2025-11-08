@@ -19,23 +19,11 @@ const BestSeller = () => {
     if (!products || !Array.isArray(products)) return [];
 
     try {
-      console.log('=== BESTSELLER FILTERING DEBUG ===');
-      console.log('Total products:', products.length);
-      
       // Filter out draft products and only show published products
       const publishedProducts = products.filter(product => {
         const isPublished = product.status === 'published' || !product.status;
-        if (!isPublished) {
-          console.log('Filtering out draft product:', {
-            id: product._id,
-            name: product.name,
-            status: product.status
-          });
-        }
         return isPublished;
       });
-
-      console.log('Published products found:', publishedProducts.length);
 
       // STRICT filtering - only products explicitly marked as bestsellers
       const bestProducts = publishedProducts.filter((item) => {
@@ -50,42 +38,17 @@ const BestSeller = () => {
         return isExplicitBestSeller;
       });
 
-      console.log('Explicit bestsellers found:', bestProducts.length);
-      console.log('Explicit bestseller products:', bestProducts.map(p => ({
-        id: p._id,
-        name: p.name,
-        bestseller: p.bestseller
-      })));
-
-      // If no explicit best sellers found, show empty state or use alternative logic
+      // If no explicit best sellers found, return empty array
       if (bestProducts.length === 0) {
-        console.log('No products are explicitly marked as bestsellers in the database');
-        
-        // Option 1: Return empty array (show "No best sellers" message)
         return [];
-        
-        // Option 2: Use top-selling products as fallback (uncomment if you want this)
-        /*
-        const topSellingProducts = publishedProducts
-          .sort((a, b) => {
-            const aSales = a.totalSales || a.salesCount || 0;
-            const bSales = b.totalSales || b.salesCount || 0;
-            return bSales - aSales;
-          })
-          .slice(0, 8);
-        console.log('Using top-selling products as fallback:', topSellingProducts.length);
-        return topSellingProducts;
-        */
       }
 
       // Limit to 10 bestseller products
       const finalBestSellers = bestProducts.slice(0, 10);
 
-      console.log('Final bestsellers to display:', finalBestSellers.length);
       return finalBestSellers;
 
     } catch (err) {
-      console.error('Error processing bestsellers:', err);
       return [];
     }
   }, [products]);

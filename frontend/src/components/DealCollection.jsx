@@ -106,7 +106,6 @@ const DealCollection = () => {
         } catch (err) {
           if (mountedRef.current && !axios.isCancel(err)) {
             // Silent error - don't show to user for better UX
-            console.log('Deals fetch failed, using cached data if available');
           }
         } finally {
           if (mountedRef.current) {
@@ -237,7 +236,7 @@ const DealCollection = () => {
         </div>
         {/* Added small line of text below heading */}
         <p className="text-lg text-gray-600 font-light">
-Grab Pure Clay’s special deals — organic goodness, proudly made in Pakistan
+  Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
         </p>
         <div className="text-center text-gray-500 py-4 text-sm">
           Check your connection
@@ -254,7 +253,7 @@ Grab Pure Clay’s special deals — organic goodness, proudly made in Pakistan
         </div>
         {/* Added small line of text below heading */}
         <p className="text-[16px] text-gray-600  font-light">
- Grab Pure Clay’s special deals — organic goodness, proudly made in Pakistan
+  Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
         </p>
       </div>
 

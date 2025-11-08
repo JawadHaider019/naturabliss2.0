@@ -19,23 +19,11 @@ const LatestCollection = () => {
     if (!products || !Array.isArray(products)) return [];
 
     try {
-      console.log('=== LATEST COLLECTION FILTERING DEBUG ===');
-      console.log('Total products:', products.length);
-      
       // Filter out draft products and only show published products
       const publishedProducts = products.filter(product => {
         const isPublished = product.status === 'published' || !product.status;
-        if (!isPublished) {
-          console.log('Filtering out draft product:', {
-            id: product._id,
-            name: product.name,
-            status: product.status
-          });
-        }
         return isPublished;
       });
-
-      console.log('Published products found:', publishedProducts.length);
 
       // Remove duplicate products by ID and get latest 10 from published products
       const uniqueProducts = publishedProducts.filter((product, index, self) =>
@@ -44,11 +32,9 @@ const LatestCollection = () => {
       
       const latestUniqueProducts = uniqueProducts.slice(0, 10);
 
-      console.log('Final latest products to display:', latestUniqueProducts.length);
       return latestUniqueProducts;
 
     } catch (err) {
-      console.error('Error processing latest products:', err);
       return [];
     }
   }, [products]);
@@ -229,7 +215,7 @@ const LatestCollection = () => {
         <div className="py-4 text-center text-2xl md:text-3xl">
           <Title text1={'LATEST'} text2={'COLLECTIONS'} />
          <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-2">
-Explore Pure Clay’s latest organic collection — fresh, natural, and proudly made in Pakistan.
+   Experience the Beauty of Nature with Natura Bliss's Newest Organic Skincare Collection
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
