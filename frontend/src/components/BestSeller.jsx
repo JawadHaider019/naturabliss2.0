@@ -43,8 +43,8 @@ const BestSeller = () => {
         return [];
       }
 
-      // Limit to 10 bestseller products
-      const finalBestSellers = bestProducts.slice(0, 10);
+      // Limit to 8 bestseller products
+      const finalBestSellers = bestProducts.slice(0, 20);
 
       return finalBestSellers;
 
@@ -89,18 +89,17 @@ const BestSeller = () => {
     if (count === 1) return "grid-cols-1 max-w-sm mx-auto";
     if (count === 2) return "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto";
     if (count === 3) return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto";
-    if (count === 4) return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
-    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 max-w-7xl mx-auto";
+    return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
   };
 
-  // Enhanced Slick Slider settings with consistent sizing
+  // Enhanced Slick Slider settings with max 4 products
   const sliderSettings = {
     dots: true,
     infinite: bestSeller.length > 1,
     speed: 500,
-    slidesToShow: Math.min(5, bestSeller.length),
+    slidesToShow: Math.min(4, bestSeller.length),
     slidesToScroll: 1,
-    autoplay: bestSeller.length > Math.min(5, bestSeller.length),
+    autoplay: bestSeller.length > Math.min(4, bestSeller.length),
     autoplaySpeed: 4000,
     pauseOnHover: true,
     swipe: true,
@@ -114,10 +113,10 @@ const BestSeller = () => {
       {
         breakpoint: 1536,
         settings: {
-          slidesToShow: Math.min(5, bestSeller.length),
+          slidesToShow: Math.min(4, bestSeller.length),
           slidesToScroll: 1,
-          infinite: bestSeller.length > 5,
-          autoplay: bestSeller.length > 5,
+          infinite: bestSeller.length > 4,
+          autoplay: bestSeller.length > 4,
         }
       },
       {

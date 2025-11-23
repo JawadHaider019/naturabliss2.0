@@ -25,12 +25,12 @@ const LatestCollection = () => {
         return isPublished;
       });
 
-      // Remove duplicate products by ID and get latest 10 from published products
+      // Remove duplicate products by ID and get latest 8 from published products
       const uniqueProducts = publishedProducts.filter((product, index, self) =>
         index === self.findIndex(p => p._id === product._id)
       );
       
-      const latestUniqueProducts = uniqueProducts.slice(0, 10);
+      const latestUniqueProducts = uniqueProducts.slice(0, 100);
 
       return latestUniqueProducts;
 
@@ -75,18 +75,17 @@ const LatestCollection = () => {
     if (count === 1) return "grid-cols-1 max-w-sm mx-auto";
     if (count === 2) return "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto";
     if (count === 3) return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto";
-    if (count === 4) return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
-    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 max-w-7xl mx-auto";
+    return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
   };
 
-  // Enhanced Slick Slider settings with consistent sizing
+  // Enhanced Slick Slider settings with max 4 products
   const sliderSettings = {
     dots: true,
     infinite: latestProducts.length > 1,
     speed: 500,
-    slidesToShow: Math.min(5, latestProducts.length),
+    slidesToShow: Math.min(4, latestProducts.length),
     slidesToScroll: 1,
-    autoplay: latestProducts.length > Math.min(5, latestProducts.length),
+    autoplay: latestProducts.length > Math.min(4, latestProducts.length),
     autoplaySpeed: 4000,
     pauseOnHover: true,
     swipe: true,
@@ -97,15 +96,6 @@ const LatestCollection = () => {
     centerMode: false,
     adaptiveHeight: false,
     responsive: [
-      {
-        breakpoint: 1536,
-        settings: {
-          slidesToShow: Math.min(5, latestProducts.length),
-          slidesToScroll: 1,
-          infinite: latestProducts.length > 5,
-          autoplay: latestProducts.length > 5,
-        }
-      },
       {
         breakpoint: 1280,
         settings: {
