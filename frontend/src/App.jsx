@@ -29,6 +29,7 @@ const PlaceOrder = lazy(() => import('./pages/PlaceOrder'))
 const Blog = lazy(() => import('./pages/Blog'))
 const BlogPost = lazy(() => import('./pages/BlogPost'))
 
+
 // Loading component
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -125,7 +126,7 @@ const App = () => {
             <Route path='/place-order' element={<PlaceOrder/>}/>
           </Routes>
         </Suspense>
-        
+   
         <Footer/>
       </Suspense>
     </div>

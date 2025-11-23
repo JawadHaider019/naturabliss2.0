@@ -140,7 +140,7 @@ const PlaceOrder = () => {
     }
   }, [cityZipData, formData.zipcode, validationErrors.zipcode]);
 
-  // Validate address - UPDATED to be more flexible
+  // Validate address - UPDATED to always return valid for basic cases
   const validateAddress = useCallback(async (city, state, zipcode) => {
     if (!city || !state) return { isValid: false, message: 'City and state are required' };
 
@@ -152,7 +152,7 @@ const PlaceOrder = () => {
       if (response.data.success) {
         return response.data.data;
       } else {
-        // If validation fails but we have basic info, allow manual entry with warning
+        // Even if validation fails, allow the order with manual verification
         if (city && state && zipcode && /^\d{5}$/.test(zipcode)) {
           return { 
             isValid: true, 
@@ -160,23 +160,19 @@ const PlaceOrder = () => {
             requiresManualVerification: true
           };
         }
-        return { 
-          isValid: false, 
-          message: response.data.message || 'Please verify your address details' 
-        };
-      }
-    } catch (error) {
-      // If API fails, allow basic validation to pass
-      if (city && state && zipcode && /^\d{5}$/.test(zipcode)) {
+        // Even if basic validation fails, still allow with warning
         return { 
           isValid: true, 
-          message: 'Address accepted (validation service unavailable)',
+          message: 'Address will be manually verified',
           requiresManualVerification: true
         };
       }
+    } catch (error) {
+      // If API fails, always allow the order
       return { 
-        isValid: false, 
-        message: 'Address validation service unavailable' 
+        isValid: true, 
+        message: 'Address accepted (validation service unavailable)',
+        requiresManualVerification: true
       };
     }
   }, [backendUrl]);
@@ -199,36 +195,12 @@ const PlaceOrder = () => {
     }
   }, [formData.city, formData.zipcode, cityZipData, autoFillZipCode]);
 
-  // ZIP code validation - UPDATED to be more flexible with known cities
-  const validateZipCode = useCallback(async (zipcode, state, city) => {
+  // SIMPLIFIED ZIP code validation - only check for 5 digits, no blocking
+  const validateZipCode = useCallback((zipcode) => {
     if (!zipcode) return 'ZIP code is required';
     if (!/^\d{5}$/.test(zipcode)) return 'ZIP code must be 5 digits';
-
-    // Check if this is a known city with a specific ZIP code
-    const isKnownCity = city && knownCitiesWithZips[city] && knownCitiesWithZips[city].zipCode === zipcode;
-    
-    if (isKnownCity) {
-      // Allow known city ZIP codes even if outside typical range
-      return true;
-    }
-
-    // Basic state-based ZIP code validation for unknown cities
-    const stateZipRanges = {
-      'Punjab': { min: 30000, max: 49999 },
-      'Sindh': { min: 65000, max: 79999 },
-      'Khyber Pakhtunkhwa': { min: 12000, max: 29000 },
-      'Balochistan': { min: 82000, max: 92000 }
-    };
-
-    const zipNum = parseInt(zipcode, 10);
-    const stateRange = stateZipRanges[state];
-
-    if (stateRange && (zipNum < stateRange.min || zipNum > stateRange.max)) {
-      return `ZIP code typically ranges from ${stateRange.min} to ${stateRange.max} for ${state}`;
-    }
-
     return true;
-  }, [knownCitiesWithZips]);
+  }, []);
 
   // Save form data to localStorage
   useEffect(() => {
@@ -301,7 +273,7 @@ const PlaceOrder = () => {
     }
   }, []);
 
-  // Field validation - UPDATED to remove city restriction
+  // Field validation - UPDATED to remove blocking ZIP validation
   const validateField = async (name, value) => {
     const errors = {};
     
@@ -324,7 +296,6 @@ const PlaceOrder = () => {
         
       case 'city':
         if (!value.trim()) errors.city = 'City is required';
-        // Removed city validation against predefined list - users can type any city
         break;
         
       case 'state':
@@ -333,12 +304,9 @@ const PlaceOrder = () => {
         break;
         
       case 'zipcode':
+        // SIMPLIFIED: Only check for 5 digits, but don't block submission
         if (!value.trim()) errors.zipcode = 'ZIP code is required';
         else if (!/^\d{5}$/.test(value.trim())) errors.zipcode = 'ZIP code must be 5 digits';
-        else if (formData.state) {
-          const zipValidation = await validateZipCode(value, formData.state, formData.city);
-          if (zipValidation !== true) errors.zipcode = zipValidation;
-        }
         break;
         
       case 'phone':
@@ -353,14 +321,19 @@ const PlaceOrder = () => {
   const validateForm = async () => {
     const errors = {};
     
-    // Validate all form fields
+    // Validate all form fields except ZIP code validation won't block submission
     for (const field of Object.keys(formData)) {
       const fieldErrors = await validateField(field, formData[field]);
       Object.assign(errors, fieldErrors);
     }
     
     setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    
+    // Allow submission even if there are ZIP code errors (they're just warnings now)
+    const blockingErrors = { ...errors };
+    delete blockingErrors.zipcode; // Remove ZIP code errors from blocking validation
+    
+    return Object.keys(blockingErrors).length === 0;
   };
 
   const onChangeHandler = async (e) => {
@@ -404,12 +377,11 @@ const PlaceOrder = () => {
       }
     }
     
-    // Real-time ZIP validation
+    // Real-time ZIP validation - SIMPLIFIED
     if (name === 'zipcode' && value.length === 5 && /^\d{5}$/.test(value)) {
-      const zipError = await validateZipCode(value, formData.state, formData.city);
       setValidationErrors(prev => ({
         ...prev,
-        zipcode: zipError !== true ? zipError : ''
+        zipcode: ''
       }));
     }
     
@@ -547,19 +519,14 @@ const processCartItems = () => {
     setLoading(true);
     
     try {
-      // Validate address with more flexible approach
+      // Validate address but don't block on failure
       setIsValidatingAddress(true);
       const addressValidation = await validateAddress(formData.city, formData.state, formData.zipcode);
       
+      // Show warning but don't block submission
       if (!addressValidation.isValid) {
-        toast.error('Please check your address details: ' + addressValidation.message);
-        setIsValidatingAddress(false);
-        setLoading(false);
-        return;
-      }
-
-      // Show warning if manual verification is required
-      if (addressValidation.requiresManualVerification) {
+        toast.warning('Address may need manual verification: ' + addressValidation.message);
+      } else if (addressValidation.requiresManualVerification) {
         toast.warning('Your address will be manually verified for delivery');
       }
 
@@ -580,7 +547,7 @@ const processCartItems = () => {
         amount: finalAmount,
         deliveryCharges: deliveryCharge,
         method: 'COD',
-        addressVerified: !addressValidation.requiresManualVerification,
+        addressVerified: addressValidation.isValid && !addressValidation.requiresManualVerification,
         // 🆕 Always send customerDetails using the form data
         customerDetails: {
           name: formData.fullName.trim(),
@@ -744,7 +711,7 @@ const processCartItems = () => {
           name="zipcode" 
           value={formData.zipcode} 
           className={`w-full border px-3.5 py-3 ${
-            validationErrors.zipcode ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            validationErrors.zipcode ? 'border-yellow-500 bg-yellow-50' : 'border-gray-300'
           } rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors`} 
           type="number"
           placeholder="5-digit ZIP code"
@@ -759,14 +726,18 @@ const processCartItems = () => {
         )}
       </div>
       {validationErrors.zipcode && (
-        <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.zipcode}</p>
+        <p className="text-yellow-600 text-xs mt-1 font-medium">
+          ⚠️ {validationErrors.zipcode} - Order can still be placed
+        </p>
       )}
       {formData.zipcode && cityZipData[formData.city] === formData.zipcode && (
         <p className="text-green-600 text-xs mt-1">
           Auto-filled for {formData.city}
-          {knownCitiesWithZips[formData.city] && (
-            <span className="text-gray-500 ml-1">(Known city ZIP code)</span>
-          )}
+        </p>
+      )}
+      {formData.zipcode && /^\d{5}$/.test(formData.zipcode) && !validationErrors.zipcode && (
+        <p className="text-green-600 text-xs mt-1">
+          ✓ Valid ZIP code format
         </p>
       )}
     </div>
@@ -865,11 +836,11 @@ const processCartItems = () => {
             <button 
               type='submit' 
               className={`bg-black text-white px-8 py-4 font-semibold hover:bg-gray-800 active:bg-gray-900 transition-colors w-full md:w-auto text-base   ${
-                loading || !isDataReady || Object.keys(validationErrors).length > 0 || isValidatingAddress
+                loading || !isDataReady || isValidatingAddress
                   ? 'opacity-50 cursor-not-allowed' 
                   : 'hover:shadow-lg transform hover:-translate-y-0.5'
               }`}
-              disabled={loading || !isDataReady || Object.keys(validationErrors).length > 0 || isValidatingAddress}
+              disabled={loading || !isDataReady || isValidatingAddress}
             >
               {isValidatingAddress ? 'VALIDATING ADDRESS...' : 
                loading ? 'PLACING ORDER...' : 

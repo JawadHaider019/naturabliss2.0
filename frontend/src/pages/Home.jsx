@@ -7,6 +7,7 @@ import Testimonial from '../components/Testimonial'
 import WhyChooseUs from "../components/WhyChooseUs"
 import DealCollection from "../components/DealCollection"
 import ScrollToTop from "../components/ScrollToTop"
+import WhatsApp from "../components/WhatsApp"
 
 const Home = () => {
   return (
@@ -19,6 +20,7 @@ const Home = () => {
       <Testimonial/>
       <OurPolicy/>
       <NewsletterBox/>
+            <WhatsApp /> 
       <ScrollToTop />
     </div>
   )

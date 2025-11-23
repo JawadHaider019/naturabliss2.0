@@ -64,87 +64,146 @@ const ShopContextProvider = ({ children }) => {
     return activeLoaders.length > 0 ? activeLoaders[0][1].message : "Loading...";
   }, [loading]);
 
-  // ==================== CART PERSISTENCE & LOGIN HANDLING ====================
+// ==================== CART PERSISTENCE & LOGIN HANDLING ====================
 
-  // Load cart from localStorage on initial load
-  useEffect(() => {
-    const savedCartItems = localStorage.getItem('cartItems');
-    const savedCartDeals = localStorage.getItem('cartDeals');
+// Load cart from localStorage on initial load
+useEffect(() => {
+  const savedCartItems = localStorage.getItem('cartItems');
+  const savedCartDeals = localStorage.getItem('cartDeals');
+  
+  if (savedCartItems) setCartItems(JSON.parse(savedCartItems));
+  if (savedCartDeals) setCartDeals(JSON.parse(savedCartDeals));
+}, []);
+
+// Save cart to localStorage whenever it changes
+useEffect(() => {
+  if (Object.keys(cartItems).length > 0 || Object.keys(cartDeals).length > 0) {
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    localStorage.setItem('cartDeals', JSON.stringify(cartDeals));
+  } else {
+    localStorage.removeItem('cartItems');
+    localStorage.removeItem('cartDeals');
+  }
+}, [cartItems, cartDeals]);
+
+// Load user cart when logged in and merge with guest cart
+useEffect(() => {
+  if (token && user) {
+    loadUserCartAndMerge();
+  }
+}, [token, user]);
+
+// FIXED: Updated loadUserCartAndMerge function
+const loadUserCartAndMerge = async () => {
+  try {
+    const guestCartItems = localStorage.getItem('cartItems');
+    const guestCartDeals = localStorage.getItem('cartDeals');
     
-    if (savedCartItems) setCartItems(JSON.parse(savedCartItems));
-    if (savedCartDeals) setCartDeals(JSON.parse(savedCartDeals));
-  }, []);
-
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (Object.keys(cartItems).length > 0 || Object.keys(cartDeals).length > 0) {
-      localStorage.setItem('cartItems', JSON.stringify(cartItems));
-      localStorage.setItem('cartDeals', JSON.stringify(cartDeals));
-    } else {
-      localStorage.removeItem('cartItems');
-      localStorage.removeItem('cartDeals');
-    }
-  }, [cartItems, cartDeals]);
-
-  // Load user cart when logged in and merge with guest cart
-  useEffect(() => {
-    if (token && user) {
-      loadUserCartAndMerge();
-    }
-  }, [token, user]);
-
-  const loadUserCartAndMerge = async () => {
+    let serverCartItems = {};
+    let serverCartDeals = {};
+    
+    // Try to get user cart from server
     try {
-      const guestCartItems = localStorage.getItem('cartItems');
-      const guestCartDeals = localStorage.getItem('cartDeals');
-      
       const response = await axios.get(`${BACKEND_URL}/api/cart`, {
         headers: { token },
         timeout: 5000
       });
       
       if (response.data.success) {
-        const serverCartItems = response.data.cartData?.products || {};
-        const serverCartDeals = response.data.cartData?.deals || {};
-        
-        if (guestCartItems || guestCartDeals) {
-          const mergedCartItems = { ...serverCartItems };
-          const mergedCartDeals = { ...serverCartDeals };
-          
-          if (guestCartItems) {
-            const guestItems = JSON.parse(guestCartItems);
-            Object.entries(guestItems).forEach(([itemId, quantity]) => {
-              if (quantity > 0) {
-                mergedCartItems[itemId] = (mergedCartItems[itemId] || 0) + quantity;
-              }
-            });
-          }
-          
-          if (guestCartDeals) {
-            const guestDeals = JSON.parse(guestCartDeals);
-            Object.entries(guestDeals).forEach(([dealId, quantity]) => {
-              if (quantity > 0) {
-                mergedCartDeals[dealId] = (mergedCartDeals[dealId] || 0) + quantity;
-              }
-            });
-          }
-          
-          setCartItems(mergedCartItems);
-          setCartDeals(mergedCartDeals);
-          
-          await syncMergedCartToServer(mergedCartItems, mergedCartDeals);
-          
-          localStorage.removeItem('cartItems');
-          localStorage.removeItem('cartDeals');
-        } else {
-          setCartItems(serverCartItems);
-          setCartDeals(serverCartDeals);
-        }
+        serverCartItems = response.data.cartData?.products || response.data.data?.cartItems || {};
+        serverCartDeals = response.data.cartData?.deals || response.data.data?.cartDeals || {};
+       
       }
     } catch (error) {
-      // Silent error handling
+    
+      // If we can't load server cart, just use guest cart without merging
+      if (guestCartItems) setCartItems(JSON.parse(guestCartItems));
+      if (guestCartDeals) setCartDeals(JSON.parse(guestCartDeals));
+      return;
     }
-  };
+    
+    // FIXED: Check if we actually have guest cart items to merge
+    const hasGuestItems = guestCartItems && Object.keys(JSON.parse(guestCartItems)).length > 0;
+    const hasGuestDeals = guestCartDeals && Object.keys(JSON.parse(guestCartDeals)).length > 0;
+    
+    if (!hasGuestItems && !hasGuestDeals) {
+    
+      setCartItems(serverCartItems);
+      setCartDeals(serverCartDeals);
+      
+      localStorage.setItem('cartItems', JSON.stringify(serverCartItems));
+      localStorage.setItem('cartDeals', JSON.stringify(serverCartDeals));
+      return;
+    }
+    
+    // FIXED: Smart merging - don't double count items
+    const guestItems = hasGuestItems ? JSON.parse(guestCartItems) : {};
+    const guestDeals = hasGuestDeals ? JSON.parse(guestCartDeals) : {};
+    
+    const mergedCartItems = { ...serverCartItems };
+    const mergedCartDeals = { ...serverCartDeals };
+    
+  
+    
+    // Merge products - only add guest items that don't exist in server cart
+    Object.entries(guestItems).forEach(([itemId, guestQuantity]) => {
+      if (guestQuantity > 0) {
+        const serverQuantity = serverCartItems[itemId] || 0;
+        // FIXED: Use the maximum quantity, not the sum
+        mergedCartItems[itemId] = Math.max(serverQuantity, guestQuantity);
+      }
+    });
+    
+    // Merge deals - only add guest deals that don't exist in server cart
+    Object.entries(guestDeals).forEach(([dealId, guestQuantity]) => {
+      if (guestQuantity > 0) {
+        const serverQuantity = serverCartDeals[dealId] || 0;
+        // FIXED: Use the maximum quantity, not the sum
+        mergedCartDeals[dealId] = Math.max(serverQuantity, guestQuantity);
+      }
+    });
+    
+   
+    
+    // Update state with merged cart
+    setCartItems(mergedCartItems);
+    setCartDeals(mergedCartDeals);
+    
+    // Save merged cart to localStorage
+    localStorage.setItem('cartItems', JSON.stringify(mergedCartItems));
+    localStorage.setItem('cartDeals', JSON.stringify(mergedCartDeals));
+    
+    
+    localStorage.removeItem('cartItems');
+    localStorage.removeItem('cartDeals');
+    
+  } catch (error) {
+    console.error('❌ DEBUG: Cart loading/merging failed:', error);
+  }
+};
+
+
+
+// Enhanced clear cart function
+const clearCart = async () => {
+  setCartItems({});
+  setCartDeals({});
+  
+  localStorage.removeItem('cartItems');
+  localStorage.removeItem('cartDeals');
+  
+  if (token) {
+    try {
+      await axios.post(`${BACKEND_URL}/api/cart/clear`, {}, {
+        headers: { token },
+        timeout: 5000
+      });
+    } catch (error) {
+      // Silent error handling - it's OK if clear endpoint doesn't exist
+      console.log("⚠️ DEBUG: Clear endpoint not available");
+    }
+  }
+};
 
   const syncMergedCartToServer = async (mergedItems, mergedDeals) => {
     try {
@@ -160,25 +219,6 @@ const ShopContextProvider = ({ children }) => {
     }
   };
 
-  // Enhanced clear cart function
-  const clearCart = async () => {
-    setCartItems({});
-    setCartDeals({});
-    
-    localStorage.removeItem('cartItems');
-    localStorage.removeItem('cartDeals');
-    
-    if (token) {
-      try {
-        await axios.post(`${BACKEND_URL}/api/cart/clear`, {}, {
-          headers: { token },
-          timeout: 5000
-        });
-      } catch (error) {
-        // Silent error handling
-      }
-    }
-  };
 
   // ==================== OPTIMIZED CART OPERATIONS ====================
 
