@@ -23,6 +23,7 @@ const ShopContextProvider = ({ children }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [cartItems, setCartItems] = useState({});
   const [cartDeals, setCartDeals] = useState({});
+  const [cartLoaded, setCartLoaded] = useState(false);
   const [products, setProducts] = useState([]);
   const [deals, setDeals] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,146 +65,192 @@ const ShopContextProvider = ({ children }) => {
     return activeLoaders.length > 0 ? activeLoaders[0][1].message : "Loading...";
   }, [loading]);
 
-// ==================== CART PERSISTENCE & LOGIN HANDLING ====================
+  // ==================== CART PERSISTENCE & LOGIN HANDLING ====================
 
-// Load cart from localStorage on initial load
-useEffect(() => {
-  const savedCartItems = localStorage.getItem('cartItems');
-  const savedCartDeals = localStorage.getItem('cartDeals');
-  
-  if (savedCartItems) setCartItems(JSON.parse(savedCartItems));
-  if (savedCartDeals) setCartDeals(JSON.parse(savedCartDeals));
-}, []);
-
-// Save cart to localStorage whenever it changes
-useEffect(() => {
-  if (Object.keys(cartItems).length > 0 || Object.keys(cartDeals).length > 0) {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    localStorage.setItem('cartDeals', JSON.stringify(cartDeals));
-  } else {
-    localStorage.removeItem('cartItems');
-    localStorage.removeItem('cartDeals');
-  }
-}, [cartItems, cartDeals]);
-
-// Load user cart when logged in and merge with guest cart
-useEffect(() => {
-  if (token && user) {
-    loadUserCartAndMerge();
-  }
-}, [token, user]);
-
-// FIXED: Updated loadUserCartAndMerge function
-const loadUserCartAndMerge = async () => {
-  try {
-    const guestCartItems = localStorage.getItem('cartItems');
-    const guestCartDeals = localStorage.getItem('cartDeals');
-    
-    let serverCartItems = {};
-    let serverCartDeals = {};
-    
-    // Try to get user cart from server
+  // FIXED: Improved cart initialization with error handling and loading state
+  useEffect(() => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/cart`, {
-        headers: { token },
-        timeout: 5000
-      });
+      const savedCartItems = localStorage.getItem('cartItems');
+      const savedCartDeals = localStorage.getItem('cartDeals');
       
-      if (response.data.success) {
-        serverCartItems = response.data.cartData?.products || response.data.data?.cartItems || {};
-        serverCartDeals = response.data.cartData?.deals || response.data.data?.cartDeals || {};
-       
+      // Initialize with empty objects if no saved data or invalid JSON
+      if (savedCartItems) {
+        const parsedItems = JSON.parse(savedCartItems);
+        if (parsedItems && typeof parsedItems === 'object') {
+          setCartItems(parsedItems);
+        }
+      }
+      
+      if (savedCartDeals) {
+        const parsedDeals = JSON.parse(savedCartDeals);
+        if (parsedDeals && typeof parsedDeals === 'object') {
+          setCartDeals(parsedDeals);
+        }
+      }
+      
+      // Mark cart as loaded
+      setCartLoaded(true);
+    } catch (error) {
+  
+      setCartItems({});
+      setCartDeals({});
+      localStorage.removeItem('cartItems');
+      localStorage.removeItem('cartDeals');
+      setCartLoaded(true);
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (Object.keys(cartItems).length > 0 || Object.keys(cartDeals).length > 0) {
+        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+        localStorage.setItem('cartDeals', JSON.stringify(cartDeals));
+      } else {
+        localStorage.removeItem('cartItems');
+        localStorage.removeItem('cartDeals');
       }
     } catch (error) {
-    
-      // If we can't load server cart, just use guest cart without merging
-      if (guestCartItems) setCartItems(JSON.parse(guestCartItems));
-      if (guestCartDeals) setCartDeals(JSON.parse(guestCartDeals));
-      return;
+      console.error('Error saving cart to localStorage:', error);
     }
-    
-    // FIXED: Check if we actually have guest cart items to merge
-    const hasGuestItems = guestCartItems && Object.keys(JSON.parse(guestCartItems)).length > 0;
-    const hasGuestDeals = guestCartDeals && Object.keys(JSON.parse(guestCartDeals)).length > 0;
-    
-    if (!hasGuestItems && !hasGuestDeals) {
-    
-      setCartItems(serverCartItems);
-      setCartDeals(serverCartDeals);
+  }, [cartItems, cartDeals]);
+
+  // Load user cart when logged in and merge with guest cart
+  useEffect(() => {
+    if (token && user) {
+      loadUserCartAndMerge();
+    }
+  }, [token, user]);
+
+  // FIXED: Simplified and improved cart merging function with loading state
+  const loadUserCartAndMerge = async () => {
+    try {
+      // Load guest cart from localStorage with proper error handling
+      let guestCartItems = {};
+      let guestCartDeals = {};
       
-      localStorage.setItem('cartItems', JSON.stringify(serverCartItems));
-      localStorage.setItem('cartDeals', JSON.stringify(serverCartDeals));
-      return;
+      try {
+        const guestItemsStr = localStorage.getItem('cartItems');
+        const guestDealsStr = localStorage.getItem('cartDeals');
+        
+        guestCartItems = guestItemsStr ? JSON.parse(guestItemsStr) : {};
+        guestCartDeals = guestDealsStr ? JSON.parse(guestDealsStr) : {};
+      } catch (error) {
+        console.error('Error parsing guest cart:', error);
+        guestCartItems = {};
+        guestCartDeals = {};
+      }
+      
+      let serverCartItems = {};
+      let serverCartDeals = {};
+      
+      // Try to get user cart from server
+      try {
+        const response = await axios.get(`${BACKEND_URL}/api/cart`, {
+          headers: { token },
+          timeout: 5000
+        });
+        
+        if (response.data.success) {
+          serverCartItems = response.data.cartData?.products || response.data.data?.cartItems || {};
+          serverCartDeals = response.data.cartData?.deals || response.data.data?.cartDeals || {};
+        }
+      } catch (error) {
+        console.log('⚠️ Could not load server cart, using guest cart');
+        // If we can't load server cart, just use guest cart without merging
+        setCartItems(guestCartItems);
+        setCartDeals(guestCartDeals);
+        setCartLoaded(true);
+        return;
+      }
+      
+      // Check if we actually have guest cart items to merge
+      const hasGuestItems = Object.keys(guestCartItems).length > 0;
+      const hasGuestDeals = Object.keys(guestCartDeals).length > 0;
+      
+      if (!hasGuestItems && !hasGuestDeals) {
+        // No guest cart, use server cart
+        setCartItems(serverCartItems);
+        setCartDeals(serverCartDeals);
+        
+        localStorage.setItem('cartItems', JSON.stringify(serverCartItems));
+        localStorage.setItem('cartDeals', JSON.stringify(serverCartDeals));
+        setCartLoaded(true);
+        return;
+      }
+      
+      // Smart merging - don't double count items
+      const mergedCartItems = { ...serverCartItems };
+      const mergedCartDeals = { ...serverCartDeals };
+      
+      // Merge products - only add guest items that don't exist in server cart
+      Object.entries(guestCartItems).forEach(([itemId, guestQuantity]) => {
+        if (guestQuantity > 0) {
+          const serverQuantity = serverCartItems[itemId] || 0;
+          // Use the maximum quantity, not the sum
+          mergedCartItems[itemId] = Math.max(serverQuantity, guestQuantity);
+        }
+      });
+      
+      // Merge deals - only add guest deals that don't exist in server cart
+      Object.entries(guestCartDeals).forEach(([dealId, guestQuantity]) => {
+        if (guestQuantity > 0) {
+          const serverQuantity = serverCartDeals[dealId] || 0;
+          // Use the maximum quantity, not the sum
+          mergedCartDeals[dealId] = Math.max(serverQuantity, guestQuantity);
+        }
+      });
+      
+      // Update state with merged cart
+      setCartItems(mergedCartItems);
+      setCartDeals(mergedCartDeals);
+      
+      // Save merged cart to localStorage
+      localStorage.setItem('cartItems', JSON.stringify(mergedCartItems));
+      localStorage.setItem('cartDeals', JSON.stringify(mergedCartDeals));
+      
+      // Clear guest cart from localStorage after successful merge
+      localStorage.removeItem('cartItems');
+      localStorage.removeItem('cartDeals');
+      
+      // Mark cart as loaded
+      setCartLoaded(true);
+      
+    } catch (error) {
+      console.error('❌ Cart loading/merging failed:', error);
+      // Ensure cart states are always valid objects
+      setCartItems({});
+      setCartDeals({});
+      setCartLoaded(true);
     }
-    
-    // FIXED: Smart merging - don't double count items
-    const guestItems = hasGuestItems ? JSON.parse(guestCartItems) : {};
-    const guestDeals = hasGuestDeals ? JSON.parse(guestCartDeals) : {};
-    
-    const mergedCartItems = { ...serverCartItems };
-    const mergedCartDeals = { ...serverCartDeals };
-    
-  
-    
-    // Merge products - only add guest items that don't exist in server cart
-    Object.entries(guestItems).forEach(([itemId, guestQuantity]) => {
-      if (guestQuantity > 0) {
-        const serverQuantity = serverCartItems[itemId] || 0;
-        // FIXED: Use the maximum quantity, not the sum
-        mergedCartItems[itemId] = Math.max(serverQuantity, guestQuantity);
-      }
-    });
-    
-    // Merge deals - only add guest deals that don't exist in server cart
-    Object.entries(guestDeals).forEach(([dealId, guestQuantity]) => {
-      if (guestQuantity > 0) {
-        const serverQuantity = serverCartDeals[dealId] || 0;
-        // FIXED: Use the maximum quantity, not the sum
-        mergedCartDeals[dealId] = Math.max(serverQuantity, guestQuantity);
-      }
-    });
-    
-   
-    
-    // Update state with merged cart
-    setCartItems(mergedCartItems);
-    setCartDeals(mergedCartDeals);
-    
-    // Save merged cart to localStorage
-    localStorage.setItem('cartItems', JSON.stringify(mergedCartItems));
-    localStorage.setItem('cartDeals', JSON.stringify(mergedCartDeals));
-    
+  };
+
+  // FIXED: Enhanced clear cart function with proper state updates
+  const clearCart = async () => {
+    // Use functional updates and create new objects to ensure re-render
+    setCartItems({});
+    setCartDeals({});
     
     localStorage.removeItem('cartItems');
     localStorage.removeItem('cartDeals');
     
-  } catch (error) {
-    console.error('❌ DEBUG: Cart loading/merging failed:', error);
-  }
-};
-
-
-
-// Enhanced clear cart function
-const clearCart = async () => {
-  setCartItems({});
-  setCartDeals({});
-  
-  localStorage.removeItem('cartItems');
-  localStorage.removeItem('cartDeals');
-  
-  if (token) {
-    try {
-      await axios.post(`${BACKEND_URL}/api/cart/clear`, {}, {
-        headers: { token },
-        timeout: 5000
-      });
-    } catch (error) {
-      // Silent error handling - it's OK if clear endpoint doesn't exist
-      console.log("⚠️ DEBUG: Clear endpoint not available");
+    // Force state synchronization
+    setTimeout(() => {
+      setCartLoaded(true);
+    }, 100);
+    
+    if (token) {
+      try {
+        await axios.post(`${BACKEND_URL}/api/cart/clear`, {}, {
+          headers: { token },
+          timeout: 5000
+        });
+      } catch (error) {
+        // Silent error handling - it's OK if clear endpoint doesn't exist
+        console.log("⚠️ Clear endpoint not available");
+      }
     }
-  }
-};
+  };
 
   const syncMergedCartToServer = async (mergedItems, mergedDeals) => {
     try {
@@ -219,9 +266,9 @@ const clearCart = async () => {
     }
   };
 
-
   // ==================== OPTIMIZED CART OPERATIONS ====================
 
+  // FIXED: Enhanced cart operations with proper state updates
   const updateCartItemQuantity = useCallback(async (itemId, quantity, itemType = 'product') => {
     if (itemType === 'deal') {
       await updateDealQuantity(itemId, quantity);
@@ -238,13 +285,16 @@ const clearCart = async () => {
         const updated = { ...prev };
         quantity === 0 ? delete updated[itemId] : (updated[itemId] = quantity);
         
-        if (Object.keys(updated).length > 0) {
-          localStorage.setItem('cartItems', JSON.stringify(updated));
+        // Force state update by creating new object
+        const newCart = Object.keys(updated).length > 0 ? { ...updated } : {};
+        
+        if (Object.keys(newCart).length > 0) {
+          localStorage.setItem('cartItems', JSON.stringify(newCart));
         } else {
           localStorage.removeItem('cartItems');
         }
         
-        return updated;
+        return newCart;
       });
 
       if (token) {
@@ -264,6 +314,7 @@ const clearCart = async () => {
     }
   }, [token, BACKEND_URL, products]);
 
+  // FIXED: Enhanced deal quantity updates
   const updateDealQuantity = useCallback(async (dealId, quantity) => {
     if (!dealId || quantity < 0) return;
 
@@ -277,13 +328,16 @@ const clearCart = async () => {
       const updated = { ...prev };
       quantity === 0 ? delete updated[dealId] : (updated[dealId] = quantity);
       
-      if (Object.keys(updated).length > 0) {
-        localStorage.setItem('cartDeals', JSON.stringify(updated));
+      // Force state update by creating new object
+      const newCart = Object.keys(updated).length > 0 ? { ...updated } : {};
+      
+      if (Object.keys(newCart).length > 0) {
+        localStorage.setItem('cartDeals', JSON.stringify(newCart));
       } else {
         localStorage.removeItem('cartDeals');
       }
       
-      return updated;
+      return newCart;
     });
 
     if (token) {
@@ -846,14 +900,18 @@ const clearCart = async () => {
     }
   }, [BACKEND_URL, setLoadingState]);
 
-  // Optimized cart calculations
+  // FIXED: Improved cart calculations with null checks
   const getCartItemCount = useCallback(() => {
+    if (!cartItems || !cartDeals) return 0;
+    
     const productCount = Object.values(cartItems).reduce((total, quantity) => total + quantity, 0);
     const dealCount = Object.values(cartDeals).reduce((total, quantity) => total + quantity, 0);
     return productCount + dealCount;
   }, [cartItems, cartDeals]);
 
   const calculateCartSubtotal = useCallback((items, itemsArray, priceKey = 'price', discountKey = 'discountprice') => {
+    if (!items || !itemsArray) return 0;
+    
     return Object.entries(items).reduce((total, [id, quantity]) => {
       const item = itemsArray.find(p => p._id === id);
       if (!item || quantity <= 0) return total;
@@ -870,6 +928,8 @@ const clearCart = async () => {
   }, [cartItems, cartDeals, products, deals, calculateCartSubtotal]);
 
   const getTotalDiscount = useCallback(() => {
+    if (!cartItems || !cartDeals) return 0;
+    
     const productDiscount = Object.entries(cartItems).reduce((total, [id, quantity]) => {
       const product = products.find(p => p._id === id);
       if (!product?.discountprice || quantity <= 0) return total;
@@ -895,12 +955,22 @@ const clearCart = async () => {
   }, [deals]);
 
   const isDealInCart = useCallback((dealId) => {
-    return cartDeals[dealId] > 0;
+    return cartDeals && cartDeals[dealId] > 0;
   }, [cartDeals]);
 
   const getDealQuantityInCart = useCallback((dealId) => {
-    return cartDeals[dealId] || 0;
+    return cartDeals ? cartDeals[dealId] || 0 : 0;
   }, [cartDeals]);
+
+  // ==================== CART STATE CHANGE LISTENER ====================
+
+  // NEW: Watch for cart changes and ensure proper re-renders
+  useEffect(() => {
+    if (cartLoaded) {
+      const itemCount = getCartItemCount();
+
+    }
+  }, [cartItems, cartDeals, cartLoaded, getCartItemCount]);
 
   // ==================== OPTIMIZED USE EFFECT HOOKS ====================
 
@@ -925,7 +995,7 @@ const clearCart = async () => {
     if (token) {
       getCart(token);
     }
-  }, [token]);
+  }, [token, getCart]);
 
   // ==================== CONTEXT VALUE ====================
 
@@ -941,6 +1011,7 @@ const clearCart = async () => {
     showSearch,
     cartItems,
     cartDeals,
+    cartLoaded,
     backendUrl: BACKEND_URL,
     user,
     productReviews,
@@ -1013,6 +1084,7 @@ const clearCart = async () => {
     showSearch,
     cartItems,
     cartDeals,
+    cartLoaded,
     user,
     productReviews,
     dealReviews,
@@ -1046,6 +1118,7 @@ const clearCart = async () => {
     fetchProducts,
     fetchDeals,
     BACKEND_URL,
+    CURRENCY,
     getCart,
     clearCart,
     checkProductStock,

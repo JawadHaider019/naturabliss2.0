@@ -25,33 +25,32 @@ const Cart = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [expandedDeals, setExpandedDeals] = useState({});
   const [hasOutOfStockItems, setHasOutOfStockItems] = useState(false);
+  const [isCartEmpty, setIsCartEmpty] = useState(true);
   const navigate = useNavigate();
 
-  // Check if cart is empty
-  const cartItemCount = (cartItems ? Object.keys(cartItems).length : 0) + 
-                       (cartDeals ? Object.keys(cartDeals).length : 0);
+  // ✅ Define helper functions BEFORE useCallback hooks
+  const getDealProductsFromDeal = useCallback((deal) => {
+    if (deal.dealProducts && deal.dealProducts.length > 0) {
+      return deal.dealProducts.map(product => {
+        const productData = products.find(p => p._id === product._id) || product;
+        return {
+          ...productData,
+          quantity: product.quantity || 1
+        };
+      });
+    } else if (deal.products && deal.products.length > 0) {
+      return deal.products.map(productId => {
+        const product = products.find(p => p._id === productId);
+        return {
+          ...product,
+          quantity: 1
+        };
+      });
+    }
+    return [];
+  }, [products]);
 
-  // Empty cart check - return early if cart is empty
-  if (cartItemCount === 0) {
-    return (
-      <div className="border-t border-gray-300 pt-8 md:pt-14 px-4 md:px-0">
-        <div className="mb-6 md:mb-8 text-3xl text-center">
-          <Title text1={'YOUR'} text2={'CART'} />
-        </div>
-        <div className="text-center py-12 md:py-16 border border-gray-300 bg-gray-50">
-          <p className="text-gray-600 text-lg mb-4">Your cart is empty</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-black text-white px-8 py-3 hover:bg-gray-800 transition-colors font-medium"
-          >
-            CONTINUE SHOPPING
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Stock checking - only check actual stock from backend
+  // ✅ Now define useCallback hooks that use the helper function
   const getProductStockInfo = useCallback((productId, quantity) => {
     const product = products.find(p => p._id === productId);
     if (!product) {
@@ -99,32 +98,23 @@ const Cart = () => {
       requested: quantity,
       isOutOfStock
     };
-  }, [deals, products]);
-
-  // Helper function to get deal products
-  const getDealProductsFromDeal = (deal) => {
-    if (deal.dealProducts && deal.dealProducts.length > 0) {
-      return deal.dealProducts.map(product => {
-        const productData = products.find(p => p._id === product._id) || product;
-        return {
-          ...productData,
-          quantity: product.quantity || 1
-        };
-      });
-    } else if (deal.products && deal.products.length > 0) {
-      return deal.products.map(productId => {
-        const product = products.find(p => p._id === productId);
-        return {
-          ...product,
-          quantity: 1
-        };
-      });
-    }
-    return [];
-  };
+  }, [deals, getDealProductsFromDeal]);
 
   // Update cart data whenever cartItems or cartDeals change
   useEffect(() => {
+    const cartItemCount = (cartItems ? Object.keys(cartItems).length : 0) + 
+                         (cartDeals ? Object.keys(cartDeals).length : 0);
+    
+    setIsCartEmpty(cartItemCount === 0);
+
+    // Only process cart data if cart is not empty
+    if (cartItemCount === 0) {
+      setProductCartData([]);
+      setDealCartData([]);
+      setHasOutOfStockItems(false);
+      return;
+    }
+
     // Process products
     const tempProductData = [];
     let outOfStockFound = false;
@@ -177,6 +167,27 @@ const Cart = () => {
     setHasOutOfStockItems(outOfStockFound);
   }, [cartItems, cartDeals, products, deals, getProductStockInfo, getDealStockInfo]);
 
+  // ✅ NO EARLY RETURN - conditionally render content instead
+  if (isCartEmpty) {
+    return (
+      <div className="border-t border-gray-300 pt-8 md:pt-14 px-4 md:px-0">
+        <div className="mb-6 md:mb-8 text-3xl text-center">
+          <Title text1={'YOUR'} text2={'CART'} />
+        </div>
+        <div className="text-center py-12 md:py-16 border border-gray-300 bg-gray-50">
+          <p className="text-gray-600 text-lg mb-4">Your cart is empty</p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-black text-white px-8 py-3 hover:bg-gray-800 transition-colors font-medium"
+          >
+            CONTINUE SHOPPING
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Rest of your component functions...
   const getItemDisplayData = (item) => {
     if (item.type === 'product') {
       const product = item.data;
@@ -295,7 +306,7 @@ const Cart = () => {
 
   // Fixed quantity update functions
   const handleQuantityUpdate = (itemId, quantity, itemType) => {
-    console.log(`Updating ${itemType} ${itemId} to quantity ${quantity}`);
+  
     
     if (itemType === 'deal') {
       updateDealQuantity(itemId, quantity);
