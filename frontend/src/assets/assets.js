@@ -6,6 +6,7 @@ import Newsletter from './Newsletter.webp';
 import logo from './logo.png';
 import cart_icon from './cart_icon.png';
 import bin_icon from './bin_icon.png';
+import order_icon from './order_icon.png';
 import dropdown_icon from './dropdown_icon.png';
 import exchange_icon from './exchange_icon.png';
 import profile_icon from './profile_icon.png';
@@ -24,6 +25,7 @@ import fav from './fav.png'
 export const assets = {
   logo,
   cart_icon,
+  order_icon,
   dropdown_icon,
   exchange_icon,
   profile_icon,

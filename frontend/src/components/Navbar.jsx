@@ -136,13 +136,17 @@ const Navbar = () => {
         
         <div className='flex items-center gap-6'>
           {/* Search icon removed */}
+          
+          {/* Orders Icon - Always visible */}
+          <div className="relative cursor-pointer" onClick={() => navigate('/orders')}>
+            <img src={assets.order_icon} className="w-5 h-5 cursor-pointer" alt="Orders" />
+          </div>
+          
           <div className='group relative'>
             <img onClick={()=> token ? null: navigate('/login') } src={assets.profile_icon} className='w-5 cursor-pointer' alt="Profile Icon" />
             {token && (
               <div className='absolute right-0 z-10 hidden pt-4 group-hover:block'>
                 <div className='flex w-36 flex-col gap-2 rounded bg-slate-100 px-5 py-3 text-gray-500'>
-                
-                  <p onClick={()=>navigate('/orders')} className="cursor-pointer hover:text-black">Orders</p>
                   <p onClick={logout} className="cursor-pointer hover:text-black">Logout</p>
                 </div>
               </div>
@@ -208,6 +212,16 @@ const Navbar = () => {
               >
                 CONTACT
               </NavLink>
+              {/* Add Orders link to mobile menu too */}
+              <div 
+                onClick={() => {
+                  navigate('/orders');
+                  handleMobileNavClick();
+                }}
+                className="block border-b py-4 pl-6 text-gray-600 cursor-pointer hover:text-black hover:bg-gray-50"
+              >
+                ORDERS
+              </div>
             </div>
           </div>
         </div>

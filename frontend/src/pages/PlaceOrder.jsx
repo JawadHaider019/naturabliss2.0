@@ -12,7 +12,6 @@ const PlaceOrder = () => {
   const [loading, setLoading] = useState(false);
   const [isDataReady, setIsDataReady] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-  const [hasUserDataLoaded, setHasUserDataLoaded] = useState(false);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -42,7 +41,13 @@ const PlaceOrder = () => {
   // Form data state
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('orderFormData');
-    return savedData ? JSON.parse(savedData) : {
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      return parsedData;
+    }
+    
+    // Set defaults - user data if logged in, otherwise empty
+    const defaultData = {
       fullName: '',
       email: '',
       street: '',
@@ -51,19 +56,16 @@ const PlaceOrder = () => {
       zipcode: '',
       phone: ''
     };
-  });
-
-  // 🆕 LOAD USER DATA AS DEFAULTS
-  useEffect(() => {
-    if (user?.name && user?.email && !hasUserDataLoaded) {
-      setFormData(prev => ({
-        ...prev,
-        fullName: user.name,
-        email: user.email
-      }));
-      setHasUserDataLoaded(true);
+    
+    // If user is logged in, pre-fill with their data
+    if (user?.name && user?.email) {
+      defaultData.fullName = user.name;
+      defaultData.email = user.email;
+      if (user.phone) defaultData.phone = user.phone;
     }
-  }, [user, hasUserDataLoaded]);
+    
+    return defaultData;
+  });
 
   // Load Pakistan states
   useEffect(() => {
@@ -140,7 +142,7 @@ const PlaceOrder = () => {
     }
   }, [cityZipData, formData.zipcode, validationErrors.zipcode]);
 
-  // Validate address - UPDATED to always return valid for basic cases
+  // Validate address
   const validateAddress = useCallback(async (city, state, zipcode) => {
     if (!city || !state) return { isValid: false, message: 'City and state are required' };
 
@@ -195,40 +197,21 @@ const PlaceOrder = () => {
     }
   }, [formData.city, formData.zipcode, cityZipData, autoFillZipCode]);
 
-  // SIMPLIFIED ZIP code validation - only check for 5 digits, no blocking
-  const validateZipCode = useCallback((zipcode) => {
-    if (!zipcode) return 'ZIP code is required';
-    if (!/^\d{5}$/.test(zipcode)) return 'ZIP code must be 5 digits';
-    return true;
-  }, []);
-
   // Save form data to localStorage
   useEffect(() => {
     localStorage.setItem('orderFormData', JSON.stringify(formData));
   }, [formData]);
 
-  // Check authentication
+  // Check if cart data is ready
   useEffect(() => {
-    if (!token || !user) {
-      sessionStorage.setItem('redirectAfterLogin', '/place-order');
-      navigate('/login');
-    }
-  }, [token, user, navigate]);
-
-  // FIXED: Check if cart data is ready - simplified logic
-  useEffect(() => {
-    // Check if we have any cart items OR if products/deals are loaded
     const hasCartItems = (cartItems && Object.keys(cartItems).length > 0) || 
                         (cartDeals && Object.keys(cartDeals).length > 0);
     
-    // Products and deals might be empty arrays, that's fine
     const hasProductsData = products !== undefined;
     const hasDealsData = deals !== undefined;
     
-    // Data is ready if we have the necessary data structures, even if cart is empty
     const ready = hasProductsData && hasDealsData;
     
-
     setIsDataReady(ready);
   }, [cartItems, cartDeals, products, deals]);
 
@@ -273,7 +256,7 @@ const PlaceOrder = () => {
     }
   }, []);
 
-  // Field validation - UPDATED to remove blocking ZIP validation
+  // Field validation
   const validateField = async (name, value) => {
     const errors = {};
     
@@ -304,7 +287,6 @@ const PlaceOrder = () => {
         break;
         
       case 'zipcode':
-        // SIMPLIFIED: Only check for 5 digits, but don't block submission
         if (!value.trim()) errors.zipcode = 'ZIP code is required';
         else if (!/^\d{5}$/.test(value.trim())) errors.zipcode = 'ZIP code must be 5 digits';
         break;
@@ -321,7 +303,7 @@ const PlaceOrder = () => {
   const validateForm = async () => {
     const errors = {};
     
-    // Validate all form fields except ZIP code validation won't block submission
+    // Validate all form fields
     for (const field of Object.keys(formData)) {
       const fieldErrors = await validateField(field, formData[field]);
       Object.assign(errors, fieldErrors);
@@ -329,9 +311,9 @@ const PlaceOrder = () => {
     
     setValidationErrors(errors);
     
-    // Allow submission even if there are ZIP code errors (they're just warnings now)
+    // Allow submission even if there are ZIP code errors
     const blockingErrors = { ...errors };
-    delete blockingErrors.zipcode; // Remove ZIP code errors from blocking validation
+    delete blockingErrors.zipcode;
     
     return Object.keys(blockingErrors).length === 0;
   };
@@ -377,7 +359,7 @@ const PlaceOrder = () => {
       }
     }
     
-    // Real-time ZIP validation - SIMPLIFIED
+    // Real-time ZIP validation
     if (name === 'zipcode' && value.length === 5 && /^\d{5}$/.test(value)) {
       setValidationErrors(prev => ({
         ...prev,
@@ -409,105 +391,119 @@ const PlaceOrder = () => {
     setShowSuggestions(false);
   };
 
-// Cart processing - FIXED DEAL PRICING
-const getDealProducts = (deal) => {
-  if (deal.dealProducts?.length > 0) {
-    return deal.dealProducts.map(product => {
-      const productData = products.find(p => p._id === product._id) || product;
-      return { ...productData, quantity: product.quantity || 1 };
-    });
-  }
-  return [];
-};
+  // Cart processing
+  const getDealProducts = (deal) => {
+    if (deal.dealProducts?.length > 0) {
+      return deal.dealProducts.map(product => {
+        const productData = products.find(p => p._id === product._id) || product;
+        return { ...productData, quantity: product.quantity || 1 };
+      });
+    }
+    return [];
+  };
 
-// Process cart items for order - FIXED DEAL PRICING
-const processCartItems = () => {
-  let orderItems = [];
-  let calculatedAmount = 0;
+  // Process cart items for order
+  const processCartItems = () => {
+    let orderItems = [];
+    let calculatedAmount = 0;
 
-  // Process regular products
-  if (cartItems && products) {
-    Object.entries(cartItems).forEach(([itemId, quantity]) => {
-      if (quantity > 0) {
-        const productInfo = products.find(product => product._id === itemId);
-        if (productInfo?.name) {
-          const unitPrice = productInfo.discountprice > 0 ? productInfo.discountprice : productInfo.price;
-          const itemTotal = unitPrice * quantity;
-          
-          orderItems.push({
-            id: productInfo._id,
-            name: productInfo.name,
-            price: unitPrice,
-            quantity: quantity,
-            image: productInfo.image?.[0],
-            category: productInfo.category,
-            isFromDeal: false,
-            description: productInfo.description,
-            originalPrice: productInfo.price,
-            hasDiscount: productInfo.discountprice > 0
-          });
-          
-          calculatedAmount += itemTotal;
+    // Process regular products
+    if (cartItems && products) {
+      Object.entries(cartItems).forEach(([itemId, quantity]) => {
+        if (quantity > 0) {
+          const productInfo = products.find(product => product._id === itemId);
+          if (productInfo?.name) {
+            const unitPrice = productInfo.discountprice > 0 ? productInfo.discountprice : productInfo.price;
+            const itemTotal = unitPrice * quantity;
+            
+            orderItems.push({
+              id: productInfo._id,
+              name: productInfo.name,
+              price: unitPrice,
+              quantity: quantity,
+              image: productInfo.image?.[0] || assets.placeholder_image,
+              category: productInfo.category || 'Product',
+              isFromDeal: false,
+              description: productInfo.description,
+              originalPrice: productInfo.price,
+              hasDiscount: productInfo.discountprice > 0
+            });
+            
+            calculatedAmount += itemTotal;
+          }
         }
-      }
-    });
-  }
+      });
+    }
 
-  // Process deals - FIXED: Use the deal's fixed price, not individual product prices
-  if (cartDeals && deals) {
-    Object.entries(cartDeals).forEach(([dealId, dealQuantity]) => {
-      if (dealQuantity > 0) {
-        const dealInfo = deals.find(deal => deal._id === dealId);
-        if (dealInfo?.dealName) {
-          // FIXED: Use the deal's fixed price
-          const dealPrice = dealInfo.dealFinalPrice || dealInfo.price || dealInfo.dealPrice || 0;
-          const dealTotal = dealPrice * dealQuantity;
-          
-          // Calculate what the individual products would cost (for display only)
-          let individualProductsTotal = 0;
-          const dealProducts = getDealProducts(dealInfo);
-          dealProducts.forEach(product => {
-            const productPrice = product.discountprice > 0 ? product.discountprice : product.price;
-            individualProductsTotal += (productPrice * (product.quantity || 1));
-          });
-          
-          const savings = Math.max(0, individualProductsTotal - dealPrice);
-          
-          orderItems.push({
-            id: dealInfo._id,
-            name: dealInfo.dealName,
-            price: dealPrice, // This is the fixed deal price
-            quantity: dealQuantity,
-            image: dealInfo.dealImages?.[0] || assets.placeholder_image,
-            category: 'Deal',
-            isFromDeal: true,
-            description: dealInfo.dealDescription,
-            originalTotalPrice: individualProductsTotal, // For display purposes
-            savings: savings, // For display purposes
-            dealProducts: dealProducts,
-            type: 'deal'
-          });
-          
-          calculatedAmount += dealTotal;
+    // Process deals
+    if (cartDeals && deals) {
+      Object.entries(cartDeals).forEach(([dealId, dealQuantity]) => {
+        if (dealQuantity > 0) {
+          const dealInfo = deals.find(deal => deal._id === dealId);
+          if (dealInfo?.dealName) {
+            const dealPrice = dealInfo.dealFinalPrice || dealInfo.price || dealInfo.dealPrice || 0;
+            const dealTotal = dealPrice * dealQuantity;
+            
+            let individualProductsTotal = 0;
+            const dealProducts = getDealProducts(dealInfo);
+            dealProducts.forEach(product => {
+              const productPrice = product.discountprice > 0 ? product.discountprice : product.price;
+              individualProductsTotal += (productPrice * (product.quantity || 1));
+            });
+            
+            const savings = Math.max(0, individualProductsTotal - dealPrice);
+            
+            orderItems.push({
+              id: dealInfo._id,
+              name: dealInfo.dealName,
+              price: dealPrice,
+              quantity: dealQuantity,
+              image: dealInfo.dealImages?.[0] || assets.placeholder_image,
+              category: 'Deal',
+              isFromDeal: true,
+              description: dealInfo.dealDescription,
+              originalTotalPrice: individualProductsTotal,
+              savings: savings,
+              dealProducts: dealProducts,
+              type: 'deal'
+            });
+            
+            calculatedAmount += dealTotal;
+          }
         }
-      }
-    });
-  }
+      });
+    }
 
-  return { orderItems, calculatedAmount };
-};
+    return { orderItems, calculatedAmount };
+  };
+
+  // 🆕 Clear cart after order
+  const clearCartAfterOrder = async () => {
+    if (token) {
+      // Clear cart for logged-in users via API
+      try {
+        await axios.post(`${backendUrl}/api/user/clear-cart`, {}, {
+          headers: { token }
+        });
+        console.log('✅ Cleared cart for logged-in user');
+      } catch (error) {
+        console.error('Failed to clear cart:', error);
+      }
+    } else {
+      // Clear localStorage for guests
+      setCartItems({});
+      setCartDeals({});
+      localStorage.removeItem('cartItems');
+      localStorage.removeItem('cartDeals');
+      console.log('✅ Cleared cart from localStorage for guest');
+    }
+  };
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
     
     if (!await validateForm()) {
       toast.error('Please fix the validation errors before submitting');
-      return;
-    }
-    
-    if (!token || !user) {
-      sessionStorage.setItem('redirectAfterLogin', '/place-order');
-      navigate('/login');
       return;
     }
     
@@ -540,63 +536,171 @@ const processCartItems = () => {
         return;
       }
 
-      // 🆕 SIMPLIFIED: Always use the form data for customer details
+      // Prepare order data
       const orderData = {
-        address: formData,
+        address: {
+          street: formData.street.trim(),
+          city: formData.city.trim(),
+          state: formData.state,
+          zipcode: formData.zipcode.trim()
+        },
         items: orderItems,
         amount: finalAmount,
         deliveryCharges: deliveryCharge,
         method: 'COD',
         addressVerified: addressValidation.isValid && !addressValidation.requiresManualVerification,
-        // 🆕 Always send customerDetails using the form data
         customerDetails: {
           name: formData.fullName.trim(),
           email: formData.email.trim(),
-          phone: formData.phone
+          phone: formData.phone.replace(/\D/g, '') // Remove dashes
         }
       };
 
       console.log("📦 ORDER DATA BEING SENT:", {
-        customerDetails: orderData.customerDetails
+        customerDetails: orderData.customerDetails,
+        hasToken: !!token,
+        isGuest: !token
       });
 
-      const response = await axios.post(backendUrl + '/api/order/place', orderData, {
-        headers: { token, 'Content-Type': 'application/json' }
-      });
+      // 🆕 Config for both guest and logged-in users
+      const config = {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      // Add token only if it exists (for logged-in users)
+      if (token) {
+        config.headers.token = token;
+      }
+
+      // 🆕 Call the unified order endpoint
+      const response = await axios.post(
+        `${backendUrl}/api/order/place`,
+        orderData,
+        config
+      );
       
       if (response.data.success) {
-        setCartItems({});
-        setCartDeals({});
+        // Clear cart
+        await clearCartAfterOrder();
+        
+        // Clear form data
         localStorage.removeItem('orderFormData');
+        
+        // Show success message
         toast.success(response.data.message);
-        navigate('/orders');
+        
+        // 🆕 Handle guest order storage - SAVE COMPLETE DATA
+        if (!token) {
+          // 🆕 Prepare COMPLETE order data for localStorage
+          const completeGuestOrder = {
+            _id: response.data.orderId,
+            userId: null,
+            items: orderItems.map(item => ({
+              id: item.id || item._id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              image: item.image || assets.placeholder_image,
+              category: item.category || 'Product',
+              isFromDeal: item.isFromDeal || false,
+              dealImage: item.dealImage,
+              originalTotalPrice: item.originalTotalPrice,
+              savings: item.savings,
+              description: item.description
+            })),
+            amount: finalAmount,
+            deliveryCharges: deliveryCharge,
+            address: {
+              street: formData.street.trim(),
+              city: formData.city.trim(),
+              state: formData.state,
+              zipcode: formData.zipcode.trim()
+            },
+            paymentMethod: 'COD',
+            payment: false,
+            status: 'Order Placed',
+            date: Date.now(),
+            customerDetails: {
+              name: formData.fullName.trim(),
+              email: formData.email.trim(),
+              phone: formData.phone.replace(/\D/g, '')
+            },
+            isGuest: true,
+            isRecent: true
+          };
+          
+          // 🆕 Save to localStorage for immediate display
+          localStorage.setItem('recentGuestOrder', JSON.stringify(completeGuestOrder));
+          
+          // 🆕 Also save to guestOrders list for persistence
+          const existingGuestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]');
+          const updatedGuestOrders = [completeGuestOrder, ...existingGuestOrders.filter(o => o._id !== completeGuestOrder._id)];
+          localStorage.setItem('guestOrders', JSON.stringify(updatedGuestOrders));
+          
+          // 🆕 Save guest info for backend sync
+          localStorage.setItem('guestOrderInfo', JSON.stringify({
+            email: formData.email.trim(),
+            phone: formData.phone.replace(/\D/g, ''),
+            timestamp: Date.now(),
+            customerName: formData.fullName.trim()
+          }));
+          
+          console.log("💾 Saved COMPLETE guest order to localStorage:", completeGuestOrder);
+          
+          // Show guest-specific success message
+          toast.info(
+            <div>
+              <div className="font-semibold">🎉 Order Placed Successfully!</div>
+              <div className="text-sm mt-1">
+                Your order #<span className="font-medium">{response.data.orderId.slice(-6)}</span> has been placed.
+                You can view your order on the orders page.
+              </div>
+            </div>,
+            { autoClose: 5000 }
+          );
+        } else {
+          // Logged-in user message
+          toast.success(
+            <div>
+              <div className="font-semibold">🎉 Order Placed Successfully!</div>
+              <div className="text-sm mt-1">
+                Your order #<span className="font-medium">{response.data.orderId.slice(-6)}</span> has been placed.
+              </div>
+            </div>,
+            { autoClose: 3000 }
+          );
+        }
+        
+        // 🆕 Wait a moment before redirecting to show success message
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1000);
+        
       } else {
         toast.error(response.data.message || 'Failed to place order');
       }
 
     } catch (error) {
       console.error('Order placement error:', error);
-      if (error.response?.status === 401) {
-        sessionStorage.setItem('redirectAfterLogin', '/place-order');
-        navigate('/login');
+      
+      // 🆕 Improved error handling
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Network error. Please check your internet connection.');
+      } else if (error.response?.status === 401 && token) {
+        toast.error('Session expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
       } else {
-        toast.error(error.response?.data?.message || 'Failed to place order');
+        toast.error('Failed to place order. Please try again.');
       }
     } finally {
       setLoading(false);
       setIsValidatingAddress(false);
     }
   };
-
-  if (!token || !user) {
-    return (
-      <div className="flex min-h-[80vh] items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Redirecting to login...</div>
-        </div>
-      </div>
-    );
-  }
 
   // Render methods with proper labels
   const renderInputField = (name, type = 'text', placeholder, label, required = true) => (
@@ -619,7 +723,6 @@ const processCartItems = () => {
       {validationErrors[name] && (
         <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors[name]}</p>
       )}
-
     </div>
   );
 
@@ -801,10 +904,8 @@ const processCartItems = () => {
           <Title text1={'DELIVERY'} text2={'INFORMATION'}/>
         </div> 
         
-      
-        {/* 🆕 SIMPLIFIED: Just use the same input fields */}
-        {renderInputField('fullName', 'text', 'Enter customer name for this order', 'Customer Name', true, true)}
-        {renderInputField('email', 'email', 'customer@example.com', 'Customer Email', true, true)}
+        {renderInputField('fullName', 'text', 'Enter customer name for this order', 'Customer Name', true)}
+        {renderInputField('email', 'email', 'customer@example.com', 'Customer Email', true)}
         
         {renderAddressInput()}
         
@@ -832,20 +933,55 @@ const processCartItems = () => {
               <p className='text-sm font-medium text-gray-700'>CASH ON DELIVERY</p>
             </div>
           </div>
+          
+          {/* 🆕 Additional info for guests */}
+          {!token && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-xs text-amber-800">
+                <span className="font-semibold">Note for guest orders:</span> Your order will be saved automatically. 
+                You can view it on the orders page.
+              </p>
+            </div>
+          )}
+          
           <div className='mt-8 w-full text-end'>
             <button 
               type='submit' 
-              className={`bg-black text-white px-8 py-4 font-semibold hover:bg-gray-800 active:bg-gray-900 transition-colors w-full md:w-auto text-base   ${
+              className={`relative px-8 py-4 font-semibold w-full md:w-auto text-base ${
                 loading || !isDataReady || isValidatingAddress
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:shadow-lg transform hover:-translate-y-0.5'
-              }`}
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                  : 'bg-black text-white hover:bg-gray-800 active:bg-gray-900 hover:shadow-lg transform hover:-translate-y-0.5'
+              } transition-all duration-200 rounded-md`}
               disabled={loading || !isDataReady || isValidatingAddress}
             >
-              {isValidatingAddress ? 'VALIDATING ADDRESS...' : 
-               loading ? 'PLACING ORDER...' : 
-               !isDataReady ? 'LOADING...' : 'PLACE ORDER'}
+              {isValidatingAddress ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  VALIDATING ADDRESS...
+                </span>
+              ) : loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  PLACING ORDER...
+                </span>
+              ) : !isDataReady ? (
+                'LOADING CART...'
+              ) : (
+                'PLACE ORDER'
+              )}
             </button>
+            
+            {!token && !loading && isDataReady && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                By placing this order, you agree to our Terms of Service
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -38,12 +38,10 @@ const BestSeller = () => {
         return isExplicitBestSeller;
       });
 
-      // If no explicit best sellers found, return empty array
+
       if (bestProducts.length === 0) {
         return [];
       }
-
-      // Limit to 8 bestseller products
       const finalBestSellers = bestProducts.slice(0, 20);
 
       return finalBestSellers;

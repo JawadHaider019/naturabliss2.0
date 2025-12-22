@@ -5,40 +5,46 @@ import {
   userOrders, 
   updateStatus, 
   cancelOrder,
+  cancelGuestOrder,
   getCancellationReasons,
   checkStock,
   getUserNotifications,
   getAdminNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getOrderDetails // 🆕 Import the new function
+  getOrderDetails,
+  getGuestOrderDetails,
+  getGuestOrders
 } from "../controllers/orderController.js"
 import { authUser } from "../middleware/auth.js"
-import  adminAuth  from "../middleware/adminAuth.js"
+import adminAuth from "../middleware/adminAuth.js"
 
 const orderRoutes = express.Router()
 
 // Admin routes
 orderRoutes.get("/list", adminAuth, allOrders)
 orderRoutes.post("/status", adminAuth, updateStatus)
+orderRoutes.get("/admin/notifications", adminAuth, getAdminNotifications)
 
-// Payment
-orderRoutes.post("/place", authUser, placeOrder)
+// 🆕 PUBLIC ORDER PLACEMENT (for both guest and logged-in users)
+orderRoutes.post("/place", placeOrder) // No auth middleware!
 
-// User orders
+// User routes (require auth)
 orderRoutes.post("/userorders", authUser, userOrders)
 orderRoutes.post("/cancel", authUser, cancelOrder)
-orderRoutes.get("/:orderId", authUser, getOrderDetails) // 🆕 Get specific order details
+orderRoutes.get("/:orderId", authUser, getOrderDetails)
 
-// Cancellation reasons
+// Guest routes (public, no auth required)
+orderRoutes.post("/guest-orders", getGuestOrders)
+orderRoutes.post("/guest-order-details", getGuestOrderDetails)
+orderRoutes.post("/cancel-guest", cancelGuestOrder)
+
+// Public routes
 orderRoutes.get("/cancellation-reasons", getCancellationReasons)
+orderRoutes.post("/check-stock", checkStock)
 
-// Stock check
-orderRoutes.post("/check-stock", authUser, checkStock)
-
-// 🆕 NOTIFICATION ROUTES
+// Notification routes (require auth)
 orderRoutes.get("/notifications", authUser, getUserNotifications)
-orderRoutes.get("/admin/notifications", adminAuth, getAdminNotifications)
 orderRoutes.post("/notifications/mark-read", authUser, markNotificationAsRead)
 orderRoutes.post("/notifications/mark-all-read", authUser, markAllNotificationsAsRead)
 

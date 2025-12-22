@@ -108,7 +108,6 @@ const App = () => {
         
         <Navbar/>
         <SearchBar/>
-        
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path='/' element={<Home/>}/>

@@ -6,243 +6,203 @@ import { assets } from "../assets/assets";
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faTimesCircle,
   faClock,
   faBox,
   faShippingFast,
   faMotorcycle,
   faCheckCircle,
-  faPhone,
   faMapMarkerAlt,
   faCreditCard,
-  faExclamationTriangle,
-  faImage
+  faUser,
+  faShoppingBag,
+  faHistory
 } from '@fortawesome/free-solid-svg-icons';
 
-// Global image cache
+// Helper functions (keep these at the top)
 const imageCache = new Map();
 
-// Ultra-fast image URL resolver
-const resolveImageUrl = (image, backendUrl) => {
-  if (!image) return assets.placeholder_image;
-  
-  const cacheKey = `${backendUrl}-${JSON.stringify(image)}`;
-  if (imageCache.has(cacheKey)) {
-    return imageCache.get(cacheKey);
-  }
+const resolveImageUrl = (imageSource, backendUrl) => {
+  if (!imageSource) return assets.placeholder_image;
+  if (imageSource.startsWith('http')) return imageSource;
+  if (imageSource.startsWith('/')) return `${backendUrl}${imageSource}`;
+  return `${backendUrl}/uploads/${imageSource}`;
+};
 
-  let url = assets.placeholder_image;
-  
-  if (Array.isArray(image) && image.length > 0) {
-    url = image[0];
-  } else if (image && typeof image === 'object' && image.url) {
-    url = image.url;
-  } else if (typeof image === 'string') {
-    if (image.startsWith('data:image')) {
-      url = image;
-    } else if (image.startsWith('/uploads/') && backendUrl) {
-      url = `${backendUrl}${image}`;
-    } else if (image in assets) {
-      url = assets[image];
-    } else {
-      url = image;
+const preloadImages = (imageUrls) => {
+  imageUrls.forEach(url => {
+    if (!imageCache.has(url)) {
+      const img = new Image();
+      img.src = url;
+      imageCache.set(url, img);
     }
-  }
-
-  imageCache.set(cacheKey, url);
-  return url;
+  });
 };
 
-// Preload images in batches
-const preloadImages = (urls) => {
-  if (!urls.length) return;
+// 🆕 Function to get product image by ID
+const getProductImageById = async (productId, backendUrl) => {
+  if (!productId) return assets.placeholder_image;
   
-  // Use requestIdleCallback for non-critical image preloading
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      urls.forEach(url => {
-        if (url && url !== assets.placeholder_image && !imageCache.get(`loaded-${url}`)) {
-          const img = new Image();
-          img.src = url;
-          imageCache.set(`loaded-${url}`, true);
-        }
-      });
-    });
-  } else {
-    // Fallback for older browsers
-    setTimeout(() => {
-      urls.forEach(url => {
-        if (url && url !== assets.placeholder_image && !imageCache.get(`loaded-${url}`)) {
-          const img = new Image();
-          img.src = url;
-          imageCache.set(`loaded-${url}`, true);
-        }
-      });
-    }, 0);
+  try {
+    // Try to get product from localStorage cache first
+    const cachedProducts = localStorage.getItem('productCache');
+    if (cachedProducts) {
+      const products = JSON.parse(cachedProducts);
+      const cachedProduct = products.find(p => p._id === productId);
+      if (cachedProduct?.image?.[0]) {
+        return resolveImageUrl(cachedProduct.image[0], backendUrl);
+      }
+    }
+    
+    // If not in cache, try to fetch from backend
+    const response = await axios.get(`${backendUrl}/api/products/${productId}`);
+    if (response.data.success && response.data.data?.image?.[0]) {
+      return resolveImageUrl(response.data.data.image[0], backendUrl);
+    }
+  } catch (error) {
+    console.error("Error fetching product image:", error);
   }
+  
+  return assets.placeholder_image;
 };
 
-// Lightning-fast Image component
-const OrderItemImage = memo(({ imageUrl, alt, className = "" }) => {
-  const [loaded, setLoaded] = useState(imageCache.get(`loaded-${imageUrl}`) || false);
-  const [error, setError] = useState(false);
+const OrderItemImage = memo(({ item, backendUrl }) => {
+  const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState(assets.placeholder_image);
 
   useEffect(() => {
-    if (imageCache.get(`loaded-${imageUrl}`)) {
-      setLoaded(true);
-      return;
-    }
-
-    let mounted = true;
-    const img = new Image();
-    
-    img.onload = () => {
-      imageCache.set(`loaded-${imageUrl}`, true);
-      if (mounted) {
-        setLoaded(true);
-        setError(false);
+    const loadImage = async () => {
+      setIsLoading(true);
+      setImageError(false);
+      
+      try {
+        let url = assets.placeholder_image;
+        
+        if (item.isFromDeal && item.dealImage) {
+          // Use deal image if available
+          url = resolveImageUrl(item.dealImage, backendUrl);
+        } else if (item.image) {
+          // Use direct image if available
+          url = resolveImageUrl(item.image, backendUrl);
+        } else if (item.id) {
+          // Try to get image by product ID
+          url = await getProductImageById(item.id, backendUrl);
+        }
+        
+        setImageUrl(url);
+        
+        // Preload the image
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+          setIsLoading(false);
+          setImageError(false);
+        };
+        img.onerror = () => {
+          setIsLoading(false);
+          setImageError(true);
+          setImageUrl(assets.placeholder_image);
+        };
+      } catch (error) {
+        console.error("Error loading order item image:", error);
+        setIsLoading(false);
+        setImageError(true);
+        setImageUrl(assets.placeholder_image);
       }
     };
     
-    img.onerror = () => {
-      if (mounted) {
-        setError(true);
-        setLoaded(true);
-      }
-    };
-    
-    img.src = imageUrl;
-
-    return () => {
-      mounted = false;
-    };
-  }, [imageUrl]);
-
-  const displayUrl = error ? assets.placeholder_image : imageUrl;
+    loadImage();
+  }, [item, backendUrl]);
 
   return (
-    <div className={`flex items-center justify-center overflow-hidden bg-white border border-gray-200 ${className}`}>
-      {!loaded ? (
-        <div className="flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
-          <FontAwesomeIcon icon={faImage} className="text-gray-200 text-lg" />
+    <div className="relative h-16 w-16 md:h-20 md:w-20 rounded-md border-2 border-gray-200 overflow-hidden">
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
+      )}
+      <img
+        src={imageError ? assets.placeholder_image : imageUrl}
+        alt={item.name}
+        className={`h-full w-full object-cover ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+        loading="lazy"
+      />
+      {item.isFromDeal && (
+        <div className="absolute top-1 left-1 bg-yellow-600 text-white text-xs px-2 py-1 rounded font-semibold">
+          Deal
         </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center w-full h-full p-2 bg-gray-100">
-          <FontAwesomeIcon icon={faImage} className="text-gray-400 text-lg mb-1" />
-          <span className="text-xs text-gray-500">No image</span>
-        </div>
-      ) : (
-        <img
-          className="w-full h-full object-contain p-1"
-          src={displayUrl}
-          alt={alt}
-          loading="eager"
-          decoding="async"
-        />
       )}
     </div>
   );
 });
 
-// Ultra-fast Order Item
 const OrderItem = memo(({ item, currency, backendUrl }) => {
-  const itemData = useMemo(() => {
-    const isDeal = item.isFromDeal === true;
-    const imageSource = isDeal ? (item.dealImage || item.image) : item.image;
-    const imageUrl = resolveImageUrl(imageSource, backendUrl);
-    const price = item.price || 0;
-    const discountPrice = item.discountprice > 0 ? item.discountprice : price;
-    
-    return {
-      name: isDeal ? (item.dealName || item.name) : item.name,
-      image: imageUrl,
-      originalPrice: price,
-      discountedPrice: discountPrice,
-      isFromDeal: isDeal,
-      description: isDeal ? item.dealDescription : item.description
-    };
-  }, [item, backendUrl]);
-
-  const { totalPrice, unitPrice, originalTotalPrice, showOriginalPrice } = useMemo(() => ({
-    totalPrice: (itemData.discountedPrice * item.quantity).toFixed(2),
-    unitPrice: itemData.discountedPrice.toFixed(2),
-    originalTotalPrice: (itemData.originalPrice * item.quantity).toFixed(2),
-    showOriginalPrice: itemData.originalPrice > itemData.discountedPrice
-  }), [itemData, item.quantity]);
-
   return (
-    <div className="flex gap-4 p-4 hover:bg-gray-50 md:items-start">
-      <div className="flex-shrink-0">
-        <OrderItemImage 
-          imageUrl={itemData.image}
-          alt={itemData.name}
-          className="w-24 h-24 md:w-28 md:h-28"
-        />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2 mb-2">
-          <p className="font-semibold text-black text-base truncate">{itemData.name}</p>
-          {itemData.isFromDeal && (
-            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-black text-white shrink-0">
-              Deal
-            </span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          {showOriginalPrice && (
-            <div className="flex flex-col">
-              <span className="text-gray-600 font-medium">Original</span>
-              <span className="line-through text-gray-500 text-base">
-                {currency}{originalTotalPrice}
-              </span>
+    <div className="p-4">
+      <div className="flex items-start gap-4">
+        <OrderItemImage item={item} backendUrl={backendUrl} />
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-3 mb-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-black text-base md:text-lg truncate">
+                {item.name}
+              </p>
+              <p className="text-gray-600 text-sm truncate">
+                {item.category || 'Product'}
+              </p>
             </div>
-          )}
-
-          <div className="flex flex-col">
-            <span className="text-gray-600 font-medium">{itemData.isFromDeal ? 'Deal' : 'Price'}</span>
-            <span className="font-semibold text-black text-base">
-              {currency}{totalPrice}
-            </span>
+            <p className="text-black font-bold text-lg md:text-xl shrink-0">
+              {currency}{item.price.toFixed(2)}
+            </p>
           </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600 font-medium">Quantity</span>
-            <span className="font-semibold text-black text-base">{item.quantity}</span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600 font-medium">Unit Price</span>
-            <span className="font-semibold text-gray-800 text-base">
-              {currency}{unitPrice}
-            </span>
+          
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <p className="text-gray-700 text-sm font-medium">
+                Qty: <span className="text-black font-bold">{item.quantity}</span>
+              </p>
+              <p className="text-gray-700 text-sm font-medium">
+                Total: <span className="text-black font-bold">
+                  {currency}{(item.price * item.quantity).toFixed(2)}
+                </span>
+              </p>
+            </div>
+            
+            {item.isFromDeal && item.originalTotalPrice && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-sm line-through">
+                  {currency}{item.originalTotalPrice.toFixed(2)}
+                </span>
+                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
+                  Save {currency}{item.savings?.toFixed(2) || '0.00'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-
-        {itemData.description && (
-          <p className="text-sm text-gray-600 mt-2 line-clamp-1">
-            {itemData.description}
-          </p>
-        )}
       </div>
     </div>
   );
 });
 
-// Blazing-fast Order Card
-const OrderCard = memo(({ order, currency, backendUrl, isCancellable, onCancelOrder }) => {
+const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
   const { subtotal, total, formattedDate, statusIcon, statusColor } = useMemo(() => {
-    const subtotal = order.items.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+    const subtotal = order.items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const total = subtotal + (order.deliveryCharges || 0);
-    const formattedDate = new Date(parseInt(order.date)).toLocaleDateString();
+    const formattedDate = new Date(parseInt(order.date)).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     
     const statusMap = {
       'Order Placed': { icon: faClock, color: 'text-black bg-yellow-100 border-yellow-300' },
-      'Packing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
+      'Processing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
       'Shipped': { icon: faShippingFast, color: 'text-black bg-purple-100 border-purple-300' },
       'Out for delivery': { icon: faMotorcycle, color: 'text-black bg-orange-100 border-orange-300' },
-      'Delivered': { icon: faCheckCircle, color: 'text-black bg-green-100 border-green-300' }
+      'Delivered': { icon: faCheckCircle, color: 'text-black bg-green-100 border-green-300' },
+      'Cancelled': { icon: faClock, color: 'text-black bg-red-100 border-red-300' }
     };
 
     const status = statusMap[order.status] || statusMap['Order Placed'];
@@ -250,23 +210,46 @@ const OrderCard = memo(({ order, currency, backendUrl, isCancellable, onCancelOr
     return { subtotal, total, formattedDate, ...status };
   }, [order]);
 
-  // Preload images for this order
+  // Preload images
   useEffect(() => {
-    const imageUrls = order.items.map(item => {
-      const imageSource = item.isFromDeal ? (item.dealImage || item.image) : item.image;
-      return resolveImageUrl(imageSource, backendUrl);
-    }).filter(url => url !== assets.placeholder_image);
-    
-    preloadImages(imageUrls);
+    const imagePromises = order.items.map(async (item) => {
+      if (item.isFromDeal && item.dealImage) {
+        return resolveImageUrl(item.dealImage, backendUrl);
+      } else if (item.image) {
+        return resolveImageUrl(item.image, backendUrl);
+      } else if (item.id) {
+        return await getProductImageById(item.id, backendUrl);
+      }
+      return assets.placeholder_image;
+    });
+
+    Promise.all(imagePromises).then(imageUrls => {
+      const validUrls = imageUrls.filter(url => url !== assets.placeholder_image);
+      preloadImages(validUrls);
+    });
   }, [order.items, backendUrl]);
 
   return (
-    <div className="mb-6 border-2 border-gray-200 bg-white shadow-lg   overflow-hidden">
+    <div className="mb-6 border-2 border-gray-200 bg-white shadow-lg overflow-hidden">
       {/* Header */}
       <div className="bg-gray-100 px-4 py-3 border-b-2 border-gray-200">
         <div className="flex justify-between items-center">
           <div className="min-w-0">
-            <p className="font-semibold text-black text-lg">Order #{order._id?.substring(0, 8)}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="font-semibold text-black text-lg">Order #{order._id?.substring(order._id.length - 6).toUpperCase()}</p>
+              {isGuest && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-700 text-white rounded">
+                  <FontAwesomeIcon icon={faUser} className="mr-1" />
+                  Guest
+                </span>
+              )}
+              {order.isRecent && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-600 text-white rounded animate-pulse">
+                  <FontAwesomeIcon icon={faHistory} className="mr-1" />
+                  New
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600 font-medium">{formattedDate}</p>
           </div>
           <div className={`inline-flex items-center px-3 py-2 border-2 font-semibold text-sm ${statusColor}`}>
@@ -278,7 +261,7 @@ const OrderCard = memo(({ order, currency, backendUrl, isCancellable, onCancelOr
 
       {/* Items */}
       <div className="divide-y divide-gray-200">
-        {order.items.map((item, index) => (
+        {order.items && order.items.map((item, index) => (
           <OrderItem 
             key={`${order._id}-${item.id || index}`}
             item={item}
@@ -293,42 +276,49 @@ const OrderCard = memo(({ order, currency, backendUrl, isCancellable, onCancelOr
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           {/* Info */}
           <div className="space-y-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-600 shrink-0 text-base" />
-              <span className="text-gray-700 font-medium truncate">
-                {order.address?.city}, {order.address?.state}
-              </span>
-            </div>
+            {order.address && (
+              <div className="flex items-center gap-2 text-sm">
+                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-600 shrink-0 text-base" />
+                <span className="text-gray-700 font-medium truncate">
+                  {order.address.city}, {order.address.state}
+                  {order.address.zipcode && ` (${order.address.zipcode})`}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faCreditCard} className="text-gray-600 shrink-0 text-base" />
               <span className="text-gray-700 font-medium capitalize">
-                {order.paymentMethod} • {order.payment ? 'Paid' : 'COD'}
+                {order.paymentMethod || 'COD'} • {order.payment ? 'Paid' : 'COD'}
               </span>
             </div>
+            {order.customerDetails && (
+              <div className="flex items-center gap-2 text-sm">
+                <FontAwesomeIcon icon={faUser} className="text-gray-600 shrink-0 text-base" />
+                <span className="text-gray-700 font-medium truncate">
+                  {order.customerDetails.name}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Price & Actions */}
-          <div className="space-y-2 min-w-[140px]">
-            <div className="bg-white border-2 border-gray-200 p-3 text-sm  ">
+          {/* Price */}
+          <div className="min-w-[140px]">
+            <div className="bg-white border-2 border-gray-200 p-3 text-sm">
               <div className="flex justify-between mb-1">
                 <span className="text-gray-600 font-medium">Subtotal:</span>
                 <span className="font-semibold text-base">{currency}{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 font-medium">Total:</span>
+              {order.deliveryCharges > 0 && (
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-600 font-medium">Delivery:</span>
+                  <span className="font-semibold">{currency}{order.deliveryCharges.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1 border-t border-gray-300">
+                <span className="text-gray-700 font-bold">Total:</span>
                 <span className="font-semibold text-lg text-black">{currency}{total.toFixed(2)}</span>
               </div>
             </div>
-
-            {isCancellable && (
-              <button
-                onClick={() => onCancelOrder(order._id)}
-                className="w-full border-2 border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 flex items-center justify-center gap-2  "
-              >
-                <FontAwesomeIcon icon={faTimesCircle} className="text-base" />
-                <span>Cancel Order</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -336,111 +326,208 @@ const OrderCard = memo(({ order, currency, backendUrl, isCancellable, onCancelOr
   );
 });
 
-// Main component with maximum optimization
+// 🆕 Function to manage guest orders in localStorage
+const loadGuestOrdersFromStorage = () => {
+  try {
+    const guestOrders = localStorage.getItem('guestOrders');
+    if (guestOrders) {
+      return JSON.parse(guestOrders);
+    }
+  } catch (error) {
+    console.error("Error loading guest orders from localStorage:", error);
+  }
+  return [];
+};
+
+// Main Orders component
 const Orders = () => {
   const { backendUrl, token, currency } = useContext(ShopContext);
   const [orders, setOrders] = useState([]);
-  const [cancellingOrder, setCancellingOrder] = useState(null);
-  const [cancellationReason, setCancellationReason] = useState("");
-  const [selectedReason, setSelectedReason] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isGuestMode, setIsGuestMode] = useState(!token);
 
-  const cancellationReasons = useMemo(() => [
-    "Changed my mind",
-    "Found better price",
-    "Delivery time",
-    "Ordered by mistake",
-    "Not required",
-    "Other"
-  ], []);
-
-  // Single effect for data loading
+  // 🆕 Load all orders (both from localStorage for guests and backend for logged-in)
   useEffect(() => {
     let mounted = true;
 
-    const loadData = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
+    const loadOrders = async () => {
+      if (mounted) setLoading(true);
+      
       try {
-        const response = await axios.post(
-          backendUrl + '/api/order/userorders',
-          {},
-          { 
-            headers: { token },
-            timeout: 5000
-          }
-        );
+        if (token) {
+          // Logged-in user: Load their orders from backend
+          const response = await axios.post(
+            backendUrl + '/api/order/userorders',
+            {},
+            { 
+              headers: { token },
+              timeout: 10000
+            }
+          );
 
-        if (mounted && response.data.success) {
-          const activeOrders = response.data.orders
+          if (mounted && response.data.success) {
+            const sortedOrders = response.data.orders
+              .filter(order => order.status !== "Cancelled")
+              .sort((a, b) => parseInt(b.date) - parseInt(a.date));
+
+            setOrders(sortedOrders);
+            
+            // Preload images
+            const imagePromises = sortedOrders.flatMap(order => 
+              order.items.map(async (item) => {
+                if (item.isFromDeal && item.dealImage) {
+                  return resolveImageUrl(item.dealImage, backendUrl);
+                } else if (item.image) {
+                  return resolveImageUrl(item.image, backendUrl);
+                } else if (item.id) {
+                  return await getProductImageById(item.id, backendUrl);
+                }
+                return assets.placeholder_image;
+              })
+            );
+
+            Promise.all(imagePromises).then(imageUrls => {
+              const validUrls = imageUrls.filter(url => url !== assets.placeholder_image);
+              preloadImages(validUrls);
+            });
+          }
+        } else {
+          // 🆕 Guest user: Load orders from localStorage
+          const guestOrders = loadGuestOrdersFromStorage();
+          
+          // Also check for recent guest order
+          const recentGuestOrder = localStorage.getItem('recentGuestOrder');
+          let allGuestOrders = [...guestOrders];
+          
+          if (recentGuestOrder) {
+            try {
+              const recentOrder = JSON.parse(recentGuestOrder);
+              // Ensure recent order has all required fields
+              if (!recentOrder.items) recentOrder.items = [];
+              if (!recentOrder.address) recentOrder.address = {};
+              if (!recentOrder.customerDetails) recentOrder.customerDetails = {};
+              
+              // Add to list if not already there
+              if (!allGuestOrders.some(order => order._id === recentOrder._id)) {
+                allGuestOrders = [recentOrder, ...allGuestOrders];
+              }
+              
+              // Clear recent order after 5 minutes
+              setTimeout(() => {
+                localStorage.removeItem('recentGuestOrder');
+                console.log("🗑️ Cleared recent guest order from localStorage");
+              }, 300000);
+            } catch (error) {
+              console.error("Error parsing recent guest order:", error);
+              localStorage.removeItem('recentGuestOrder');
+            }
+          }
+          
+          // Ensure all guest orders have required fields
+          const validatedOrders = allGuestOrders.map(order => ({
+            ...order,
+            items: order.items || [],
+            address: order.address || { city: '', state: '' },
+            customerDetails: order.customerDetails || { name: 'Guest Customer' },
+            deliveryCharges: order.deliveryCharges || 0,
+            paymentMethod: order.paymentMethod || 'COD',
+            status: order.status || 'Order Placed',
+            isGuest: true
+          }));
+          
+          // Sort by date (newest first) and filter out cancelled
+          const sortedOrders = validatedOrders
             .filter(order => order.status !== "Cancelled")
             .sort((a, b) => parseInt(b.date) - parseInt(a.date));
 
-          setOrders(activeOrders);
-
-          // Preload all images immediately
-          const allImageUrls = activeOrders.flatMap(order => 
-            order.items.map(item => {
-              const imageSource = item.isFromDeal ? (item.dealImage || item.image) : item.image;
-              return resolveImageUrl(imageSource, backendUrl);
-            })
-          ).filter(url => url !== assets.placeholder_image);
+          if (mounted) {
+            setOrders(sortedOrders);
+            setIsGuestMode(true);
+          }
           
-          preloadImages(allImageUrls);
+          // Preload images
+          const imagePromises = sortedOrders.flatMap(order => 
+            (order.items || []).map(async (item) => {
+              if (item.isFromDeal && item.dealImage) {
+                return resolveImageUrl(item.dealImage, backendUrl);
+              } else if (item.image) {
+                return resolveImageUrl(item.image, backendUrl);
+              } else if (item.id) {
+                return await getProductImageById(item.id, backendUrl);
+              }
+              return assets.placeholder_image;
+            })
+          );
+
+          Promise.all(imagePromises).then(imageUrls => {
+            const validUrls = imageUrls.filter(url => url !== assets.placeholder_image);
+            preloadImages(validUrls);
+          });
+          
+          // 🆕 Try to sync with backend if we have guest info
+          const guestOrderInfo = localStorage.getItem('guestOrderInfo');
+          if (guestOrderInfo) {
+            try {
+              const { email, phone } = JSON.parse(guestOrderInfo);
+              
+              // Try to fetch guest orders from backend
+              const response = await axios.post(
+                backendUrl + '/api/order/guest-orders',
+                { email, phone },
+                { timeout: 10000 }
+              );
+
+              if (mounted && response.data.success && response.data.orders.length > 0) {
+                const backendOrders = response.data.orders
+                  .filter(order => order.status !== "Cancelled")
+                  .map(order => ({
+                    ...order,
+                    isGuest: true
+                  }))
+                  .sort((a, b) => parseInt(b.date) - parseInt(a.date));
+
+                // Merge localStorage and backend orders, remove duplicates
+                const combinedOrders = [...backendOrders];
+                sortedOrders.forEach(localOrder => {
+                  if (!combinedOrders.some(backendOrder => backendOrder._id === localOrder._id)) {
+                    combinedOrders.push(localOrder);
+                  }
+                });
+
+                // Sort by date
+                const finalOrders = combinedOrders.sort((a, b) => parseInt(b.date) - parseInt(a.date));
+                
+                if (mounted) {
+                  setOrders(finalOrders);
+                  // Save updated list to localStorage
+                  localStorage.setItem('guestOrders', JSON.stringify(finalOrders));
+                }
+              }
+            } catch (error) {
+              console.log("No guest orders found or error fetching from backend:", error);
+              // Keep using localStorage orders
+            }
+          }
         }
       } catch (error) {
-        if (mounted && error.code !== 'ECONNABORTED') {
-          toast.error("Failed to load orders");
+        console.error("Error loading orders:", error);
+        if (mounted && !orders.length) {
+          // Only show error if we have no orders at all
+          if (token || !loadGuestOrdersFromStorage().length) {
+            toast.error("Failed to load orders");
+          }
         }
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    loadData();
+    loadOrders();
 
     return () => {
       mounted = false;
     };
-  }, [backendUrl, token]);
-
-  const cancelOrder = useCallback(async (orderId) => {
-    const reason = selectedReason === 'Other' ? cancellationReason : selectedReason;
-
-    if (!reason.trim()) {
-      toast.error("Please provide a reason");
-      return;
-    }
-
-    setCancellingOrder(orderId);
-    try {
-      const response = await axios.post(
-        backendUrl + '/api/order/cancel',
-        { orderId, cancellationReason: reason.trim() },
-        { headers: { token }, timeout: 3000 }
-      );
-
-      if (response.data.success) {
-        toast.success("Order cancelled successfully");
-        setOrders(prev => prev.filter(order => order._id !== orderId));
-      }
-    } catch (error) {
-      toast.error("Failed to cancel order");
-    } finally {
-      setCancellingOrder(null);
-      setCancellationReason("");
-      setSelectedReason("");
-    }
-  }, [backendUrl, token, selectedReason, cancellationReason]);
-
-  const canCancelOrder = useCallback((order) => {
-    if (order.status !== "Order Placed") return false;
-    const orderTime = new Date(parseInt(order.date));
-    return (Date.now() - orderTime) < (15 * 60 * 1000);
-  }, []);
+  }, [backendUrl, token, orders.length]);
 
   if (loading) {
     return (
@@ -461,93 +548,46 @@ const Orders = () => {
         <Title text1={"MY"} text2={"ORDERS"} />
       </div>
 
-      {/* Cancellation Modal */}
-      {cancellingOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-md w-full border-2 border-gray-400  ">
-            <div className="flex items-center justify-between p-4 border-b-2 border-gray-400 bg-gray-100">
-              <div className="flex items-center gap-3">
-                <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 text-xl" />
-                <h3 className="font-semibold text-black text-lg">Cancel Order</h3>
-              </div>
-              <button
-                onClick={() => setCancellingOrder(null)}
-                className="text-gray-600 hover:text-black text-xl font-semibold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4">
-              <p className="text-base text-gray-700 mb-4 font-medium">Please tell us why you want to cancel this order:</p>
-
-              <div className="space-y-3">
-                <select
-                  value={selectedReason}
-                  onChange={(e) => setSelectedReason(e.target.value)}
-                  className="w-full p-3 border-2 border-gray-400 text-base font-medium  "
-                >
-                  <option value="">Select a reason</option>
-                  {cancellationReasons.map(reason => (
-                    <option key={reason} value={reason}>{reason}</option>
-                  ))}
-                </select>
-
-                {selectedReason === 'Other' && (
-                  <textarea
-                    value={cancellationReason}
-                    onChange={(e) => setCancellationReason(e.target.value)}
-                    placeholder="Please provide details..."
-                    rows="3"
-                    className="w-full p-3 border-2 border-gray-400 text-base font-medium   resize-none"
-                    maxLength={200}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 p-4 border-t-2 border-gray-400 bg-gray-100">
-              <button
-                onClick={() => setCancellingOrder(null)}
-                className="flex-1 px-4 py-3 border-2 border-gray-400 text-black text-base font-semibold hover:bg-gray-200  "
-              >
-                Keep Order
-              </button>
-              <button
-                onClick={() => cancelOrder(cancellingOrder)}
-                disabled={!selectedReason || (selectedReason === 'Other' && !cancellationReason.trim())}
-                className={`flex-1 px-4 py-3 bg-red-600 text-white text-base font-semibold   ${
-                  (!selectedReason || (selectedReason === 'Other' && !cancellationReason.trim()))
-                    ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'
-                }`}
-              >
-                Confirm Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    
 
       <div>
         {orders.length === 0 ? (
-          <div className="text-center py-12 border-2 border-gray-400 bg-gray-100  ">
+          <div className="text-center py-12 border-2 border-gray-400 bg-gray-100 rounded-lg">
             <div className="mx-auto h-16 w-16 text-gray-500 mb-4">
-              <img src={assets.parcel_icon} alt="No orders" className="opacity-60" />
+              <FontAwesomeIcon icon={faShoppingBag} className="text-4xl opacity-60" />
             </div>
-            <p className="text-gray-600 text-lg font-semibold">No active orders found</p>
-            <p className="text-gray-500 text-base mt-2">Your orders will appear here once placed</p>
+            <p className="text-gray-600 text-lg font-semibold">No orders found</p>
+            <p className="text-gray-500 text-base mt-2">
+              {token 
+                ? "Your orders will appear here once placed" 
+                : "Place an order to see it here"}
+            </p>
+            {!token && (
+              <div className="mt-4">
+                <button
+                  onClick={() => window.location.href = '/place-order'}
+                  className="px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800"
+                >
+                  Place Your First Order
+                </button>
+              </div>
+            )}
           </div>
         ) : (
-          orders.map((order) => (
-            <OrderCard
-              key={order._id}
-              order={order}
-              currency={currency}
-              backendUrl={backendUrl}
-              isCancellable={canCancelOrder(order)}
-              onCancelOrder={setCancellingOrder}
-            />
-          ))
+          <>
+            {/* Orders list */}
+            {orders.map((order) => (
+              <OrderCard
+                key={order._id}
+                order={order}
+                currency={currency}
+                backendUrl={backendUrl}
+                isGuest={isGuestMode}
+              />
+            ))}
+
+           
+          </>
         )}
       </div>
     </div>
