@@ -2,7 +2,7 @@ import { Banner } from "../models/bannerModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 
-// 🟩 Get all banners
+// 🟩 Get all banners (for admin)
 export const getAllBanners = async (req, res) => {
   try {
     const banners = await Banner.find().sort({ order: 1, createdAt: -1 });
@@ -23,10 +23,7 @@ export const getAllBanners = async (req, res) => {
 // 🟩 Get active banners (for frontend)
 export const getActiveBanners = async (req, res) => {
   try {
-    const banners = await Banner.find({ isActive: true }).sort({
-      order: 1,
-      createdAt: -1,
-    });
+    const banners = await Banner.find({ isActive: true }).sort({ order: 1, createdAt: -1 });
     res.json({
       success: true,
       data: banners,
@@ -63,63 +60,81 @@ export const getBannerById = async (req, res) => {
   }
 };
 
-// 🟩 Create banner - ABSOLUTELY NO CROPPING
+// 🟩 Create banner - Both desktop and mobile images required
 export const createBanner = async (req, res) => {
   try {
     const {
-      headingLine1,
-      headingLine2,
-      subtext,
-      buttonText,
-      redirectUrl,
+      title = "",
+      linkUrl,
+      openInNewTab = false,
       isActive = true,
       order = 0,
     } = req.body;
 
-    if (!req.file) {
+    console.log('Request files:', req.files); // Debug log
+    console.log('Request body:', req.body); // Debug log
+
+    // Check for both desktop and mobile images
+    if (!req.files || !req.files.desktopImage || !req.files.mobileImage) {
       return res.status(400).json({
         success: false,
-        message: "Banner image is required",
+        message: "Both desktop and mobile images are required",
+        receivedFiles: req.files ? Object.keys(req.files) : 'No files'
       });
     }
 
-    let imageUrl = "";
-    let imagePublicId = "";
+    // Validate both images exist
+    const desktopImage = req.files.desktopImage[0];
+    const mobileImage = req.files.mobileImage[0];
+    
+    if (!desktopImage || !mobileImage) {
+      return res.status(400).json({
+        success: false,
+        message: "Both desktop and mobile images must be provided"
+      });
+    }
 
+    let desktopImageUrl = "";
+    let desktopImagePublicId = "";
+    let mobileImageUrl = "";
+    let mobileImagePublicId = "";
+
+    // Upload desktop image
     if (process.env.FILE_STORAGE === "local") {
-      imageUrl = `/uploads/banners/${req.file.filename}`;
+      desktopImageUrl = `/uploads/${desktopImage.filename}`;
     } else {
-      // ✅ SIMPLIFIED: Force original dimensions
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "banners-original",
-        // Use scale crop to maintain aspect ratio without cropping
-        transformation: [
-          { width: "iw", height: "ih", crop: "scale" } // iw = original width, ih = original height
-        ],
+      const desktopResult = await cloudinary.uploader.upload(desktopImage.path, {
+        folder: "banners/desktop",
+        transformation: [{ width: "iw", height: "ih", crop: "scale" }],
         quality: "auto"
       });
-      
-      console.log('🔄 UPLOAD COMPLETE - Original dimensions preserved:', {
-        original_file: req.file.originalname,
-        stored_dimensions: `${result.width}x${result.height}`,
-        public_id: result.public_id,
-        url: result.secure_url
+      desktopImageUrl = desktopResult.secure_url;
+      desktopImagePublicId = desktopResult.public_id;
+      fs.unlinkSync(desktopImage.path);
+    }
+
+    // Upload mobile image
+    if (process.env.FILE_STORAGE === "local") {
+      mobileImageUrl = `/uploads/${mobileImage.filename}`;
+    } else {
+      const mobileResult = await cloudinary.uploader.upload(mobileImage.path, {
+        folder: "banners/mobile",
+        transformation: [{ width: "iw", height: "ih", crop: "scale" }],
+        quality: "auto"
       });
-
-      imageUrl = result.secure_url;
-      imagePublicId = result.public_id;
-
-      fs.unlinkSync(req.file.path);
+      mobileImageUrl = mobileResult.secure_url;
+      mobileImagePublicId = mobileResult.public_id;
+      fs.unlinkSync(mobileImage.path);
     }
 
     const banner = new Banner({
-      headingLine1,
-      headingLine2,
-      subtext,
-      buttonText,
-      redirectUrl,
-      imageUrl,
-      imagePublicId,
+      title,
+      desktopImageUrl,
+      desktopImagePublicId,
+      mobileImageUrl,
+      mobileImagePublicId,
+      linkUrl: linkUrl || "",
+      openInNewTab,
       isActive,
       order,
     });
@@ -128,7 +143,7 @@ export const createBanner = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Banner created successfully",
+      message: "Banner created successfully with both images",
       data: banner,
     });
   } catch (error) {
@@ -141,7 +156,7 @@ export const createBanner = async (req, res) => {
   }
 };
 
-// 🟩 Update banner - ABSOLUTELY NO CROPPING
+// 🟩 Update banner - Can update individual images or both
 export const updateBanner = async (req, res) => {
   try {
     const banner = await Banner.findById(req.params.id);
@@ -153,52 +168,62 @@ export const updateBanner = async (req, res) => {
     }
 
     const {
-      headingLine1,
-      headingLine2,
-      subtext,
-      buttonText,
-      redirectUrl,
+      title,
+      linkUrl,
+      openInNewTab,
       isActive,
       order,
     } = req.body;
 
-    if (headingLine1 !== undefined) banner.headingLine1 = headingLine1;
-    if (headingLine2 !== undefined) banner.headingLine2 = headingLine2;
-    if (subtext !== undefined) banner.subtext = subtext;
-    if (buttonText !== undefined) banner.buttonText = buttonText;
-    if (redirectUrl !== undefined) banner.redirectUrl = redirectUrl;
+    if (title !== undefined) banner.title = title;
+    if (linkUrl !== undefined) banner.linkUrl = linkUrl;
+    if (openInNewTab !== undefined) banner.openInNewTab = openInNewTab;
     if (isActive !== undefined) banner.isActive = isActive;
     if (order !== undefined) banner.order = order;
 
-    if (req.file) {
-      if (banner.imagePublicId && process.env.FILE_STORAGE !== "local") {
-        await cloudinary.uploader.destroy(banner.imagePublicId);
+    // Update desktop image if provided
+    if (req.files && req.files.desktopImage) {
+      const desktopImage = req.files.desktopImage[0];
+      
+      // Delete old desktop image if exists
+      if (banner.desktopImagePublicId && process.env.FILE_STORAGE !== "local") {
+        await cloudinary.uploader.destroy(banner.desktopImagePublicId);
       }
 
       if (process.env.FILE_STORAGE === "local") {
-        banner.imageUrl = `/uploads/banners/${req.file.filename}`;
+        banner.desktopImageUrl = `/uploads/${desktopImage.filename}`;
       } else {
-        // ✅ SIMPLIFIED: Force original dimensions
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: "banners-original",
-          // Use scale crop to maintain aspect ratio without cropping
-          transformation: [
-            { width: "iw", height: "ih", crop: "scale" } // iw = original width, ih = original height
-          ],
+        const desktopResult = await cloudinary.uploader.upload(desktopImage.path, {
+          folder: "banners/desktop",
+          transformation: [{ width: "iw", height: "ih", crop: "scale" }],
           quality: "auto"
         });
-        
-        console.log('🔄 UPDATE COMPLETE - Original dimensions preserved:', {
-          original_file: req.file.originalname,
-          stored_dimensions: `${result.width}x${result.height}`,
-          public_id: result.public_id,
-          url: result.secure_url
+        banner.desktopImageUrl = desktopResult.secure_url;
+        banner.desktopImagePublicId = desktopResult.public_id;
+        fs.unlinkSync(desktopImage.path);
+      }
+    }
+
+    // Update mobile image if provided
+    if (req.files && req.files.mobileImage) {
+      const mobileImage = req.files.mobileImage[0];
+      
+      // Delete old mobile image if exists
+      if (banner.mobileImagePublicId && process.env.FILE_STORAGE !== "local") {
+        await cloudinary.uploader.destroy(banner.mobileImagePublicId);
+      }
+
+      if (process.env.FILE_STORAGE === "local") {
+        banner.mobileImageUrl = `/uploads/${mobileImage.filename}`;
+      } else {
+        const mobileResult = await cloudinary.uploader.upload(mobileImage.path, {
+          folder: "banners/mobile",
+          transformation: [{ width: "iw", height: "ih", crop: "scale" }],
+          quality: "auto"
         });
-
-        banner.imageUrl = result.secure_url;
-        banner.imagePublicId = result.public_id;
-
-        fs.unlinkSync(req.file.path);
+        banner.mobileImageUrl = mobileResult.secure_url;
+        banner.mobileImagePublicId = mobileResult.public_id;
+        fs.unlinkSync(mobileImage.path);
       }
     }
 
@@ -219,7 +244,7 @@ export const updateBanner = async (req, res) => {
   }
 };
 
-// 🟩 Delete banner
+// 🟩 Delete banner - ADD THIS FUNCTION
 export const deleteBanner = async (req, res) => {
   try {
     const banner = await Banner.findById(req.params.id);
@@ -230,8 +255,14 @@ export const deleteBanner = async (req, res) => {
       });
     }
 
-    if (banner.imagePublicId && process.env.FILE_STORAGE !== "local") {
-      await cloudinary.uploader.destroy(banner.imagePublicId);
+    // Delete images from Cloudinary if using cloud storage
+    if (process.env.FILE_STORAGE !== "local") {
+      if (banner.desktopImagePublicId) {
+        await cloudinary.uploader.destroy(banner.desktopImagePublicId);
+      }
+      if (banner.mobileImagePublicId) {
+        await cloudinary.uploader.destroy(banner.mobileImagePublicId);
+      }
     }
 
     await Banner.findByIdAndDelete(req.params.id);
@@ -241,6 +272,7 @@ export const deleteBanner = async (req, res) => {
       message: "Banner deleted successfully",
     });
   } catch (error) {
+    console.error('❌ Error deleting banner:', error);
     res.status(500).json({
       success: false,
       message: "Error deleting banner",
@@ -249,7 +281,7 @@ export const deleteBanner = async (req, res) => {
   }
 };
 
-// 🟩 Update banner order
+// 🟩 Update banner order - ADD THIS FUNCTION
 export const updateBannerOrder = async (req, res) => {
   try {
     const { banners } = req.body; // array of { id, order }
@@ -265,6 +297,7 @@ export const updateBannerOrder = async (req, res) => {
       message: "Banner order updated successfully",
     });
   } catch (error) {
+    console.error('❌ Error updating banner order:', error);
     res.status(500).json({
       success: false,
       message: "Error updating banner order",

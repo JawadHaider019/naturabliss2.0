@@ -9,7 +9,7 @@ import {
   updateBannerOrder,
 } from "../controllers/bannerController.js";
 
-import upload from "../middleware/multer.js"; // ✅ using your existing multer.js
+import { bannerUpload } from "../middleware/multer.js";
 
 const router = express.Router();
 
@@ -17,8 +17,8 @@ const router = express.Router();
 router.get("/", getAllBanners);
 router.get("/active", getActiveBanners);
 router.get("/:id", getBannerById);
-router.post("/", upload.single("image"), createBanner);
-router.put("/:id", upload.single("image"), updateBanner);
+router.post("/", bannerUpload, createBanner);
+router.put("/:id", bannerUpload, updateBanner);
 router.delete("/:id", deleteBanner);
 router.put("/order/update", updateBannerOrder);
 

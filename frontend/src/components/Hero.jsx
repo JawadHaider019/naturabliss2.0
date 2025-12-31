@@ -1,28 +1,31 @@
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { IoIosArrowForward } from "react-icons/io";
 import { assets } from '../assets/assets'
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 const Hero = () => {
   const [banners, setBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const sliderRef = useRef(null);
   const hasFetchedRef = useRef(false);
+  const navigate = useNavigate();
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  // Create axios instance
+  const api = axios.create({
+    baseURL: backendUrl,
+    timeout: 5000,
+  });
 
   // Pre-defined default banner - shown immediately
   const defaultBanner = {
     _id: 'default-banner',
-    imageUrl: assets.banner1,
-    headingLine1: 'NATURA BLISS',
-    headingLine2: 'Pure Organic Beauty',
-    subtext: 'Discover the essence of natural skincare',
-    buttonText: 'Explore Collection',
-    redirectUrl: '/collection'
+    desktopImageUrl: assets.banner1,
+    mobileImageUrl: assets.banner1,
   };
 
   // Simple fetch function
@@ -32,18 +35,20 @@ const Hero = () => {
     try {
       hasFetchedRef.current = true;
       
-      const response = await fetch(`${backendUrl}/api/banners/active`);
+      const response = await api.get('/api/banners/active');
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data.success) {
+        const data = response.data.data;
         
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          const validBanners = data.data.filter(banner => 
-            banner.imageUrl && banner.headingLine1
+        if (Array.isArray(data) && data.length > 0) {
+          const validBanners = data.filter(banner => 
+            banner.desktopImageUrl && banner.mobileImageUrl
           );
           
           if (validBanners.length > 0) {
-            setBanners(validBanners);
+            // Sort by order
+            const sortedBanners = validBanners.sort((a, b) => a.order - b.order);
+            setBanners(sortedBanners);
           }
         }
       }
@@ -58,6 +63,7 @@ const Hero = () => {
   useEffect(() => {
     // Show default banner immediately
     setBanners([defaultBanner]);
+    setIsLoading(false);
     
     // Fetch from backend after a short delay
     const timer = setTimeout(() => {
@@ -67,8 +73,51 @@ const Hero = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleButtonClick = (e) => {
-    e.stopPropagation();
+  // Check screen size - show mobile banner on tablets too
+  const [screenSize, setScreenSize] = useState('desktop');
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      // Mobile: < 768px, Tablet: 768px - 1024px, Desktop: > 1024px
+      if (width < 1024) {
+        setScreenSize('mobile'); // Show mobile banner on both mobile and tablet
+      } else {
+        setScreenSize('desktop');
+      }
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Handle banner click
+  const handleBannerClick = (banner) => {
+    if (banner.linkUrl && banner.linkUrl !== '') {
+      if (banner.openInNewTab) {
+        window.open(banner.linkUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        navigate(banner.linkUrl);
+      }
+    }
+  };
+
+  // Get image URL based on screen size
+  const getImageUrl = (banner) => {
+    if (!banner) return assets.banner1;
+    
+    if (screenSize === 'mobile' && banner.mobileImageUrl) {
+      // Show mobile image on both mobile phones and tablets
+      return banner.mobileImageUrl;
+    }
+    
+    if (banner.desktopImageUrl) {
+      return banner.desktopImageUrl;
+    }
+    
+    return assets.banner1;
   };
 
   // Custom dots components
@@ -88,7 +137,7 @@ const Hero = () => {
     </div>
   );
 
-  // Slider settings
+  // Slider settings - responsive breakpoints
   const settings = {
     dots: true,
     infinite: banners.length > 1,
@@ -110,7 +159,7 @@ const Hero = () => {
     dotsClass: "slick-dots !flex !flex-col !static !w-auto !m-0",
     responsive: [
       {
-        breakpoint: 768,
+        breakpoint: 1024, // Tablet and below
         settings: {
           arrows: false,
           dots: true,
@@ -130,26 +179,37 @@ const Hero = () => {
   // Banner Item Component
   const BannerItem = ({ banner, index }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
+    const imageUrl = getImageUrl(banner);
     
     useEffect(() => {
       const img = new Image();
-      img.src = banner.imageUrl;
+      img.src = imageUrl;
       img.onload = () => setImageLoaded(true);
       img.onerror = () => setImageLoaded(true);
-    }, [banner.imageUrl]);
+    }, [imageUrl]);
+
+    // Determine if banner is clickable
+    const isClickable = banner.linkUrl && banner.linkUrl !== '';
+
+    // Adjust height based on screen size
+    const bannerHeight = screenSize === 'mobile' ? 'h-[70vh] md:h-[80vh]' : 'h-[90vh]';
 
     return (
-      <section 
-        className="relative w-full h-[90vh] overflow-hidden bg-black"
+      <div 
+        className={`relative w-full overflow-hidden bg-black ${bannerHeight}`}
         role="group"
         aria-roledescription="slide"
         aria-label={`${index + 1} of ${banners.length}`}
+        onClick={() => isClickable && handleBannerClick(banner)}
+        style={{ 
+          cursor: isClickable ? 'pointer' : 'default',
+        }}
       >
         {/* Background Image */}
         <div className="absolute inset-0 bg-black">
           <img
-            src={banner.imageUrl}
-            alt={banner.headingLine1 || "Natura Bliss Banner"}
+            src={imageUrl}
+            alt="Banner"
             className="w-full h-full object-cover transition-opacity duration-300"
             loading={index === 0 ? "eager" : "lazy"}
             style={{ 
@@ -159,47 +219,7 @@ const Hero = () => {
         </div>
 
         {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black/40 z-2"></div>
-
-        {/* Content */}
-        <div className="absolute inset-0 z-10">
-          {/* Main Headline */}
-          <h1 className="text-oswald absolute top-10 left-1/2 transform -translate-x-1/2 md:left-16 md:transform-none text-6xl xs:text-6xl sm:text-6xl md:text-6xl lg:text-8xl font-extrabold text-white uppercase leading-none tracking-tighter text-center md:text-left w-full md:w-auto px-4 md:px-0">
-            {banner.headingLine1}
-            {banner.headingLine2 && (
-              <>
-                <br />
-                <span className="pl-0 md:pl-[50px] mb-2 text-oswald text-holo block md:inline">
-                  {banner.headingLine2}
-                </span>
-              </>
-            )}
-          </h1>
-
-          <div className="absolute bottom-5 md:bottom-10 right-4 md:right-10 text-white mx-2 mt-2">
-            {banner.subtext && (
-              <p className="font-mono text-sm uppercase max-w-60 md:max-w-80 border-y border-white/70 py-2 text-white/90">
-                {banner.subtext}
-              </p>
-            )}
-
-            {banner.buttonText && banner.redirectUrl && (
-              <div className="text-right relative z-30">
-                <Link
-                  to={banner.redirectUrl}
-                  onClick={handleButtonClick}
-                  className="inline-flex items-center gap-2 px-6 py-3 text-sm md:text-base font-semibold text-white lowercase transition-all duration-300 hover:text-gray-100 hover:scale-105 relative z-30 pointer-events-auto"
-                  aria-label={`${banner.buttonText} - ${banner.headingLine1}`}
-                >
-                  {banner.buttonText}
-                  <span className="inline-flex items-center justify-center w-4 h-4 bg-white text-black rounded-full">
-                    <IoIosArrowForward size={16} />
-                  </span>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="absolute inset-0 bg-black/40"></div>
 
         {/* Loading indicator for backend images */}
         {!imageLoaded && banner._id !== 'default-banner' && (
@@ -207,35 +227,34 @@ const Hero = () => {
             <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           </div>
         )}
-      </section>
+
+        {/* Accessibility indicator for clickable banners */}
+        {isClickable && (
+          <div className="sr-only">
+            Clickable banner - {banner.openInNewTab ? 'Opens in new tab' : 'Navigate to link'}
+          </div>
+        )}
+      </div>
     );
   };
 
   // ALWAYS SHOW CONTENT - Never show "not found" or empty states to users
-  const displayBanners = banners.length > 0 ? banners : [{
-    _id: 'default-banner',
-    imageUrl: '', // Empty for gradient fallback
-    headingLine1: 'NATURA BLISS',
-    headingLine2: 'Pure Organic',
-    subtext: 'Discover the essence of natural skincare',
-    buttonText: 'Explore Collection',
-    redirectUrl: '/collection'
-  }];
+  const displayBanners = banners.length > 0 ? banners : [defaultBanner];
 
- // Minimal loading state that doesn't block content
-if (isLoading && banners.length === 0) {
-  return (
-    <section className="relative w-full h-[90vh] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
-      <div className="absolute inset-0 bg-black/40"></div>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="w-12 h-12 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-          <p className="text-sm text-white/70">Loading...</p>
+  // Minimal loading state that doesn't block content
+  if (isLoading && banners.length === 0) {
+    return (
+      <section className="relative w-full h-[90vh] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="w-12 h-12 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
+            <p className="text-sm text-white/70">Loading...</p>
+          </div>
         </div>
-      </div>
-    </section>
-  );
-}
+      </section>
+    );
+  }
 
   return (
     <div 
@@ -255,11 +274,21 @@ if (isLoading && banners.length === 0) {
         .slick-slide > div {
           height: 100%;
         }
+        /* Add subtle hover effect for clickable banners */
+        .clickable-banner:hover img {
+          transform: scale(1.01);
+          transition: transform 0.3s ease;
+        }
       `}</style>
       
       <Slider ref={sliderRef} {...settings}>
-        {banners.map((banner, index) => (
-          <BannerItem key={`${banner._id}-${index}`} banner={banner} index={index} />
+        {displayBanners.map((banner, index) => (
+          <BannerItem 
+            key={`${banner._id}-${index}`} 
+            banner={banner} 
+            index={index}
+            className={banner.linkUrl ? 'clickable-banner' : ''}
+          />
         ))}
       </Slider>
     </div>
