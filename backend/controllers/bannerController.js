@@ -71,8 +71,8 @@ export const createBanner = async (req, res) => {
       order = 0,
     } = req.body;
 
-    console.log('Request files:', req.files); // Debug log
-    console.log('Request body:', req.body); // Debug log
+    console.log('Request files:', req.files);
+    console.log('Request body:', req.body);
 
     // Check for both desktop and mobile images
     if (!req.files || !req.files.desktopImage || !req.files.mobileImage) {
@@ -99,32 +99,46 @@ export const createBanner = async (req, res) => {
     let mobileImageUrl = "";
     let mobileImagePublicId = "";
 
-    // Upload desktop image
+    // Upload desktop image - NO TRANSFORMATIONS, keep original dimensions
     if (process.env.FILE_STORAGE === "local") {
       desktopImageUrl = `/uploads/${desktopImage.filename}`;
     } else {
-      const desktopResult = await cloudinary.uploader.upload(desktopImage.path, {
-        folder: "banners/desktop",
-        transformation: [{ width: "iw", height: "ih", crop: "scale" }],
-        quality: "auto"
-      });
-      desktopImageUrl = desktopResult.secure_url;
-      desktopImagePublicId = desktopResult.public_id;
-      fs.unlinkSync(desktopImage.path);
+      try {
+        console.log('Uploading desktop image to Cloudinary...');
+        // Upload without any transformations - keep original dimensions
+        const desktopResult = await cloudinary.uploader.upload(desktopImage.path, {
+          folder: "banners/desktop"
+          // NO transformations - keep original size and dimensions
+        });
+        desktopImageUrl = desktopResult.secure_url;
+        desktopImagePublicId = desktopResult.public_id;
+        fs.unlinkSync(desktopImage.path);
+        console.log('Desktop image uploaded:', desktopResult.secure_url);
+      } catch (error) {
+        console.error('Desktop upload error:', error);
+        throw new Error(`Desktop image upload failed: ${error.message}`);
+      }
     }
 
-    // Upload mobile image
+    // Upload mobile image - NO TRANSFORMATIONS, keep original dimensions
     if (process.env.FILE_STORAGE === "local") {
       mobileImageUrl = `/uploads/${mobileImage.filename}`;
     } else {
-      const mobileResult = await cloudinary.uploader.upload(mobileImage.path, {
-        folder: "banners/mobile",
-        transformation: [{ width: "iw", height: "ih", crop: "scale" }],
-        quality: "auto"
-      });
-      mobileImageUrl = mobileResult.secure_url;
-      mobileImagePublicId = mobileResult.public_id;
-      fs.unlinkSync(mobileImage.path);
+      try {
+        console.log('Uploading mobile image to Cloudinary...');
+        // Upload without any transformations - keep original dimensions
+        const mobileResult = await cloudinary.uploader.upload(mobileImage.path, {
+          folder: "banners/mobile"
+          // NO transformations - keep original size and dimensions
+        });
+        mobileImageUrl = mobileResult.secure_url;
+        mobileImagePublicId = mobileResult.public_id;
+        fs.unlinkSync(mobileImage.path);
+        console.log('Mobile image uploaded:', mobileResult.secure_url);
+      } catch (error) {
+        console.error('Mobile upload error:', error);
+        throw new Error(`Mobile image upload failed: ${error.message}`);
+      }
     }
 
     const banner = new Banner({
@@ -148,6 +162,20 @@ export const createBanner = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error creating banner:', error);
+    
+    // Clean up uploaded files if they exist
+    if (req.files) {
+      Object.values(req.files).flat().forEach(file => {
+        if (fs.existsSync(file.path)) {
+          try {
+            fs.unlinkSync(file.path);
+          } catch (cleanupError) {
+            console.error('Error cleaning up file:', cleanupError);
+          }
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Error creating banner",
@@ -193,10 +221,10 @@ export const updateBanner = async (req, res) => {
       if (process.env.FILE_STORAGE === "local") {
         banner.desktopImageUrl = `/uploads/${desktopImage.filename}`;
       } else {
+        // Upload new desktop image without transformations
         const desktopResult = await cloudinary.uploader.upload(desktopImage.path, {
-          folder: "banners/desktop",
-          transformation: [{ width: "iw", height: "ih", crop: "scale" }],
-          quality: "auto"
+          folder: "banners/desktop"
+          // NO transformations - keep original dimensions
         });
         banner.desktopImageUrl = desktopResult.secure_url;
         banner.desktopImagePublicId = desktopResult.public_id;
@@ -216,10 +244,10 @@ export const updateBanner = async (req, res) => {
       if (process.env.FILE_STORAGE === "local") {
         banner.mobileImageUrl = `/uploads/${mobileImage.filename}`;
       } else {
+        // Upload new mobile image without transformations
         const mobileResult = await cloudinary.uploader.upload(mobileImage.path, {
-          folder: "banners/mobile",
-          transformation: [{ width: "iw", height: "ih", crop: "scale" }],
-          quality: "auto"
+          folder: "banners/mobile"
+          // NO transformations - keep original dimensions
         });
         banner.mobileImageUrl = mobileResult.secure_url;
         banner.mobileImagePublicId = mobileResult.public_id;
@@ -236,6 +264,20 @@ export const updateBanner = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error updating banner:', error);
+    
+    // Clean up uploaded files if they exist
+    if (req.files) {
+      Object.values(req.files).flat().forEach(file => {
+        if (fs.existsSync(file.path)) {
+          try {
+            fs.unlinkSync(file.path);
+          } catch (cleanupError) {
+            console.error('Error cleaning up file:', cleanupError);
+          }
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Error updating banner",
@@ -244,7 +286,7 @@ export const updateBanner = async (req, res) => {
   }
 };
 
-// 🟩 Delete banner - ADD THIS FUNCTION
+// 🟩 Delete banner
 export const deleteBanner = async (req, res) => {
   try {
     const banner = await Banner.findById(req.params.id);
@@ -281,7 +323,7 @@ export const deleteBanner = async (req, res) => {
   }
 };
 
-// 🟩 Update banner order - ADD THIS FUNCTION
+// 🟩 Update banner order
 export const updateBannerOrder = async (req, res) => {
   try {
     const { banners } = req.body; // array of { id, order }
