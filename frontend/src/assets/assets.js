@@ -1,6 +1,4 @@
-import banner1 from './banner1.webp';
-import banner2 from './banner2.webp';
-import banner3 from './banner3.webp';
+import banner1 from './banner1.png';
 import whyus from './whyus.webp';
 import Newsletter from './Newsletter.webp';
 import logo from './logo.png';
@@ -43,7 +41,5 @@ export const assets = {
   whyus,
   Newsletter,
   fav,
-  banner1,
-  banner2,
-  banner3,
+  banner1
 };
