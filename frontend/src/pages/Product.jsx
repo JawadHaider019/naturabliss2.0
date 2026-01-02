@@ -1,8 +1,8 @@
-import { useContext, useState, useEffect, useRef } from 'react';
+import { useContext, useState, useEffect, useRef ,useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import RelatedProduct from '../components/RelatedProduct';
-import { FaStar, FaStarHalf, FaRegStar, FaThumbsUp, FaThumbsDown, FaTimes, FaUserShield } from 'react-icons/fa';
+import { FaStar, FaStarHalf, FaRegStar,  FaWhatsapp, FaThumbsUp, FaThumbsDown, FaTimes, FaUserShield } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const Product = () => {
@@ -27,6 +27,7 @@ const Product = () => {
 
   // Use ref to track if addToCart was called to prevent multiple calls
   const addToCartCalledRef = useRef(false);
+   const whatsappButtonRef = useRef(null);
 
   // Email masking function
   const maskEmail = (email) => {
@@ -503,6 +504,20 @@ const Product = () => {
     }
     return stars;
   };
+  const handleOrderOnWhatsApp = useCallback(() => {
+    if (!productData) return;
+    
+    const message = `Assalam O Alaikum! I would like to order:\n\n` +
+                   `*Product:* ${productData.name}\n` +
+                   `*Quantity:* ${quantity}\n` +
+                   `*Price:* ${currency} ${(productData.discountprice || productData.price) * quantity}\n\n` +
+                   `Please let me know the next steps.`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    const phoneNumber = "923241572294";
+    
+    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+  }, [productData, quantity, currency]);
 
   // Updated handleAddToCart with proper debouncing and single call guarantee
   const handleAddToCart = async () => {
@@ -706,8 +721,8 @@ const Product = () => {
           </div>
           
           {renderStockStatus()}
-          
-          <button
+          <div className="mt-6 flex flex-col items-start gap-4">
+        <button
             onClick={handleAddToCart}
             className={`btn mt-4 ${
               stock === 0 || isAddingToCart
@@ -725,7 +740,21 @@ const Product = () => {
                   : `ADD TO CART`
             }
           </button>
-          
+
+                 <button  
+                    ref={whatsappButtonRef}
+                    onClick={handleOrderOnWhatsApp}
+                    disabled={stock === 0}
+                    className={`btn flex gap-2 bg-green-600 text-white  ${
+                      stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <FaWhatsapp className="w-5 h-5" />
+                    <span>Order on WhatsApp</span>
+                  </button>
+       
+            </div>
+            
           <hr className="mt-8 sm:w-4/5" />
           <ul className="mt-5 flex flex-col gap-1 text-sm text-gray-700 leading-relaxed list-disc list-inside">
             <li>Made with pure, natural, and organic ingredients.</li>

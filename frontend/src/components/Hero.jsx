@@ -21,11 +21,12 @@ const Hero = () => {
     timeout: 5000,
   });
 
-  // Pre-defined default banner - shown immediately
+  // Pre-loaded default banner from assets - ALWAYS AVAILABLE
   const defaultBanner = {
     _id: 'default-banner',
     desktopImageUrl: assets.banner1,
     mobileImageUrl: assets.banner1,
+    altText: 'Default banner image'
   };
 
   // Simple fetch function
@@ -59,29 +60,26 @@ const Hero = () => {
     }
   };
 
-  // Start with default banner, then fetch from backend
+  // Start with default banner immediately - NO DELAY
   useEffect(() => {
-    // Show default banner immediately
+    // ALWAYS show default banner first
     setBanners([defaultBanner]);
     setIsLoading(false);
     
-    // Fetch from backend after a short delay
-    const timer = setTimeout(() => {
+    // Then fetch from backend
+    setTimeout(() => {
       fetchBanners();
     }, 100);
-    
-    return () => clearTimeout(timer);
   }, []);
 
-  // Check screen size - show mobile banner on tablets too
+  // Check screen size
   const [screenSize, setScreenSize] = useState('desktop');
 
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      // Mobile: < 768px, Tablet: 768px - 1024px, Desktop: > 1024px
       if (width < 1024) {
-        setScreenSize('mobile'); // Show mobile banner on both mobile and tablet
+        setScreenSize('mobile');
       } else {
         setScreenSize('desktop');
       }
@@ -109,7 +107,6 @@ const Hero = () => {
     if (!banner) return assets.banner1;
     
     if (screenSize === 'mobile' && banner.mobileImageUrl) {
-      // Show mobile image on both mobile phones and tablets
       return banner.mobileImageUrl;
     }
     
@@ -137,7 +134,7 @@ const Hero = () => {
     </div>
   );
 
-  // Slider settings - responsive breakpoints
+  // Slider settings
   const settings = {
     dots: true,
     infinite: banners.length > 1,
@@ -159,7 +156,7 @@ const Hero = () => {
     dotsClass: "slick-dots !flex !flex-col !static !w-auto !m-0",
     responsive: [
       {
-        breakpoint: 1024, // Tablet and below
+        breakpoint: 1024,
         settings: {
           arrows: false,
           dots: true,
@@ -176,27 +173,41 @@ const Hero = () => {
     ]
   };
 
-  // Banner Item Component
+  // Banner Item Component - FIXED: No initial opacity 0
   const BannerItem = ({ banner, index }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const imageUrl = getImageUrl(banner);
     
+    // Pre-load the image
     useEffect(() => {
+      if (!imageUrl) {
+        setImageLoaded(true);
+        return;
+      }
+      
+      // Check if image is already cached (default banner from assets)
       const img = new Image();
+      
+      // For default banner, assume it's already loaded since it's in assets
+      if (banner._id === 'default-banner') {
+        setImageLoaded(true);
+        return;
+      }
+      
       img.src = imageUrl;
       img.onload = () => setImageLoaded(true);
-      img.onerror = () => setImageLoaded(true);
-    }, [imageUrl]);
+      img.onerror = () => {
+        console.warn(`Failed to load banner image: ${imageUrl}`);
+        setImageLoaded(true); // Still show fallback
+      };
+    }, [imageUrl, banner._id]);
 
-    // Determine if banner is clickable
     const isClickable = banner.linkUrl && banner.linkUrl !== '';
-
-    // Adjust height based on screen size
     const bannerHeight = screenSize === 'mobile' ? 'h-[70vh] md:h-[80vh]' : 'h-[90vh]';
 
     return (
       <div 
-        className={`relative w-full overflow-hidden bg-black ${bannerHeight}`}
+        className={`relative w-full overflow-hidden ${bannerHeight}`}
         role="group"
         aria-roledescription="slide"
         aria-label={`${index + 1} of ${banners.length}`}
@@ -205,30 +216,33 @@ const Hero = () => {
           cursor: isClickable ? 'pointer' : 'default',
         }}
       >
-        {/* Background Image */}
-        <div className="absolute inset-0 bg-black">
+        {/* MAIN FIX: Always show image immediately with full opacity */}
+        <div className="absolute inset-0">
           <img
             src={imageUrl}
-            alt="Banner"
-            className="w-full h-full object-cover transition-opacity duration-300"
+            alt={banner.altText || "Banner image"}
+            className="w-full h-full object-cover"
             loading={index === 0 ? "eager" : "lazy"}
-            style={{ 
-              opacity: imageLoaded ? 1 : 0.7,
+            // REMOVED: style={{ opacity: imageLoaded ? 1 : 0 }}
+            // Now shows immediately at full opacity
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = assets.banner1; // Fallback to default
             }}
           />
         </div>
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black/40"></div>
+        {/* Light overlay for better contrast (optional) */}
+        <div className="absolute inset-0 bg-black/10"></div>
 
-        {/* Loading indicator for backend images */}
+        {/* Loading spinner only for non-default banners */}
         {!imageLoaded && banner._id !== 'default-banner' && (
-          <div className="absolute inset-0 flex items-center justify-center z-5">
-            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 z-5">
+            <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
           </div>
         )}
 
-        {/* Accessibility indicator for clickable banners */}
+        {/* Accessibility indicator */}
         {isClickable && (
           <div className="sr-only">
             Clickable banner - {banner.openInNewTab ? 'Opens in new tab' : 'Navigate to link'}
@@ -238,27 +252,12 @@ const Hero = () => {
     );
   };
 
-  // ALWAYS SHOW CONTENT - Never show "not found" or empty states to users
+  // ALWAYS show at least the default banner
   const displayBanners = banners.length > 0 ? banners : [defaultBanner];
-
-  // Minimal loading state that doesn't block content
-  if (isLoading && banners.length === 0) {
-    return (
-      <section className="relative w-full h-[90vh] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
-        <div className="absolute inset-0 bg-black/40"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white">
-            <div className="w-12 h-12 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-            <p className="text-sm text-white/70">Loading...</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <div 
-      className="relative w-full overflow-hidden" 
+      className="relative w-full overflow-hidden bg-gray-900" 
       aria-label="Featured banners"
       role="region"
       aria-roledescription="carousel"
@@ -274,23 +273,44 @@ const Hero = () => {
         .slick-slide > div {
           height: 100%;
         }
-        /* Add subtle hover effect for clickable banners */
-        .clickable-banner:hover img {
-          transform: scale(1.01);
-          transition: transform 0.3s ease;
+        /* Ensure no black flashes */
+        .slick-slide {
+          background: transparent !important;
+        }
+        /* Make sure the track has no black background */
+        .slick-track {
+          background: transparent !important;
+        }
+        /* Prevent any black backgrounds in slick components */
+        .slick-list {
+          background: transparent !important;
         }
       `}</style>
       
-      <Slider ref={sliderRef} {...settings}>
-        {displayBanners.map((banner, index) => (
-          <BannerItem 
-            key={`${banner._id}-${index}`} 
-            banner={banner} 
-            index={index}
-            className={banner.linkUrl ? 'clickable-banner' : ''}
-          />
-        ))}
-      </Slider>
+      {/* Container with fallback background */}
+      <div className="relative w-full h-full">
+        <Slider ref={sliderRef} {...settings}>
+          {displayBanners.map((banner, index) => (
+            <BannerItem 
+              key={`${banner._id}-${index}`} 
+              banner={banner} 
+              index={index}
+            />
+          ))}
+        </Slider>
+        
+        {/* Fallback in case slider fails to render */}
+        {displayBanners.length === 0 && (
+          <div className="w-full h-[90vh] relative">
+            <img
+              src={assets.banner1}
+              alt="Fallback banner"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/10"></div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
