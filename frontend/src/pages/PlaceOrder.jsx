@@ -582,6 +582,28 @@ const PlaceOrder = () => {
       );
       
       if (response.data.success) {
+        // ==================== FACEBOOK PIXEL PURCHASE TRACKING ====================
+        if (window.fbq) {
+          const purchaseData = {
+            value: finalAmount,
+            currency: 'PKR',
+            content_type: 'product',
+            contents: orderItems.map(item => ({
+              id: item.id,
+              quantity: item.quantity,
+              item_price: item.price
+            })),
+            content_ids: orderItems.map(item => item.id),
+            num_items: orderItems.length,
+            order_id: response.data.orderId
+          };
+          
+          window.fbq('track', 'Purchase', purchaseData);
+          
+          console.log('📊 Facebook Pixel: Purchase tracked', purchaseData);
+        }
+        // ==================== END FACEBOOK PIXEL ====================
+        
         // Clear cart
         await clearCartAfterOrder();
         

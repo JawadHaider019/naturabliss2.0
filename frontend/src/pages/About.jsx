@@ -310,7 +310,7 @@ const About = () => {
 </div>
 
       {/* Meet the Team - Magazine Style */}
-      <div className="py-20 bg-white">
+     { teamMembers.length>0 && <div className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-block border-b-2 border-gray-300 pb-2 mb-4">
@@ -383,7 +383,7 @@ const About = () => {
             )}
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Closing Signature */}
       <div className="max-w-2xl mx-auto px-6 py-16 text-center border-t border-gray-200">

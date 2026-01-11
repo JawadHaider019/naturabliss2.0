@@ -18,6 +18,56 @@ const Collection = () => {
   const [error, setError] = useState(null);
   const backendURL = import.meta.env.VITE_BACKEND_URL;
 
+  // Facebook Pixel tracking for collection view
+  useEffect(() => {
+    // Track ViewCategory when collection is loaded
+    if (window.fbq && filterProducts.length > 0) {
+      window.fbq('track', 'ViewCategory', {
+        content_category: 'Collection',
+        content_type: 'product',
+        num_items: filterProducts.length,
+        search_term: search || undefined
+      });
+      
+      console.log('📊 Facebook Pixel: Collection view tracked', {
+        items: filterProducts.length,
+        hasSearch: !!search
+      });
+    }
+  }, [filterProducts, search]);
+
+  // Track individual product views (when product is visible)
+  const trackProductView = useCallback((product) => {
+    if (window.fbq && product) {
+      const price = product.discountprice > 0 ? product.discountprice : product.price;
+      const categoryName = product.category || 'Product';
+      
+      window.fbq('track', 'ViewContent', {
+        content_ids: [product._id],
+        content_name: product.name,
+        content_type: 'product',
+        content_category: categoryName,
+        value: price,
+        currency: 'PKR'
+      });
+      
+      console.log('📊 Facebook Pixel: Product view tracked', {
+        name: product.name,
+        price: price
+      });
+    }
+  }, []);
+
+  // Track category filter changes
+  useEffect(() => {
+    if (window.fbq && selectedCategories.length > 0) {
+      window.fbq('trackCustom', 'FilterByCategory', {
+        categories: selectedCategories,
+        num_categories: selectedCategories.length
+      });
+    }
+  }, [selectedCategories]);
+
   // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
@@ -487,6 +537,8 @@ const Collection = () => {
                 discount={item.discountprice}
                 rating={item.rating || 0}
                 bestseller={item.bestseller}
+                // Add onClick to track product view when clicked
+                onClick={() => trackProductView(item)}
               />
             ))}
           </div>

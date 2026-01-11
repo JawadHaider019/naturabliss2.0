@@ -13,6 +13,30 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
   }
 
   const handleClick = () => {
+    // Facebook Pixel: Track product view
+    if (window.fbq) {
+      const actualPrice = discount ? discount : price;
+      const discountPercentage = discount ? Math.round(((price - discount) / price) * 100) : 0;
+      
+      window.fbq('track', 'ViewContent', {
+        content_ids: [id],
+        content_name: name,
+        content_type: 'product',
+        value: actualPrice,
+        currency: 'PKR',
+        content_category: 'Product',
+        has_discount: discount > 0,
+        discount_percentage: discountPercentage || undefined
+      });
+      
+      console.log('📊 Facebook Pixel: Product view tracked', {
+        product: name,
+        price: actualPrice,
+        id: id
+      });
+    }
+    
+    // Navigate to product page
     navigate(`/product/${id}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

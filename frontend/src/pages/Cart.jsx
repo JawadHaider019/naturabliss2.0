@@ -28,6 +28,39 @@ const Cart = () => {
   const [isCartEmpty, setIsCartEmpty] = useState(true);
   const navigate = useNavigate();
 
+  // Facebook Pixel tracking functions
+  const trackFacebookAddToCart = (itemData, quantity, itemType) => {
+    if (window.fbq) {
+      window.fbq('track', 'AddToCart', {
+        content_ids: [itemData.id || itemData._id],
+        content_name: itemData.name,
+        content_type: itemType === 'deal' ? 'product_group' : 'product',
+        value: itemData.unitPrice || itemData.price || itemData.dealFinalPrice || 0,
+        currency: 'PKR',
+        quantity: quantity
+      });
+      
+      console.log('📊 Facebook Pixel: AddToCart tracked', {
+        name: itemData.name,
+        type: itemType,
+        quantity: quantity,
+        value: itemData.unitPrice || itemData.price
+      });
+    }
+  };
+
+  const trackFacebookRemoveFromCart = (itemData, itemType) => {
+    if (window.fbq) {
+      window.fbq('trackCustom', 'RemoveFromCart', {
+        content_ids: [itemData.id || itemData._id],
+        content_name: itemData.name,
+        content_type: itemType === 'deal' ? 'product_group' : 'product',
+        value: itemData.unitPrice || itemData.price || itemData.dealFinalPrice || 0,
+        currency: 'PKR'
+      });
+    }
+  };
+
   // ✅ Define helper functions BEFORE useCallback hooks
   const getDealProductsFromDeal = useCallback((deal) => {
     if (deal.dealProducts && deal.dealProducts.length > 0) {
@@ -304,10 +337,48 @@ const Cart = () => {
     }
   };
 
-  // Fixed quantity update functions
+  // Fixed quantity update functions with Facebook Pixel tracking
   const handleQuantityUpdate = (itemId, quantity, itemType) => {
-  
+    // Get item data before updating
+    let itemData = null;
+    let currentQuantity = 0;
     
+    if (itemType === 'deal') {
+      itemData = deals.find(d => d._id === itemId);
+      currentQuantity = cartDeals[itemId] || 0;
+    } else {
+      itemData = products.find(p => p._id === itemId);
+      currentQuantity = cartItems[itemId] || 0;
+    }
+    
+    // If quantity is increasing (adding to cart)
+    if (quantity > currentQuantity && itemData) {
+      const qtyAdded = quantity - currentQuantity;
+      const itemToTrack = {
+        id: itemData._id,
+        name: itemData.name || itemData.dealName,
+        unitPrice: itemData.discountprice > 0 ? itemData.discountprice : itemData.price,
+        price: itemData.price || itemData.dealFinalPrice || 0,
+        dealFinalPrice: itemData.dealFinalPrice
+      };
+      
+      trackFacebookAddToCart(itemToTrack, qtyAdded, itemType);
+    }
+    
+    // If quantity is decreasing to 0 (removing from cart)
+    if (quantity === 0 && currentQuantity > 0 && itemData) {
+      const itemToTrack = {
+        id: itemData._id,
+        name: itemData.name || itemData.dealName,
+        unitPrice: itemData.discountprice > 0 ? itemData.discountprice : itemData.price,
+        price: itemData.price || itemData.dealFinalPrice || 0,
+        dealFinalPrice: itemData.dealFinalPrice
+      };
+      
+      trackFacebookRemoveFromCart(itemToTrack, itemType);
+    }
+    
+    // Update the quantity
     if (itemType === 'deal') {
       updateDealQuantity(itemId, quantity);
     } else {
@@ -346,6 +417,18 @@ const Cart = () => {
     if (productCartData.length === 0 && dealCartData.length === 0) {
       toast.error("Your cart is empty");
       return;
+    }
+    
+    // Track InitiateCheckout event
+    if (window.fbq) {
+      const totalItems = [...productCartData, ...dealCartData].reduce((sum, item) => sum + item.quantity, 0);
+      window.fbq('track', 'InitiateCheckout', {
+        content_type: 'product',
+        num_items: totalItems,
+        currency: 'PKR'
+      });
+      
+      console.log('📊 Facebook Pixel: InitiateCheckout tracked');
     }
     
     navigate('/place-order');

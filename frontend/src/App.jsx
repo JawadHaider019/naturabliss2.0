@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -13,7 +13,7 @@ const Favicon = lazy(() => import('./components/Favicon'))
 const Home = lazy(() => 
   Promise.all([
     import('./pages/Home'),
-    new Promise(resolve => setTimeout(resolve, 100)) // Small delay to avoid blocking
+    new Promise(resolve => setTimeout(resolve, 100))
   ]).then(([module]) => module)
 )
 
@@ -29,7 +29,6 @@ const PlaceOrder = lazy(() => import('./pages/PlaceOrder'))
 const Blog = lazy(() => import('./pages/Blog'))
 const BlogPost = lazy(() => import('./pages/BlogPost'))
 
-
 // Loading component
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -37,12 +36,11 @@ const LoadingSpinner = () => (
   </div>
 )
 
-// ScrollToTop component with smooth behavior
+// ScrollToTop component
 const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Instant scroll for better UX
     window.scrollTo({
       top: 0,
       left: 0,
@@ -53,6 +51,52 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Meta Pixel Initialization Hook
+const useFacebookPixel = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Initialize Meta Pixel only once
+    if (!window.fbq) {
+      !function(f,b,e,v,n,t,s) {
+        if(f.fbq)return;
+        n=f.fbq=function() {
+          n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)
+        };
+        if(!f._fbq)f._fbq=n;
+        n.push=n;
+        n.loaded=!0;
+        n.version='2.0';
+        n.queue=[];
+        t=b.createElement(e);
+        t.async=!0;
+        t.src=v;
+        s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s);
+      }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      
+      // Initialize with your Pixel ID
+      window.fbq('init', '913853534399435');
+    }
+  }, []); // Empty dependency - runs only once
+
+  // Track page views on route change
+  useEffect(() => {
+    if (window.fbq) {
+      window.fbq('track', 'PageView');
+      
+      // Optional: Track custom page events based on route
+      const pageData = {
+        page_path: location.pathname,
+        page_title: document.title,
+      };
+      
+      // Send custom event with page info (optional but useful)
+      window.fbq('trackCustom', 'PageView', pageData);
+    }
+  }, [location.pathname]); // Runs on every route change
+};
+
 // Preload critical routes
 const preloadRoutes = () => {
   const routes = [
@@ -61,10 +105,24 @@ const preloadRoutes = () => {
     () => import('./pages/Cart')
   ];
   
-  // Start preloading after initial render
   setTimeout(() => {
     routes.forEach(preload => preload());
   }, 2000);
+};
+
+// Helper function to track events from anywhere
+export const trackFacebookEvent = (eventName, data = {}) => {
+  if (window.fbq) {
+    window.fbq('track', eventName, data);
+  } else {
+    console.warn('Facebook Pixel not initialized');
+  }
+};
+
+// Component to track specific page interactions
+const FacebookPixelTracker = () => {
+  useFacebookPixel();
+  return null;
 };
 
 const App = () => {
@@ -105,6 +163,7 @@ const App = () => {
         />
         
         <ScrollToTop />
+        <FacebookPixelTracker /> {/* Add this line */}
         
         <Navbar/>
         <SearchBar/>
