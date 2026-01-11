@@ -237,7 +237,7 @@ const Footer = () => {
                             {copyrightText}
                         </p>
                         <div className="text-gray-500 text-sm">
-                            Developed by <Link to='https://jawumitech.com/' className="text-gray-700 hover:text-gray-500">JawumiTech</Link>
+                            A Project of <Link to='https://jawumitech.com/' className="text-gray-700 hover:text-gray-500">JawumiTech</Link>
                         </div>
                     </div>
                 </div>
