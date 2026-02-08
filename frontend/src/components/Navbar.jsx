@@ -67,7 +67,7 @@ const Navbar = () => {
         <img 
           src={websiteLogo} 
           alt="Website Logo" 
-          className='w-20 s object-contain'
+          className='w-14 sm:w-20 object-contain'
           onError={(e) => {
             // Show asset logo if website logo fails
             e.target.src = assets.logo;

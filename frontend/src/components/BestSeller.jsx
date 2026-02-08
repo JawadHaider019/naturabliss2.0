@@ -146,13 +146,13 @@ const BestSeller = () => {
         }
       },
       {
-        breakpoint: 640,
+        breakpoint: 480, // Changed from 640 to 480 for better mobile targeting
         settings: {
-          slidesToShow: 1,
+          slidesToShow: Math.min(2, bestSeller.length), // Changed from 1 to 2
           slidesToScroll: 1,
-          infinite: bestSeller.length > 1,
-          autoplay: bestSeller.length > 1,
-          dots: bestSeller.length > 1,
+          infinite: bestSeller.length > 2, // Updated from > 1 to > 2
+          autoplay: bestSeller.length > 2, // Updated from > 1 to > 2
+          dots: bestSeller.length > 2, // Updated from > 1 to > 2
           arrows: false,
           swipe: true,
           touchMove: true,
@@ -176,7 +176,7 @@ const BestSeller = () => {
   // Determine if we should show slider based on current screen size logic
   const shouldShowSlider = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return bestSeller.length > 1;
+      return bestSeller.length > 2; // Changed from > 1 to > 2
     }
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       return bestSeller.length > 2;
@@ -302,6 +302,15 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
           }
           .slick-slide {
             height: inherit !important;
+          }
+          /* Ensure proper spacing for 2 items on mobile */
+          @media (max-width: 480px) {
+            .slick-slide {
+              padding: 0 8px;
+            }
+            .slick-list {
+              margin: 0 -8px;
+            }
           }
         `}
       </style>

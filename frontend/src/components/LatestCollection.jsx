@@ -125,13 +125,13 @@ const LatestCollection = () => {
         }
       },
       {
-        breakpoint: 640,
+        breakpoint: 480, // Changed from 640 to 480 for better mobile targeting
         settings: {
-          slidesToShow: 1,
+          slidesToShow: Math.min(2, latestProducts.length), // Changed from 1 to 2
           slidesToScroll: 1,
-          infinite: latestProducts.length > 1,
-          autoplay: latestProducts.length > 1,
-          dots: latestProducts.length > 1,
+          infinite: latestProducts.length > 2, // Updated condition for 2 slides
+          autoplay: latestProducts.length > 2, // Updated condition for 2 slides
+          dots: latestProducts.length > 2, // Updated condition for 2 slides
           arrows: false,
           swipe: true,
           touchMove: true,
@@ -155,7 +155,7 @@ const LatestCollection = () => {
   // Determine if we should show slider based on current screen size logic
   const shouldShowSlider = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return latestProducts.length > 1;
+      return latestProducts.length > 2; // Changed from > 1 to > 2
     }
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       return latestProducts.length > 2;
@@ -281,6 +281,15 @@ const LatestCollection = () => {
           }
           .slick-slide {
             height: inherit !important;
+          }
+          /* Ensure proper spacing for 2 items on mobile */
+          @media (max-width: 480px) {
+            .slick-slide {
+              padding: 0 8px;
+            }
+            .slick-list {
+              margin: 0 -8px;
+            }
           }
         `}
       </style>

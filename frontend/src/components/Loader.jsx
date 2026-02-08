@@ -9,7 +9,7 @@ const Loader = () => {
         <div className="w-20 h-20 border-4 border-gray-300 border-t-black rounded-full animate-spin bg-white"></div>
         {/* Logo in center */}
         <img 
-          src={assets.fav} 
+          src={assets.logo} 
           alt="Loading" 
           className="w-8 h-8 absolute"
         />
