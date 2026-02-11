@@ -8,6 +8,8 @@ const Navbar = lazy(() => import('./components/Navbar'))
 const SearchBar = lazy(() => import('./components/SearchBar'))
 const Footer = lazy(() => import('./components/Footer'))
 const Favicon = lazy(() => import('./components/Favicon'))
+import FacebookPixel from './components/FacebookPixel';
+import TikTokPixel from './components/TiktokPixel';
 
 // Lazy load pages with preloading strategy
 const Home = lazy(() => 
@@ -51,51 +53,7 @@ const ScrollToTop = () => {
   return null;
 };
 
-// Meta Pixel Initialization Hook
-const useFacebookPixel = () => {
-  const location = useLocation();
-  
-  useEffect(() => {
-    // Initialize Meta Pixel only once
-    if (!window.fbq) {
-      !function(f,b,e,v,n,t,s) {
-        if(f.fbq)return;
-        n=f.fbq=function() {
-          n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)
-        };
-        if(!f._fbq)f._fbq=n;
-        n.push=n;
-        n.loaded=!0;
-        n.version='2.0';
-        n.queue=[];
-        t=b.createElement(e);
-        t.async=!0;
-        t.src=v;
-        s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s);
-      }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
-      
-      // Initialize with your Pixel ID
-      window.fbq('init', '913853534399435');
-    }
-  }, []); // Empty dependency - runs only once
 
-  // Track page views on route change
-  useEffect(() => {
-    if (window.fbq) {
-      window.fbq('track', 'PageView');
-      
-      // Optional: Track custom page events based on route
-      const pageData = {
-        page_path: location.pathname,
-        page_title: document.title,
-      };
-      
-      // Send custom event with page info (optional but useful)
-      window.fbq('trackCustom', 'PageView', pageData);
-    }
-  }, [location.pathname]); // Runs on every route change
-};
 
 // Preload critical routes
 const preloadRoutes = () => {
@@ -119,11 +77,7 @@ export const trackFacebookEvent = (eventName, data = {}) => {
   }
 };
 
-// Component to track specific page interactions
-const FacebookPixelTracker = () => {
-  useFacebookPixel();
-  return null;
-};
+
 
 const App = () => {
   // Preload important routes after mount
@@ -163,7 +117,8 @@ const App = () => {
         />
         
         <ScrollToTop />
-        <FacebookPixelTracker /> {/* Add this line */}
+        <FacebookPixel /> 
+        <TikTokPixel />
         
         <Navbar/>
         <SearchBar/>

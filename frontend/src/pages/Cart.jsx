@@ -61,6 +61,53 @@ const Cart = () => {
     }
   };
 
+  // TikTok Pixel tracking functions
+const trackTikTokAddToCart = (itemData, quantity, itemType) => {
+  if (window.ttq) {
+    window.ttq.track('AddToCart', {
+      content_id: itemData.id || itemData._id,
+      content_name: itemData.name,
+      content_type: itemType === 'deal' ? 'product_group' : 'product',
+      price: itemData.unitPrice || itemData.price || itemData.dealFinalPrice || 0,
+      currency: 'PKR',
+      quantity
+    });
+
+    console.log('📊 TikTok Pixel: AddToCart tracked', {
+      name: itemData.name,
+      type: itemType,
+      quantity,
+      value: itemData.unitPrice || itemData.price
+    });
+  }
+};
+
+const trackTikTokRemoveFromCart = (itemData, itemType) => {
+  if (window.ttq) {
+    window.ttq.track('RemoveFromCart', {
+      content_id: itemData.id || itemData._id,
+      content_name: itemData.name,
+      content_type: itemType === 'deal' ? 'product_group' : 'product',
+      price: itemData.unitPrice || itemData.price || itemData.dealFinalPrice || 0,
+      currency: 'PKR'
+    });
+
+    console.log('📊 TikTok Pixel: RemoveFromCart tracked', itemData.name);
+  }
+};
+
+const trackTikTokInitiateCheckout = (totalItems) => {
+  if (window.ttq) {
+    window.ttq.track('InitiateCheckout', {
+      content_type: 'product',
+      num_items: totalItems,
+      currency: 'PKR'
+    });
+
+    console.log('📊 TikTok Pixel: InitiateCheckout tracked');
+  }
+};
+
   // ✅ Define helper functions BEFORE useCallback hooks
   const getDealProductsFromDeal = useCallback((deal) => {
     if (deal.dealProducts && deal.dealProducts.length > 0) {
@@ -384,6 +431,37 @@ const Cart = () => {
     } else {
       updateQuantity(itemId, quantity);
     }
+
+
+    // Track AddToCart
+if (quantity > currentQuantity && itemData) {
+  const qtyAdded = quantity - currentQuantity;
+  const itemToTrack = {
+    id: itemData._id,
+    name: itemData.name || itemData.dealName,
+    unitPrice: itemData.discountprice > 0 ? itemData.discountprice : itemData.price,
+    price: itemData.price || itemData.dealFinalPrice || 0,
+    dealFinalPrice: itemData.dealFinalPrice
+  };
+
+  trackFacebookAddToCart(itemToTrack, qtyAdded, itemType);
+  trackTikTokAddToCart(itemToTrack, qtyAdded, itemType); // ✅ TikTok
+}
+
+// Track RemoveFromCart
+if (quantity === 0 && currentQuantity > 0 && itemData) {
+  const itemToTrack = {
+    id: itemData._id,
+    name: itemData.name || itemData.dealName,
+    unitPrice: itemData.discountprice > 0 ? itemData.discountprice : itemData.price,
+    price: itemData.price || itemData.dealFinalPrice || 0,
+    dealFinalPrice: itemData.dealFinalPrice
+  };
+
+  trackFacebookRemoveFromCart(itemToTrack, itemType);
+  trackTikTokRemoveFromCart(itemToTrack, itemType); // ✅ TikTok
+}
+
   };
 
   const handleRemoveItem = (itemId, itemType) => {
@@ -419,19 +497,25 @@ const Cart = () => {
       return;
     }
     
-    // Track InitiateCheckout event
-    if (window.fbq) {
-      const totalItems = [...productCartData, ...dealCartData].reduce((sum, item) => sum + item.quantity, 0);
-      window.fbq('track', 'InitiateCheckout', {
-        content_type: 'product',
-        num_items: totalItems,
-        currency: 'PKR'
-      });
-      
-      console.log('📊 Facebook Pixel: InitiateCheckout tracked');
-    }
+    
     
     navigate('/place-order');
+
+    // Facebook Pixel
+if (window.fbq) {
+  const totalItems = [...productCartData, ...dealCartData].reduce((sum, item) => sum + item.quantity, 0);
+  window.fbq('track', 'InitiateCheckout', {
+    content_type: 'product',
+    num_items: totalItems,
+    currency: 'PKR'
+  });
+  
+}
+
+// TikTok Pixel
+const totalItems = [...productCartData, ...dealCartData].reduce((sum, item) => sum + item.quantity, 0);
+trackTikTokInitiateCheckout(totalItems);
+
   };
 
   // Fixed Quantity Controls component

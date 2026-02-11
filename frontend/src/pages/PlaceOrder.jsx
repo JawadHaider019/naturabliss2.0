@@ -603,7 +603,23 @@ const PlaceOrder = () => {
           console.log('📊 Facebook Pixel: Purchase tracked', purchaseData);
         }
         // ==================== END FACEBOOK PIXEL ====================
-        
+        // ==================== TIKTOK PIXEL PURCHASE TRACKING ====================
+if (window.ttq) {
+  const tiktokPurchaseData = {
+    content_id: orderItems.map(item => item.id),
+    content_type: 'product',
+    quantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+    value: finalAmount,
+    currency: 'PKR',
+    order_id: response.data.orderId
+  };
+
+  window.ttq.track('CompletePayment', tiktokPurchaseData);
+
+  console.log('📊 TikTok Pixel: Purchase tracked', tiktokPurchaseData);
+}
+// ==================== END TIKTOK PIXEL ====================
+
         // Clear cart
         await clearCartAfterOrder();
         

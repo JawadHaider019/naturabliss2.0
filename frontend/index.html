@@ -2,32 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="facebook-domain-verification" content="nlxpmvqotr5el913t1wkv9dn4avadk" />
+
     <!-- Favicon for all devices -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     <meta name="facebook-domain-verification" content="nlxpmvqotr5el913t1wkv9dn4avadk" />
-   
+
     <!-- SEO Meta Tags -->
     <title>Natura Bliss | Pure Organic Beauty & Skincare Products</title>
     <meta name="description" content="Discover Natura Bliss - Premium organic skincare products. Pure, natural beauty solutions for radiant skin. Shop our collection of organic beauty products." />
     <meta name="keywords" content="organic skincare, natural beauty, pure cosmetics, organic products, skincare, beauty, natura bliss, organic beauty" />
     <meta name="author" content="Natura Bliss" />
     <meta name="robots" content="index, follow" />
-    
-    <!-- Additional Important Meta Tags -->
     <meta name="theme-color" content="#000000" />
     <meta name="msapplication-TileColor" content="#000000" />
-    
-    <!-- Canonical URL -->
     <link rel="canonical" href="https://naturablissorganics.com/" />
-    
-    <!-- Structured Data (JSON-LD) for Better SEO -->
+
+    <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -37,10 +31,6 @@
       "description": "Premium organic skincare and beauty products made with pure natural ingredients for radiant, healthy skin.",
       "logo": "https://naturablissorganics.com/logo.png",
       "image": "https://naturablissorganics.com/og-image.jpg",
-      "address": {
-        "@type": "PostalAddress",
-        "addressCountry": "Pakistan"
-      },
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Chakwal , Talagang",
@@ -56,31 +46,20 @@
       }
     }
     </script>
-    
-    <!-- Meta Pixel Code -->
-    <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '913853534399435');
-    fbq('track', 'PageView');
-    </script>
-    <!-- End Meta Pixel Code -->
-    
   </head>
   <body>
-    <!-- Move noscript tag here -->
+    <!-- Facebook Pixel fallback for non-JS -->
     <noscript>
       <img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=913853534399435&ev=PageView&noscript=1"
-      />
+           src="https://www.facebook.com/tr?id=913853534399435&ev=PageView&noscript=1"/>
     </noscript>
-    
+
+    <!-- TikTok Pixel fallback for non-JS -->
+    <noscript>
+      <img height="1" width="1" style="display:none"
+           src="https://analytics.tiktok.com/i18n/pixel/events.gif?sdkid=D6507NJC77U8DQFBR5VG&event=PageView" />
+    </noscript>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

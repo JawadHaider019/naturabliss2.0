@@ -1,4 +1,4 @@
-// src/components/FacebookPixel.js
+// src/components/FacebookPixel.jsx
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -27,7 +27,7 @@ const FacebookPixel = () => {
     }
   }, [location.pathname]);
 
-  return null; // This component doesn't render anything
+  return null; 
 };
 
 export default FacebookPixel;

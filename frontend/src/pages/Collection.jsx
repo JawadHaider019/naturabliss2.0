@@ -18,162 +18,151 @@ const Collection = () => {
   const [error, setError] = useState(null);
   const backendURL = import.meta.env.VITE_BACKEND_URL;
 
-  // Facebook Pixel tracking for collection view
-  useEffect(() => {
-    // Track ViewCategory when collection is loaded
-    if (window.fbq && filterProducts.length > 0) {
-      window.fbq('track', 'ViewCategory', {
-        content_category: 'Collection',
-        content_type: 'product',
-        num_items: filterProducts.length,
-        search_term: search || undefined
-      });
-      
-      console.log('📊 Facebook Pixel: Collection view tracked', {
-        items: filterProducts.length,
-        hasSearch: !!search
-      });
-    }
-  }, [filterProducts, search]);
+// Facebook & TikTok Pixel tracking for collection view
+useEffect(() => {
+  if (filterProducts.length === 0) return;
+
+  // Facebook Pixel
+  if (window.fbq) {
+    window.fbq('track', 'ViewCategory', {
+      content_category: 'Collection',
+      content_type: 'product',
+      num_items: filterProducts.length,
+      search_term: search || undefined
+    });
+
+    console.log('📊 Facebook Pixel: Collection view tracked', {
+      items: filterProducts.length,
+      hasSearch: !!search
+    });
+  }
+
+  // TikTok Pixel
+  if (window.ttq) {
+    window.ttq.track('ViewContent', {  // TikTok does not have ViewCategory, so we use ViewContent for category
+      content_category: 'Collection',
+      content_type: 'product',
+      num_items: filterProducts.length,
+      search_term: search || undefined
+    });
+
+    console.log('📊 TikTok Pixel: Collection view tracked', {
+      items: filterProducts.length,
+      hasSearch: !!search
+    });
+  }
+}, [filterProducts, search]);
+
 
   // Track individual product views (when product is visible)
-  const trackProductView = useCallback((product) => {
-    if (window.fbq && product) {
-      const price = product.discountprice > 0 ? product.discountprice : product.price;
-      const categoryName = product.category || 'Product';
-      
-      window.fbq('track', 'ViewContent', {
-        content_ids: [product._id],
-        content_name: product.name,
-        content_type: 'product',
-        content_category: categoryName,
-        value: price,
-        currency: 'PKR'
-      });
-      
-      console.log('📊 Facebook Pixel: Product view tracked', {
-        name: product.name,
-        price: price
-      });
-    }
-  }, []);
+ const trackProductView = useCallback((product) => {
+  const price = product.discountprice > 0 ? product.discountprice : product.price;
+  const categoryName = product.category || 'Product';
 
-  // Track category filter changes
-  useEffect(() => {
-    if (window.fbq && selectedCategories.length > 0) {
+  // Facebook Pixel
+  if (window.fbq) {
+    window.fbq('track', 'ViewContent', {
+      content_ids: [product._id],
+      content_name: product.name,
+      content_type: 'product',
+      content_category: categoryName,
+      value: price,
+      currency: 'PKR'
+    });
+  }
+
+  // TikTok Pixel
+  if (window.ttq) {
+    window.ttq.track('ViewContent', {
+      content_id: product._id,
+      content_name: product.name,
+      content_type: 'product',
+      content_category: categoryName,
+      price: price,
+      currency: 'PKR'
+    });
+  }
+
+  console.log('📊 Product view tracked:', product.name);
+}, []);
+
+ useEffect(() => {
+    if (selectedCategories.length === 0) return;
+
+    // Facebook
+    if (window.fbq) {
       window.fbq('trackCustom', 'FilterByCategory', {
         categories: selectedCategories,
         num_categories: selectedCategories.length
       });
     }
+
+    // TikTok
+    if (window.ttq) {
+      window.ttq.track('FilterByCategory', {
+        categories: selectedCategories,
+        num_categories: selectedCategories.length
+      });
+    }
+
+    console.log('📊 Category filter applied:', selectedCategories);
   }, [selectedCategories]);
 
-  // Fetch categories from backend
-  useEffect(() => {
+
+useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await fetch(`${backendURL}/api/categories`);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
-        
-        let categories = data;
-        
-        if (data.data && Array.isArray(data.data)) {
-          categories = data.data;
-        }
-        
-        if (data.categories && Array.isArray(data.categories)) {
-          categories = data.categories;
-        }
-        
-        if (!Array.isArray(categories)) {
-          throw new Error('Categories data is not an array');
-        }
 
-        // Create mapping from IDs to names
+        let categories = data.data || data.categories || data;
+        if (!Array.isArray(categories)) throw new Error('Categories data is not an array');
+
         const idToNameMap = {};
         const subcategoryIdToNameMap = {};
 
         const transformedCategories = categories.map((cat) => {
           const categoryId = cat._id || cat.id;
           const categoryName = cat.name || cat.categoryName || cat.title || 'Category';
-          
-          if (categoryId) {
-            idToNameMap[categoryId] = categoryName;
-          }
+
+          if (categoryId) idToNameMap[categoryId] = categoryName;
 
           const subcategories = (cat.subcategories || cat.subCategories || []).map((sub) => {
             const subcategoryId = sub._id || sub.id;
             const subcategoryName = sub.name || sub.subcategoryName || sub.title || sub || 'Subcategory';
-            
-            if (subcategoryId) {
-              subcategoryIdToNameMap[subcategoryId] = subcategoryName;
-            }
-            
-            return {
-              id: subcategoryId,
-              name: subcategoryName
-            };
+            if (subcategoryId) subcategoryIdToNameMap[subcategoryId] = subcategoryName;
+            return { id: subcategoryId, name: subcategoryName };
           });
 
-          return {
-            id: categoryId,
-            name: categoryName,
-            subcategories
-          };
+          return { id: categoryId, name: categoryName, subcategories };
         });
 
         setBackendCategories(transformedCategories);
         setCategoryIdMap(idToNameMap);
         setSubcategoryIdMap(subcategoryIdToNameMap);
         setError(null);
-        
       } catch (error) {
         setError(error.message);
-        // Fallback: extract categories from products
         const categoryMap = {};
         products.forEach(product => {
-          if (product && product.category) {
-            const categoryName = product.category;
-            const subcategoryName = product.subcategory;
-            
-            if (!categoryMap[categoryName]) {
-              categoryMap[categoryName] = {
-                name: categoryName,
-                subcategories: new Set()
-              };
-            }
-            
-            if (subcategoryName) {
-              categoryMap[categoryName].subcategories.add(subcategoryName);
-            }
-          }
+          if (!product || !product.category) return;
+          if (!categoryMap[product.category]) categoryMap[product.category] = { name: product.category, subcategories: new Set() };
+          if (product.subcategory) categoryMap[product.category].subcategories.add(product.subcategory);
         });
 
-        const fallbackCategories = Object.values(categoryMap).map(cat => ({
+        setBackendCategories(Object.values(categoryMap).map(cat => ({
           name: cat.name,
-          subcategories: Array.from(cat.subcategories).map(sub => ({
-            name: sub
-          }))
-        }));
-        
-        setBackendCategories(fallbackCategories);
+          subcategories: Array.from(cat.subcategories).map(sub => ({ name: sub }))
+        })));
       } finally {
         setLoading(false);
       }
     };
 
-    if (backendURL) {
-      fetchCategories();
-    } else {
-      setError('Backend URL configuration missing');
-      setLoading(false);
-    }
-  }, [backendURL]); // Removed products dependency to prevent infinite loops
+    if (backendURL) fetchCategories();
+    else { setError('Backend URL configuration missing'); setLoading(false); }
+  }, [backendURL]);
 
   // Helper functions
   const getCategoryName = useCallback((categoryId) => {
