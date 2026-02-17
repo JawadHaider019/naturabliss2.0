@@ -84,13 +84,14 @@ const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
       });
     }
 
-    // Filter by search term
+    // Filter by search term - FIXED: Also search in customerDetails.phone
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(order => 
         order._id.toLowerCase().includes(term) ||
         (order.customerDetails?.name?.toLowerCase().includes(term)) ||
         (order.customerDetails?.email?.toLowerCase().includes(term)) ||
+        (order.customerDetails?.phone?.includes(searchTerm)) ||
         order.address?.phone?.includes(searchTerm)
       );
     }
@@ -262,7 +263,7 @@ const OrderCard = ({
   const allDeals = Object.values(dealGroups);
   const totalItemsCount = order.items?.length || 0;
 
-  // 🆕 USE CUSTOMER DETAILS FROM ORDER INSTEAD OF FETCHING USER DATA
+  // Get customer info from order's customerDetails
   const customerInfo = useMemo(() => 
     getCustomerInfo(order), 
     [order]
@@ -537,51 +538,64 @@ const OrderSidebar = ({ order, customerInfo, subtotal, total, onStatusChange }) 
   </div>
 );
 
-const CustomerInfo = ({ order, customerInfo }) => (
-  <div>
-    <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-      <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-400" />
-      Customer Information
-    </h5>
-    <div className="bg-gray-50 rounded-xl p-4 text-sm border border-gray-200">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-        <div>
-          <p className="text-gray-500 text-xs font-medium mb-1">CUSTOMER NAME</p>
-          <p className="font-semibold text-gray-900 flex items-center">
-            {customerInfo.name}
-          </p>
-        </div>
-        <div>
-          <p className="text-gray-500 text-xs font-medium mb-1">EMAIL</p>
-          <p className="font-semibold text-gray-900 flex items-center">
-            {customerInfo.email}
-          </p>
-        </div>
-      </div>
+// FIXED: CustomerInfo component now uses customerInfo.phone instead of order.address.phone
+const CustomerInfo = ({ order, customerInfo }) => {
+  // Check if phone is available and not the default placeholder
+  const phoneNumber = customerInfo.phone && customerInfo.phone !== 'Phone not available' 
+    ? customerInfo.phone 
+    : null;
 
-      <div className="border-t border-gray-200 pt-3">
-        <p className="text-gray-500 text-xs font-medium mb-2">SHIPPING ADDRESS</p>
-        {order.address ? (
-          <>
-            <p className="text-gray-600 mb-1">{order.address.street || 'Street not specified'}</p>
-            <p className="text-gray-600 mb-1">
-              {order.address.city || 'City'}, {order.address.state || 'State'}
+  return (
+    <div>
+      <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+        <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-400" />
+        Customer Information
+      </h5>
+      <div className="bg-gray-50 rounded-xl p-4 text-sm border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <div>
+            <p className="text-gray-500 text-xs font-medium mb-1">CUSTOMER NAME</p>
+            <p className="font-semibold text-gray-900 flex items-center">
+              {customerInfo.name}
             </p>
-            <p className="text-gray-600 mb-3">{order.address.zipcode || 'Zipcode'}</p>
-            {order.address.phone && (
-              <p className="text-gray-600 flex items-center">
-                <FontAwesomeIcon icon={faPhone} className="mr-2 text-gray-400 w-4 h-4" />
-                {order.address.phone}
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="text-gray-500 text-sm">Shipping address not available</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs font-medium mb-1">EMAIL</p>
+            <p className="font-semibold text-gray-900 flex items-center">
+              {customerInfo.email}
+            </p>
+          </div>
+        </div>
+
+        {/* FIXED: Phone Number Section - Using customerInfo.phone */}
+        {phoneNumber && (
+          <div className="mb-3">
+            <p className="text-gray-500 text-xs font-medium mb-1">PHONE NUMBER</p>
+            <p className="text-gray-600 flex items-center">
+              <FontAwesomeIcon icon={faPhone} className="mr-2 text-gray-400 w-4 h-4" />
+              {phoneNumber}
+            </p>
+          </div>
         )}
+
+        <div className="border-t border-gray-200 pt-3">
+          <p className="text-gray-500 text-xs font-medium mb-2">SHIPPING ADDRESS</p>
+          {order.address ? (
+            <>
+              <p className="text-gray-600 mb-1">{order.address.street || 'Street not specified'}</p>
+              <p className="text-gray-600 mb-1">
+                {order.address.city || 'City'}, {order.address.state || 'State'}
+              </p>
+              <p className="text-gray-600 mb-3">{order.address.zipcode || 'Zipcode'}</p>
+            </>
+          ) : (
+            <p className="text-gray-500 text-sm">Shipping address not available</p>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const OrderSummary = ({ order, subtotal, total, onStatusChange }) => (
   <div className="space-y-6">
@@ -663,7 +677,7 @@ const groupItemsByDeal = (items) => {
   return { dealGroups, regularItems };
 };
 
-// 🆕 UPDATED: Get customer info from order's customerDetails
+// Get customer info from order's customerDetails
 const getCustomerInfo = (order) => {
   // Use customerDetails from order if available (edited during checkout)
   if (order.customerDetails) {
@@ -743,7 +757,6 @@ const Orders = () => {
   const tabsWithCounts = useMemo(() => calculateTabCounts(orders), [orders]);
 
   const handleUnauthorized = useCallback((endpoint) => {
-    console.error(`❌ Unauthorized while calling ${endpoint}`);
     toast.error('Session expired. Please login again.');
     logout();
     navigate('/');
@@ -764,9 +777,6 @@ const Orders = () => {
       if (response.data.success) {
         const ordersData = response.data.orders || [];
         setOrders(ordersData);
-        
-        // 🆕 REMOVED: No need to fetch user details anymore since we use customerDetails from order
-        
       } else if (response.data.message?.includes('Not Authorized') || response.status === 401) {
         handleUnauthorized('/api/order/list');
       } else {
@@ -776,7 +786,6 @@ const Orders = () => {
       if (error.response?.status === 401 || error.response?.data?.message?.includes('Not Authorized')) {
         handleUnauthorized('/api/order/list');
       } else {
-        console.error('💥 Error fetching orders:', error);
         toast.error(error.response?.data?.message || error.message);
       }
     } finally {
@@ -811,7 +820,6 @@ const Orders = () => {
       if (error.response?.status === 401 || error.response?.data?.message?.includes('Not Authorized')) {
         handleUnauthorized('/api/order/status');
       } else {
-        console.error('💥 Error updating status:', error);
         toast.error(error.response?.data?.message || error.message);
       }
     }

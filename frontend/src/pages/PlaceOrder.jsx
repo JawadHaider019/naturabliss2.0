@@ -21,6 +21,9 @@ const PlaceOrder = () => {
   const [isValidatingAddress, setIsValidatingAddress] = useState(false);
   const [cityZipData, setCityZipData] = useState({});
   const [knownCitiesWithZips, setKnownCitiesWithZips] = useState({});
+  // Add state for category mappings
+  const [categoryIdMap, setCategoryIdMap] = useState({});
+  const [subcategoryIdMap, setSubcategoryIdMap] = useState({});
   
   const {
     backendUrl,
@@ -38,15 +41,48 @@ const PlaceOrder = () => {
   
   const navigate = useNavigate();
 
-  // Form data state
+  // Fetch categories to build ID-to-name mapping
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${backendUrl}/api/categories`);
+        const data = response.data;
+        
+        let categories = data.data || data.categories || data;
+        if (!Array.isArray(categories)) return;
+
+        const idToNameMap = {};
+        const subcategoryIdToNameMap = {};
+
+        categories.forEach((cat) => {
+          const categoryId = cat._id || cat.id;
+          const categoryName = cat.name || cat.categoryName || cat.title || 'Category';
+
+          if (categoryId) idToNameMap[categoryId] = categoryName;
+
+          const subcategories = cat.subcategories || cat.subCategories || [];
+          subcategories.forEach((sub) => {
+            const subcategoryId = sub._id || sub.id;
+            const subcategoryName = sub.name || sub.subcategoryName || sub.title || sub || 'Subcategory';
+            if (subcategoryId) subcategoryIdToNameMap[subcategoryId] = subcategoryName;
+          });
+        });
+
+        setCategoryIdMap(idToNameMap);
+        setSubcategoryIdMap(subcategoryIdToNameMap);
+      } catch (error) {
+        // Silently handle error - no console
+      }
+    };
+
+    fetchCategories();
+  }, [backendUrl]);
+
+  // Form data state - FIXED: Ensure phone always exists
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('orderFormData');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      return parsedData;
-    }
     
-    // Set defaults - user data if logged in, otherwise empty
+    // Base default data with all fields
     const defaultData = {
       fullName: '',
       email: '',
@@ -57,11 +93,20 @@ const PlaceOrder = () => {
       phone: ''
     };
     
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      // Merge saved data with defaults to ensure all fields exist
+      return {
+        ...defaultData,
+        ...parsedData
+      };
+    }
+    
     // If user is logged in, pre-fill with their data
     if (user?.name && user?.email) {
-      defaultData.fullName = user.name;
-      defaultData.email = user.email;
-      if (user.phone) defaultData.phone = user.phone;
+      defaultData.fullName = user.name || '';
+      defaultData.email = user.email || '';
+      defaultData.phone = user.phone || '';
     }
     
     return defaultData;
@@ -122,7 +167,7 @@ const PlaceOrder = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching cities:', error);
+      // Silently handle error
     } finally {
       setIsLoadingCities(false);
     }
@@ -262,38 +307,44 @@ const PlaceOrder = () => {
     
     switch (name) {
       case 'fullName':
-        if (!value.trim()) errors.fullName = 'Customer name is required';
+        if (!value?.trim()) errors.fullName = 'Customer name is required';
         else if (value.trim().length < 2) errors.fullName = 'Customer name must be at least 2 characters';
         else if (!/^[a-zA-Z\s]{2,50}$/.test(value.trim())) errors.fullName = 'Customer name can only contain letters and spaces';
         break;
         
       case 'email':
-        if (!value.trim()) errors.email = 'Customer email is required';
+        if (!value?.trim()) errors.email = 'Customer email is required';
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errors.email = 'Please enter a valid email address';
         break;
         
       case 'street':
-        if (!value.trim()) errors.street = 'Street address is required';
+        if (!value?.trim()) errors.street = 'Street address is required';
         else if (value.trim().length < 5) errors.street = 'Please enter a complete street address';
         break;
         
       case 'city':
-        if (!value.trim()) errors.city = 'City is required';
+        if (!value?.trim()) errors.city = 'City is required';
         break;
         
       case 'state':
-        if (!value.trim()) errors.state = 'Province is required';
+        if (!value?.trim()) errors.state = 'Province is required';
         else if (!pakistanStates.includes(value)) errors.state = 'Please select a valid province';
         break;
         
       case 'zipcode':
-        if (!value.trim()) errors.zipcode = 'ZIP code is required';
+        if (!value?.trim()) errors.zipcode = 'ZIP code is required';
         else if (!/^\d{5}$/.test(value.trim())) errors.zipcode = 'ZIP code must be 5 digits';
         break;
         
       case 'phone':
-        if (!value.trim()) errors.phone = 'Phone number is required';
-        else if (!/^03\d{9}$/.test(value.replace(/\D/g, ''))) errors.phone = 'Please enter a valid Pakistani phone number (03XXXXXXXXX)';
+        if (!value?.trim()) {
+          errors.phone = 'Whatsapp number is required';
+        } else {
+          const digitsOnly = value.replace(/\D/g, '');
+          if (!/^03\d{9}$/.test(digitsOnly)) {
+            errors.phone = 'Please enter a valid Pakistani number (03XXXXXXXXX)';
+          }
+        }
         break;
     }
     
@@ -359,15 +410,7 @@ const PlaceOrder = () => {
       }
     }
     
-    // Real-time ZIP validation
-    if (name === 'zipcode' && value.length === 5 && /^\d{5}$/.test(value)) {
-      setValidationErrors(prev => ({
-        ...prev,
-        zipcode: ''
-      }));
-    }
-    
-    // Clear validation error
+    // Clear validation error for this field
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -402,6 +445,105 @@ const PlaceOrder = () => {
     return [];
   };
 
+  // Helper function to extract category name using the category mappings
+  const getCategoryName = (productInfo) => {
+    // If category doesn't exist, return default
+    if (!productInfo.category) return 'Product';
+    
+    // If category is an object with a name property
+    if (typeof productInfo.category === 'object' && productInfo.category !== null) {
+      if (productInfo.category.name) {
+        return productInfo.category.name;
+      }
+      return 'Product';
+    }
+    
+    // If category is a string
+    if (typeof productInfo.category === 'string') {
+      const categoryString = productInfo.category;
+      
+      // Check if it looks like a MongoDB ID (24 hex characters)
+      const isMongoId = /^[0-9a-f]{24}$/i.test(categoryString);
+      
+      if (isMongoId) {
+        // Try to get from categoryIdMap first (from fetched categories)
+        if (categoryIdMap[categoryString]) {
+          return categoryIdMap[categoryString];
+        }
+        
+        // Try to get from categoryName field
+        if (productInfo.categoryName) {
+          return productInfo.categoryName;
+        }
+        
+        // Try to infer from product name
+        if (productInfo.name) {
+          const name = productInfo.name.toLowerCase();
+          if (name.includes('hair')) return 'Hair Care';
+          if (name.includes('oil')) return 'Hair Oil';
+          if (name.includes('shampoo')) return 'Shampoo';
+          if (name.includes('conditioner')) return 'Conditioner';
+          if (name.includes('serum')) return 'Serum';
+          if (name.includes('cream')) return 'Cream';
+          if (name.includes('lotion')) return 'Lotion';
+          if (name.includes('face')) return 'Face Care';
+          if (name.includes('body')) return 'Body Care';
+        }
+        
+        return 'Product';
+      }
+      
+      // If it contains "Product" and looks like it has an ID, clean it
+      if (categoryString.includes('Product') && categoryString.length > 10) {
+        return 'Product';
+      }
+      
+      // Try to clean any IDs from the string
+      const words = categoryString.split(' ');
+      const lastWord = words[words.length - 1];
+      if (lastWord && /^[0-9a-f]{24}$/i.test(lastWord)) {
+        words.pop();
+        return words.join(' ') || 'Product';
+      }
+      
+      // Return the category string if it's not an ID
+      return categoryString;
+    }
+    
+    return 'Product';
+  };
+
+  // Helper function to get subcategory name
+  const getSubcategoryName = (productInfo) => {
+    if (!productInfo.subcategory) return '';
+    
+    if (typeof productInfo.subcategory === 'object' && productInfo.subcategory !== null) {
+      if (productInfo.subcategory.name) {
+        return productInfo.subcategory.name;
+      }
+      return '';
+    }
+    
+    if (typeof productInfo.subcategory === 'string') {
+      const subcategoryString = productInfo.subcategory;
+      const isMongoId = /^[0-9a-f]{24}$/i.test(subcategoryString);
+      
+      if (isMongoId) {
+        if (subcategoryIdMap[subcategoryString]) {
+          return subcategoryIdMap[subcategoryString];
+        }
+        if (productInfo.subcategoryName) {
+          return productInfo.subcategoryName;
+        }
+        return '';
+      }
+      
+      return subcategoryString;
+    }
+    
+    return '';
+  };
+
   // Process cart items for order
   const processCartItems = () => {
     let orderItems = [];
@@ -416,13 +558,18 @@ const PlaceOrder = () => {
             const unitPrice = productInfo.discountprice > 0 ? productInfo.discountprice : productInfo.price;
             const itemTotal = unitPrice * quantity;
             
+            // Get proper category and subcategory names
+            const categoryName = getCategoryName(productInfo);
+            const subcategoryName = getSubcategoryName(productInfo);
+            
             orderItems.push({
               id: productInfo._id,
               name: productInfo.name,
               price: unitPrice,
               quantity: quantity,
               image: productInfo.image?.[0] || assets.placeholder_image,
-              category: productInfo.category || 'Product',
+              category: categoryName,
+              subcategory: subcategoryName,
               isFromDeal: false,
               description: productInfo.description,
               originalPrice: productInfo.price,
@@ -477,7 +624,7 @@ const PlaceOrder = () => {
     return { orderItems, calculatedAmount };
   };
 
-  // 🆕 Clear cart after order
+  // Clear cart after order
   const clearCartAfterOrder = async () => {
     if (token) {
       // Clear cart for logged-in users via API
@@ -485,9 +632,8 @@ const PlaceOrder = () => {
         await axios.post(`${backendUrl}/api/user/clear-cart`, {}, {
           headers: { token }
         });
-        console.log('✅ Cleared cart for logged-in user');
       } catch (error) {
-        console.error('Failed to clear cart:', error);
+        // Silently handle error
       }
     } else {
       // Clear localStorage for guests
@@ -495,12 +641,32 @@ const PlaceOrder = () => {
       setCartDeals({});
       localStorage.removeItem('cartItems');
       localStorage.removeItem('cartDeals');
-      console.log('✅ Cleared cart from localStorage for guest');
     }
   };
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+    
+    // Explicit phone validation before anything else
+    if (!formData.phone || !formData.phone.trim()) {
+      toast.error('Whatsapp number is required');
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        phone: 'Whatsapp number is required' 
+      }));
+      return;
+    }
+    
+    // Validate phone format
+    const digitsOnly = formData.phone.replace(/\D/g, '');
+    if (!/^03\d{9}$/.test(digitsOnly)) {
+      toast.error('Please enter a valid Whatsapp number');
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        phone: 'Please enter a valid Pakistani number (03XXXXXXXXX)' 
+      }));
+      return;
+    }
     
     if (!await validateForm()) {
       toast.error('Please fix the validation errors before submitting');
@@ -552,17 +718,11 @@ const PlaceOrder = () => {
         customerDetails: {
           name: formData.fullName.trim(),
           email: formData.email.trim(),
-          phone: formData.phone.replace(/\D/g, '') // Remove dashes
+          phone: digitsOnly
         }
       };
 
-      console.log("📦 ORDER DATA BEING SENT:", {
-        customerDetails: orderData.customerDetails,
-        hasToken: !!token,
-        isGuest: !token
-      });
-
-      // 🆕 Config for both guest and logged-in users
+      // Config for both guest and logged-in users
       const config = {
         headers: {
           'Content-Type': 'application/json'
@@ -574,7 +734,7 @@ const PlaceOrder = () => {
         config.headers.token = token;
       }
 
-      // 🆕 Call the unified order endpoint
+      // Call the unified order endpoint
       const response = await axios.post(
         `${backendUrl}/api/order/place`,
         orderData,
@@ -599,26 +759,23 @@ const PlaceOrder = () => {
           };
           
           window.fbq('track', 'Purchase', purchaseData);
-          
-          console.log('📊 Facebook Pixel: Purchase tracked', purchaseData);
         }
         // ==================== END FACEBOOK PIXEL ====================
+        
         // ==================== TIKTOK PIXEL PURCHASE TRACKING ====================
-if (window.ttq) {
-  const tiktokPurchaseData = {
-    content_id: orderItems.map(item => item.id),
-    content_type: 'product',
-    quantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
-    value: finalAmount,
-    currency: 'PKR',
-    order_id: response.data.orderId
-  };
+        if (window.ttq) {
+          const tiktokPurchaseData = {
+            content_id: orderItems.map(item => item.id),
+            content_type: 'product',
+            quantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+            value: finalAmount,
+            currency: 'PKR',
+            order_id: response.data.orderId
+          };
 
-  window.ttq.track('CompletePayment', tiktokPurchaseData);
-
-  console.log('📊 TikTok Pixel: Purchase tracked', tiktokPurchaseData);
-}
-// ==================== END TIKTOK PIXEL ====================
+          window.ttq.track('CompletePayment', tiktokPurchaseData);
+        }
+        // ==================== END TIKTOK PIXEL ====================
 
         // Clear cart
         await clearCartAfterOrder();
@@ -629,9 +786,9 @@ if (window.ttq) {
         // Show success message
         toast.success(response.data.message);
         
-        // 🆕 Handle guest order storage - SAVE COMPLETE DATA
+        // Handle guest order storage - SAVE COMPLETE DATA
         if (!token) {
-          // 🆕 Prepare COMPLETE order data for localStorage
+          // Prepare COMPLETE order data for localStorage with proper category
           const completeGuestOrder = {
             _id: response.data.orderId,
             userId: null,
@@ -641,7 +798,8 @@ if (window.ttq) {
               price: item.price,
               quantity: item.quantity,
               image: item.image || assets.placeholder_image,
-              category: item.category || 'Product',
+              category: item.category,
+              subcategory: item.subcategory,
               isFromDeal: item.isFromDeal || false,
               dealImage: item.dealImage,
               originalTotalPrice: item.originalTotalPrice,
@@ -663,41 +821,28 @@ if (window.ttq) {
             customerDetails: {
               name: formData.fullName.trim(),
               email: formData.email.trim(),
-              phone: formData.phone.replace(/\D/g, '')
+              phone: digitsOnly
             },
             isGuest: true,
             isRecent: true
           };
           
-          // 🆕 Save to localStorage for immediate display
+          // Save to localStorage for immediate display
           localStorage.setItem('recentGuestOrder', JSON.stringify(completeGuestOrder));
           
-          // 🆕 Also save to guestOrders list for persistence
+          // Also save to guestOrders list for persistence
           const existingGuestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]');
           const updatedGuestOrders = [completeGuestOrder, ...existingGuestOrders.filter(o => o._id !== completeGuestOrder._id)];
           localStorage.setItem('guestOrders', JSON.stringify(updatedGuestOrders));
           
-          // 🆕 Save guest info for backend sync
+          // Save guest info for backend sync
           localStorage.setItem('guestOrderInfo', JSON.stringify({
             email: formData.email.trim(),
-            phone: formData.phone.replace(/\D/g, ''),
+            phone: digitsOnly,
             timestamp: Date.now(),
             customerName: formData.fullName.trim()
           }));
-          
-          console.log("💾 Saved COMPLETE guest order to localStorage:", completeGuestOrder);
-          
-          // Show guest-specific success message
-          toast.info(
-            <div>
-              <div className="font-semibold">🎉 Order Placed Successfully!</div>
-              <div className="text-sm mt-1">
-                Your order #<span className="font-medium">{response.data.orderId.slice(-6)}</span> has been placed.
-                You can view your order on the orders page.
-              </div>
-            </div>,
-            { autoClose: 5000 }
-          );
+        
         } else {
           // Logged-in user message
           toast.success(
@@ -711,7 +856,7 @@ if (window.ttq) {
           );
         }
         
-        // 🆕 Wait a moment before redirecting to show success message
+        // Wait a moment before redirecting to show success message
         setTimeout(() => {
           navigate('/orders');
         }, 1000);
@@ -721,9 +866,7 @@ if (window.ttq) {
       }
 
     } catch (error) {
-      console.error('Order placement error:', error);
-      
-      // 🆕 Improved error handling
+      // Improved error handling
       if (error.code === 'ERR_NETWORK') {
         toast.error('Network error. Please check your internet connection.');
       } else if (error.response?.status === 401 && token) {
@@ -750,7 +893,7 @@ if (window.ttq) {
         onChange={onChangeHandler}
         onBlur={onBlurHandler}
         name={name} 
-        value={formData[name]} 
+        value={formData[name] || ''} 
         className={`w-full border px-3.5 py-3 ${
           validationErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
         } rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors`} 
@@ -773,7 +916,7 @@ if (window.ttq) {
         onChange={onChangeHandler}
         onBlur={onBlurHandler}
         name={name}
-        value={formData[name]}
+        value={formData[name] || ''}
         className={`w-full border px-3.5 py-3 ${
           validationErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
         } rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors`}
@@ -800,7 +943,7 @@ if (window.ttq) {
           onChange={onChangeHandler}
           onBlur={onBlurHandler}
           name="city"
-          value={formData.city}
+          value={formData.city || ''}
           list="city-suggestions"
           className={`w-full border px-3.5 py-3 ${
             validationErrors.city ? 'border-red-500 bg-red-50' : 'border-gray-300'
@@ -850,7 +993,7 @@ if (window.ttq) {
           onChange={onChangeHandler}
           onBlur={onBlurHandler}
           name="zipcode" 
-          value={formData.zipcode} 
+          value={formData.zipcode || ''} 
           className={`w-full border px-3.5 py-3 ${
             validationErrors.zipcode ? 'border-yellow-500 bg-yellow-50' : 'border-gray-300'
           } rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors`} 
@@ -893,9 +1036,9 @@ if (window.ttq) {
         <input 
           onChange={onChangeHandler}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          onFocus={() => formData.street.length >= 3 && setShowSuggestions(true)}
+          onFocus={() => formData.street?.length >= 3 && setShowSuggestions(true)}
           name="street" 
-          value={formData.street} 
+          value={formData.street || ''} 
           className={`w-full border px-3.5 py-3 ${
             validationErrors.street ? 'border-red-500 bg-red-50' : 'border-gray-300'
           } rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors`} 
@@ -954,7 +1097,7 @@ if (window.ttq) {
         
         <div className='flex gap-4'>
           {renderZipCodeInput()}
-          {renderInputField('phone', 'tel', '03XX-XXXXXXX', 'Phone Number')}
+          {renderInputField('phone', 'tel', '03XX-XXXXXXX', 'Whatsapp Number', true)}
         </div>
 
       </div>
@@ -972,7 +1115,7 @@ if (window.ttq) {
             </div>
           </div>
           
-          {/* 🆕 Additional info for guests */}
+          {/* Additional info for guests */}
           {!token && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
               <p className="text-xs text-amber-800">

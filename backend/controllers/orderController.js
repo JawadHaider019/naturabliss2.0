@@ -524,10 +524,12 @@ const userOrders = async (req, res) => {
   }
 };
 
-// 🆕 Get Guest Orders by Email/Phone
+// 🆕 Get Guest Orders by Email/Phone - Match EITHER email OR phone
 const getGuestOrders = async (req, res) => {
   try {
     const { email, phone } = req.body;
+    
+    console.log("🔍 getGuestOrders called with:", { email, phone });
     
     if (!email && !phone) {
       return res.json({ 
@@ -536,36 +538,68 @@ const getGuestOrders = async (req, res) => {
       });
     }
     
-    let query = { isGuest: true };
+    // Build OR conditions array
+    let orConditions = [];
     
     if (email) {
-      query['customerDetails.email'] = email.trim().toLowerCase();
+      orConditions.push({ 
+        'customerDetails.email': email.trim().toLowerCase() 
+      });
     }
     
     if (phone) {
       const phoneDigits = phone.replace(/\D/g, '');
-      query['customerDetails.phone'] = { $regex: phoneDigits, $options: 'i' };
+      orConditions.push({ 
+        'customerDetails.phone': { 
+          $regex: phoneDigits, 
+          $options: 'i' 
+        } 
+      });
     }
+    
+    // Query with OR condition
+    const query = {
+      isGuest: true,
+      $or: orConditions
+    };
+    
+    console.log("🔍 Final query:", JSON.stringify(query, null, 2));
     
     const orders = await orderModel.find(query).sort({ date: -1 });
     
-    console.log(`📦 Found ${orders.length} guest orders for ${email || phone}`);
+    console.log(`📦 Found ${orders.length} guest orders`);
     
+    // Return full order details including category and subcategory
     const safeOrders = orders.map(order => ({
       _id: order._id,
       items: order.items.map(item => ({
+        id: item.id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        image: item.image
+        image: item.image,
+        category: item.category,
+        subcategory: item.subcategory,
+        isFromDeal: item.isFromDeal || false,
+        dealName: item.dealName,
+        dealImage: item.dealImage,
+        originalTotalPrice: item.originalTotalPrice,
+        savings: item.savings,
+        description: item.description
       })),
       amount: order.amount,
       status: order.status,
       date: order.date,
       deliveryCharges: order.deliveryCharges,
+      address: order.address,
       customerDetails: {
         name: order.customerDetails.name,
-      }
+        email: order.customerDetails.email,
+        phone: order.customerDetails.phone
+      },
+      paymentMethod: order.paymentMethod,
+      payment: order.payment,
+      isGuest: true
     }));
     
     res.json({ 

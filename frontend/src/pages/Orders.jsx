@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useMemo, useCallback, memo } from "react";
+import { useContext, useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from '../components/Title';
 import axios from "axios";
@@ -15,10 +15,11 @@ import {
   faCreditCard,
   faUser,
   faShoppingBag,
-  faHistory
+  faHistory,
+  faSyncAlt
 } from '@fortawesome/free-solid-svg-icons';
 
-// Helper functions (keep these at the top)
+// Helper functions
 const imageCache = new Map();
 
 const resolveImageUrl = (imageSource, backendUrl) => {
@@ -38,12 +39,10 @@ const preloadImages = (imageUrls) => {
   });
 };
 
-// 🆕 Function to get product image by ID
 const getProductImageById = async (productId, backendUrl) => {
   if (!productId) return assets.placeholder_image;
   
   try {
-    // Try to get product from localStorage cache first
     const cachedProducts = localStorage.getItem('productCache');
     if (cachedProducts) {
       const products = JSON.parse(cachedProducts);
@@ -53,13 +52,12 @@ const getProductImageById = async (productId, backendUrl) => {
       }
     }
     
-    // If not in cache, try to fetch from backend
     const response = await axios.get(`${backendUrl}/api/products/${productId}`);
     if (response.data.success && response.data.data?.image?.[0]) {
       return resolveImageUrl(response.data.data.image[0], backendUrl);
     }
   } catch (error) {
-    console.error("Error fetching product image:", error);
+    // Silently handle error
   }
   
   return assets.placeholder_image;
@@ -79,19 +77,15 @@ const OrderItemImage = memo(({ item, backendUrl }) => {
         let url = assets.placeholder_image;
         
         if (item.isFromDeal && item.dealImage) {
-          // Use deal image if available
           url = resolveImageUrl(item.dealImage, backendUrl);
         } else if (item.image) {
-          // Use direct image if available
           url = resolveImageUrl(item.image, backendUrl);
         } else if (item.id) {
-          // Try to get image by product ID
           url = await getProductImageById(item.id, backendUrl);
         }
         
         setImageUrl(url);
         
-        // Preload the image
         const img = new Image();
         img.src = url;
         img.onload = () => {
@@ -104,7 +98,6 @@ const OrderItemImage = memo(({ item, backendUrl }) => {
           setImageUrl(assets.placeholder_image);
         };
       } catch (error) {
-        console.error("Error loading order item image:", error);
         setIsLoading(false);
         setImageError(true);
         setImageUrl(assets.placeholder_image);
@@ -147,22 +140,22 @@ const OrderItem = memo(({ item, currency, backendUrl }) => {
                 {item.name}
               </p>
               <p className="text-gray-600 text-sm truncate">
-                {item.category || 'Product'}
+                {item.category || 'Product'} {item.subcategory ? `| ${item.subcategory}` : ''}
               </p>
             </div>
             <p className="text-black font-bold text-lg md:text-xl shrink-0">
-              {currency}{item.price.toFixed(2)}
+              {currency}{item.price?.toFixed(2) || '0.00'}
             </p>
           </div>
           
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <p className="text-gray-700 text-sm font-medium">
-                Qty: <span className="text-black font-bold">{item.quantity}</span>
+                Qty: <span className="text-black font-bold">{item.quantity || 1}</span>
               </p>
               <p className="text-gray-700 text-sm font-medium">
                 Total: <span className="text-black font-bold">
-                  {currency}{(item.price * item.quantity).toFixed(2)}
+                  {currency}{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
                 </span>
               </p>
             </div>
@@ -199,6 +192,7 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
     const statusMap = {
       'Order Placed': { icon: faClock, color: 'text-black bg-yellow-100 border-yellow-300' },
       'Processing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
+      'Packing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
       'Shipped': { icon: faShippingFast, color: 'text-black bg-purple-100 border-purple-300' },
       'Out for delivery': { icon: faMotorcycle, color: 'text-black bg-orange-100 border-orange-300' },
       'Delivered': { icon: faCheckCircle, color: 'text-black bg-green-100 border-green-300' },
@@ -210,7 +204,6 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
     return { subtotal, total, formattedDate, ...status };
   }, [order]);
 
-  // Preload images
   useEffect(() => {
     const imagePromises = order.items.map(async (item) => {
       if (item.isFromDeal && item.dealImage) {
@@ -231,7 +224,6 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
 
   return (
     <div className="mb-6 border-2 border-gray-200 bg-white shadow-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-gray-100 px-4 py-3 border-b-2 border-gray-200">
         <div className="flex justify-between items-center">
           <div className="min-w-0">
@@ -241,12 +233,6 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
                 <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-700 text-white rounded">
                   <FontAwesomeIcon icon={faUser} className="mr-1" />
                   Guest
-                </span>
-              )}
-              {order.isRecent && (
-                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-600 text-white rounded animate-pulse">
-                  <FontAwesomeIcon icon={faHistory} className="mr-1" />
-                  New
                 </span>
               )}
             </div>
@@ -259,7 +245,6 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
         </div>
       </div>
 
-      {/* Items */}
       <div className="divide-y divide-gray-200">
         {order.items && order.items.map((item, index) => (
           <OrderItem 
@@ -271,10 +256,8 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
         ))}
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-3 bg-gray-100 border-t-2 border-gray-200">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          {/* Info */}
           <div className="space-y-2 flex-1 min-w-0">
             {order.address && (
               <div className="flex items-center gap-2 text-sm">
@@ -301,7 +284,6 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
             )}
           </div>
 
-          {/* Price */}
           <div className="min-w-[140px]">
             <div className="bg-white border-2 border-gray-200 p-3 text-sm">
               <div className="flex justify-between mb-1">
@@ -326,7 +308,20 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
   );
 });
 
-// 🆕 Function to manage guest orders in localStorage
+// Function to load guest info from localStorage
+const loadGuestInfo = () => {
+  try {
+    const guestInfo = localStorage.getItem('guestOrderInfo');
+    if (guestInfo) {
+      return JSON.parse(guestInfo);
+    }
+  } catch (error) {
+    console.error('Error loading guest info:', error);
+  }
+  return null;
+};
+
+// Function to load guest orders from localStorage
 const loadGuestOrdersFromStorage = () => {
   try {
     const guestOrders = localStorage.getItem('guestOrders');
@@ -334,7 +329,7 @@ const loadGuestOrdersFromStorage = () => {
       return JSON.parse(guestOrders);
     }
   } catch (error) {
-    console.error("Error loading guest orders from localStorage:", error);
+    console.error('Error loading guest orders:', error);
   }
   return [];
 };
@@ -344,190 +339,181 @@ const Orders = () => {
   const { backendUrl, token, currency } = useContext(ShopContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isGuestMode, setIsGuestMode] = useState(!token);
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [guestInfo, setGuestInfo] = useState(null);
+  
+  const isMounted = useRef(true);
 
-  // 🆕 Load all orders (both from localStorage for guests and backend for logged-in)
+  // Load guest info from localStorage on mount
   useEffect(() => {
-    let mounted = true;
+    const info = loadGuestInfo();
+    if (info) {
+      setGuestInfo(info);
+      setIsGuestMode(true);
+    }
+  }, []);
 
-    const loadOrders = async () => {
-      if (mounted) setLoading(true);
+  // Fetch orders from backend
+  const fetchOrders = useCallback(async (showIndicator = false) => {
+    if (!isMounted.current) return;
+    
+    if (showIndicator) {
+      setRefreshing(true);
+    }
+    
+    try {
+      let newOrders = [];
+
+      if (token) {
+        // Logged-in user: Load their orders from backend
+        const response = await axios.post(
+          backendUrl + '/api/order/userorders',
+          {},
+          { headers: { token } }
+        );
+
+        if (response.data.success) {
+          newOrders = response.data.orders || [];
+        }
+      } else if (guestInfo) {
+        // Guest user: Load orders from backend using email/phone
+        const response = await axios.post(
+          backendUrl + '/api/order/guest-orders',
+          { 
+            email: guestInfo.email,
+            phone: guestInfo.phone 
+          }
+        );
+
+        if (response.data.success) {
+          newOrders = response.data.orders || [];
+        }
+      } else {
+        // Fallback to localStorage
+        newOrders = loadGuestOrdersFromStorage();
+      }
+
+      // Filter orders - keep cancelled orders from last 24 hours
+      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
       
-      try {
-        if (token) {
-          // Logged-in user: Load their orders from backend
-          const response = await axios.post(
-            backendUrl + '/api/order/userorders',
-            {},
-            { 
-              headers: { token },
-              timeout: 10000
+      newOrders = newOrders
+        .filter(order => {
+          if (order.status !== "Cancelled") {
+            return true;
+          }
+          return parseInt(order.date) > oneDayAgo;
+        })
+        .sort((a, b) => parseInt(b.date) - parseInt(a.date));
+
+      if (isMounted.current) {
+        setOrders(newOrders);
+        setLastUpdated(new Date());
+        
+        if (showIndicator) {
+          if (newOrders.length > 0) {
+            toast.success(`Found ${newOrders.length} orders!`);
+          } else {
+            toast.info('No orders found');
+          }
+        }
+      }
+
+      // Preload images
+      if (newOrders.length > 0) {
+        const imagePromises = newOrders.flatMap(order => 
+          order.items.map(async (item) => {
+            if (item.isFromDeal && item.dealImage) {
+              return resolveImageUrl(item.dealImage, backendUrl);
+            } else if (item.image) {
+              return resolveImageUrl(item.image, backendUrl);
+            } else if (item.id) {
+              return await getProductImageById(item.id, backendUrl);
             }
-          );
+            return assets.placeholder_image;
+          })
+        );
 
-          if (mounted && response.data.success) {
-            const sortedOrders = response.data.orders
-              .filter(order => order.status !== "Cancelled")
-              .sort((a, b) => parseInt(b.date) - parseInt(a.date));
-
-            setOrders(sortedOrders);
-            
-            // Preload images
-            const imagePromises = sortedOrders.flatMap(order => 
-              order.items.map(async (item) => {
-                if (item.isFromDeal && item.dealImage) {
-                  return resolveImageUrl(item.dealImage, backendUrl);
-                } else if (item.image) {
-                  return resolveImageUrl(item.image, backendUrl);
-                } else if (item.id) {
-                  return await getProductImageById(item.id, backendUrl);
-                }
-                return assets.placeholder_image;
-              })
-            );
-
-            Promise.all(imagePromises).then(imageUrls => {
-              const validUrls = imageUrls.filter(url => url !== assets.placeholder_image);
-              preloadImages(validUrls);
-            });
-          }
-        } else {
-          // 🆕 Guest user: Load orders from localStorage
-          const guestOrders = loadGuestOrdersFromStorage();
-          
-          // Also check for recent guest order
-          const recentGuestOrder = localStorage.getItem('recentGuestOrder');
-          let allGuestOrders = [...guestOrders];
-          
-          if (recentGuestOrder) {
-            try {
-              const recentOrder = JSON.parse(recentGuestOrder);
-              // Ensure recent order has all required fields
-              if (!recentOrder.items) recentOrder.items = [];
-              if (!recentOrder.address) recentOrder.address = {};
-              if (!recentOrder.customerDetails) recentOrder.customerDetails = {};
-              
-              // Add to list if not already there
-              if (!allGuestOrders.some(order => order._id === recentOrder._id)) {
-                allGuestOrders = [recentOrder, ...allGuestOrders];
-              }
-              
-              // Clear recent order after 5 minutes
-              setTimeout(() => {
-                localStorage.removeItem('recentGuestOrder');
-                console.log("🗑️ Cleared recent guest order from localStorage");
-              }, 300000);
-            } catch (error) {
-              console.error("Error parsing recent guest order:", error);
-              localStorage.removeItem('recentGuestOrder');
-            }
-          }
-          
-          // Ensure all guest orders have required fields
-          const validatedOrders = allGuestOrders.map(order => ({
-            ...order,
-            items: order.items || [],
-            address: order.address || { city: '', state: '' },
-            customerDetails: order.customerDetails || { name: 'Guest Customer' },
-            deliveryCharges: order.deliveryCharges || 0,
-            paymentMethod: order.paymentMethod || 'COD',
-            status: order.status || 'Order Placed',
-            isGuest: true
-          }));
-          
-          // Sort by date (newest first) and filter out cancelled
-          const sortedOrders = validatedOrders
-            .filter(order => order.status !== "Cancelled")
-            .sort((a, b) => parseInt(b.date) - parseInt(a.date));
-
-          if (mounted) {
-            setOrders(sortedOrders);
-            setIsGuestMode(true);
-          }
-          
-          // Preload images
-          const imagePromises = sortedOrders.flatMap(order => 
-            (order.items || []).map(async (item) => {
-              if (item.isFromDeal && item.dealImage) {
-                return resolveImageUrl(item.dealImage, backendUrl);
-              } else if (item.image) {
-                return resolveImageUrl(item.image, backendUrl);
-              } else if (item.id) {
-                return await getProductImageById(item.id, backendUrl);
-              }
-              return assets.placeholder_image;
-            })
-          );
-
-          Promise.all(imagePromises).then(imageUrls => {
+        Promise.all(imagePromises).then(imageUrls => {
+          if (isMounted.current) {
             const validUrls = imageUrls.filter(url => url !== assets.placeholder_image);
             preloadImages(validUrls);
-          });
-          
-          // 🆕 Try to sync with backend if we have guest info
-          const guestOrderInfo = localStorage.getItem('guestOrderInfo');
-          if (guestOrderInfo) {
-            try {
-              const { email, phone } = JSON.parse(guestOrderInfo);
-              
-              // Try to fetch guest orders from backend
-              const response = await axios.post(
-                backendUrl + '/api/order/guest-orders',
-                { email, phone },
-                { timeout: 10000 }
-              );
-
-              if (mounted && response.data.success && response.data.orders.length > 0) {
-                const backendOrders = response.data.orders
-                  .filter(order => order.status !== "Cancelled")
-                  .map(order => ({
-                    ...order,
-                    isGuest: true
-                  }))
-                  .sort((a, b) => parseInt(b.date) - parseInt(a.date));
-
-                // Merge localStorage and backend orders, remove duplicates
-                const combinedOrders = [...backendOrders];
-                sortedOrders.forEach(localOrder => {
-                  if (!combinedOrders.some(backendOrder => backendOrder._id === localOrder._id)) {
-                    combinedOrders.push(localOrder);
-                  }
-                });
-
-                // Sort by date
-                const finalOrders = combinedOrders.sort((a, b) => parseInt(b.date) - parseInt(a.date));
-                
-                if (mounted) {
-                  setOrders(finalOrders);
-                  // Save updated list to localStorage
-                  localStorage.setItem('guestOrders', JSON.stringify(finalOrders));
-                }
-              }
-            } catch (error) {
-              console.log("No guest orders found or error fetching from backend:", error);
-              // Keep using localStorage orders
-            }
           }
-        }
-      } catch (error) {
-        console.error("Error loading orders:", error);
-        if (mounted && !orders.length) {
-          // Only show error if we have no orders at all
-          if (token || !loadGuestOrdersFromStorage().length) {
-            toast.error("Failed to load orders");
-          }
-        }
-      } finally {
-        if (mounted) setLoading(false);
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      if (showIndicator) {
+        toast.error('Failed to fetch orders');
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, [backendUrl, token, guestInfo]);
+
+  // Initial load
+  useEffect(() => {
+    isMounted.current = true;
+    fetchOrders();
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, [fetchOrders]);
+
+  // Set up polling for real-time updates
+  useEffect(() => {
+    if (!guestInfo && !token) return;
+
+    const intervalId = setInterval(() => {
+      fetchOrders(false);
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [fetchOrders, guestInfo, token]);
+
+  // Refresh when page becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders(false);
       }
     };
 
-    loadOrders();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchOrders]);
 
-    return () => {
-      mounted = false;
+  // Refresh on focus
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchOrders(false);
     };
-  }, [backendUrl, token, orders.length]);
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchOrders]);
+
+  // Manual refresh handler
+  const handleRefresh = () => {
+    fetchOrders(true);
+  };
+
+  // Format last updated time
+  const getLastUpdatedText = () => {
+    if (!lastUpdated) return '';
+    const now = new Date();
+    const diff = Math.floor((now - lastUpdated) / 1000);
+    
+    if (diff < 10) return 'Just now';
+    if (diff < 60) return `${diff} seconds ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    return lastUpdated.toLocaleTimeString();
+  };
 
   if (loading) {
     return (
@@ -544,11 +530,32 @@ const Orders = () => {
 
   return (
     <div className="border-t border-gray-200 pt-16">
-      <div className="text-3xl mb-8">
+      <div className="text-3xl mb-8 flex justify-between items-center">
         <Title text1={"MY"} text2={"ORDERS"} />
+        
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs text-gray-500">
+              Updated {getLastUpdatedText()}
+            </span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              refreshing 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+          >
+            <FontAwesomeIcon 
+              icon={faSyncAlt} 
+              className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} 
+            />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
-
-    
 
       <div>
         {orders.length === 0 ? (
@@ -560,7 +567,9 @@ const Orders = () => {
             <p className="text-gray-500 text-base mt-2">
               {token 
                 ? "Your orders will appear here once placed" 
-                : "Place an order to see it here"}
+                : guestInfo 
+                  ? "No orders found with this email/phone"
+                  : "Place an order to see it here"}
             </p>
             {!token && (
               <div className="mt-4">
@@ -575,7 +584,6 @@ const Orders = () => {
           </div>
         ) : (
           <>
-            {/* Orders list */}
             {orders.map((order) => (
               <OrderCard
                 key={order._id}
@@ -585,8 +593,6 @@ const Orders = () => {
                 isGuest={isGuestMode}
               />
             ))}
-
-           
           </>
         )}
       </div>

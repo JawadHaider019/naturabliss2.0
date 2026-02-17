@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const orderSchema = new mongoose.Schema({
     userId: {
         type: String, 
-        required: false, // 🆕 Changed from true to false
-        default: null    // 🆕 Add default value
+        required: false,
+        default: null
     },
     
     items: {type: Array, required: true},
@@ -16,7 +16,10 @@ const orderSchema = new mongoose.Schema({
     date: {type: Number, required: true},
     deliveryCharges: {type: Number, required: true, default: 0},
     
-    // 🆕 ORDER-SPECIFIC CUSTOMER DETAILS
+    // 🆕 ADD THIS FIELD
+    isGuest: { type: Boolean, default: false },
+    
+    // ORDER-SPECIFIC CUSTOMER DETAILS
     customerDetails: {
         name: {type: String, required: true},
         email: {type: String, required: true},
