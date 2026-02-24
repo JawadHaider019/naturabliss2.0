@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Clarity from "@microsoft/clarity"
+import Loader from './components/Loader' // Import your custom loader
 
 // Lazy load components
 const Navbar = lazy(() => import('./components/Navbar'))
@@ -27,10 +28,15 @@ const PlaceOrder = lazy(() => import('./pages/PlaceOrder'))
 const Blog = lazy(() => import('./pages/Blog'))
 const BlogPost = lazy(() => import('./pages/BlogPost'))
 
-// Loading Spinner
+// Loading Spinner - Using loader
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+  <div className="min-h-screen flex items-center justify-center bg-white/50 backdrop-blur-sm">
+    <Loader 
+      text="Loading" 
+      size="xl" 
+      color="rgb(84 119 55)"
+      
+    />
   </div>
 )
 
