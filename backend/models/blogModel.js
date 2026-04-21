@@ -18,11 +18,12 @@ const blogSchema = new mongoose.Schema({
   publishDate: { type: Date, default: null },
   views: { type: Number, default: 0 },
   // New field to track if notification was sent
-  notificationSent: { type: Boolean, default: false }
+  notificationSent: { type: Boolean, default: false },
+  slug: { type: String, required: true, unique: true, index: true }
 }, { timestamps: true });
 
 // Blog pre-save middleware
-blogSchema.pre('save', function(next) {
+blogSchema.pre('save', function (next) {
   // Calculate read time
   if (this.isModified('content')) {
     const words = this.content.split(/\s+/).length;

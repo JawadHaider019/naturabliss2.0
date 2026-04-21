@@ -28,7 +28,8 @@ const productSchema = new mongoose.Schema({
     idealStock: { type: Number, default: 20 },
     views: { type: Number, default: 0 },
     // New field to track if notification was sent
-    notificationSent: { type: Boolean, default: false }
+    notificationSent: { type: Boolean, default: false },
+    slug: { type: String, required: true, unique: true, index: true }
 });
 
 // Add index for better category queries

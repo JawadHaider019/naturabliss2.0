@@ -2,6 +2,17 @@ import { Blog } from '../models/blogModel.js';
 import { v2 as cloudinary } from "cloudinary";
 import fs from 'fs';
 import { notifyNewBlog } from '../controllers/newsletterController.js'; // ADDED IMPORT
+import mongoose from 'mongoose';
+
+// Helper function to generate slug from title
+const generateSlug = (title) => {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
 
 // 🟢 Blog Controllers
 
@@ -50,7 +61,23 @@ export const getAllBlogs = async (req, res) => {
 
 export const getBlogById = async (req, res) => {
   try {
-    const blog = await Blog.findById(req.params.id);
+    const { id } = req.params;
+    let blog;
+
+    // 1. Try finding by ID if it looks like one
+    if (id && id.length === 24) {
+      try {
+        blog = await Blog.findById(id);
+      } catch (err) {
+        // Not a valid ID, move to slug
+      }
+    }
+
+    // 2. If not found by ID, try finding by slug
+    if (!blog) {
+      blog = await Blog.findOne({ slug: id });
+    }
+
     if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
 
     blog.views += 1;
@@ -83,6 +110,9 @@ export const createBlog = async (req, res) => {
       const blogCount = await Blog.countDocuments();
       blogData.title = `Blog Post ${blogCount + 1}`;
     }
+
+    // Generate slug from title
+    blogData.slug = generateSlug(blogData.title);
 
     const blog = new Blog(blogData);
     await blog.save();
@@ -126,6 +156,11 @@ export const updateBlog = async (req, res) => {
     if (!existingBlog) return res.status(404).json({ success: false, message: 'Blog not found' });
 
     const wasPublished = existingBlog.status === 'published';
+
+    // Update slug if title changed
+    if (updateData.title && updateData.title !== existingBlog.title) {
+      updateData.slug = generateSlug(updateData.title);
+    }
 
     const blog = await Blog.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
 
@@ -172,14 +207,14 @@ export const togglePublishStatus = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
-    
+
     const wasPublished = blog.status === 'published';
     blog.status = blog.status === 'published' ? 'draft' : 'published';
-    
+
     if (blog.status === 'published' && !blog.publishDate) {
       blog.publishDate = new Date();
     }
-    
+
     await blog.save();
 
     // ✅ ADDED: Send newsletter notification when blog is published (only if it wasn't already published)
@@ -193,10 +228,10 @@ export const togglePublishStatus = async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
-      message: `Blog ${blog.status === 'published' ? 'published' : 'unpublished'} successfully`, 
-      data: blog 
+    res.json({
+      success: true,
+      message: `Blog ${blog.status === 'published' ? 'published' : 'unpublished'} successfully`,
+      data: blog
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error updating blog status', error: error.message });
@@ -208,7 +243,7 @@ export const getAllCategories = async (req, res) => {
     // Get distinct categories from all blogs with counts
     const categories = await Blog.aggregate([
       { $unwind: "$category" },
-      { 
+      {
         $group: {
           _id: "$category",
           blogCount: { $sum: 1 },
@@ -217,13 +252,13 @@ export const getAllCategories = async (req, res) => {
       },
       { $sort: { _id: 1 } }
     ]);
-    
+
     const formattedCategories = categories.map(cat => ({
       name: cat._id,
       blogCount: cat.blogCount,
       lastUsed: cat.lastUsed
     }));
-    
+
     res.json({ success: true, data: formattedCategories });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching categories', error: error.message });
@@ -233,22 +268,22 @@ export const getAllCategories = async (req, res) => {
 export const createCategory = async (req, res) => {
   try {
     const { name } = req.body;
-    
+
     if (!name || name.trim() === '') {
       return res.status(400).json({ success: false, message: 'Category name is required' });
     }
-    
+
     const categoryName = name.trim();
-    
+
     // Check if category already exists in any blog
-    const existingCategory = await Blog.findOne({ 
-      category: { $regex: new RegExp(`^${categoryName}$`, 'i') } 
+    const existingCategory = await Blog.findOne({
+      category: { $regex: new RegExp(`^${categoryName}$`, 'i') }
     });
-    
+
     if (existingCategory) {
       return res.status(400).json({ success: false, message: 'Category already exists' });
     }
-    
+
     // ACTUALLY CREATE A BLOG WITH THIS CATEGORY TO SAVE IT
     const newBlog = new Blog({
       title: `Category Setup - ${categoryName}`,
@@ -259,17 +294,17 @@ export const createCategory = async (req, res) => {
       status: 'draft', // Keep it as draft so it doesn't show publicly
       author: 'System'
     });
-    
+
     await newBlog.save();
-    
-    res.json({ 
-      success: true, 
-      message: 'Category created successfully', 
-      data: { 
+
+    res.json({
+      success: true,
+      message: 'Category created successfully',
+      data: {
         name: categoryName,
         blogCount: 1,
         lastUsed: new Date()
-      } 
+      }
     });
   } catch (error) {
     res.status(400).json({ success: false, message: 'Error creating category', error: error.message });
@@ -280,42 +315,42 @@ export const updateCategory = async (req, res) => {
   try {
     const { newName } = req.body;
     const oldName = req.params.id;
-    
+
     if (!newName || newName.trim() === '') {
       return res.status(400).json({ success: false, message: 'New category name is required' });
     }
-    
+
     // Check if new category name already exists
-    const existingCategory = await Blog.findOne({ 
-      category: { $regex: new RegExp(`^${newName.trim()}$`, 'i') } 
+    const existingCategory = await Blog.findOne({
+      category: { $regex: new RegExp(`^${newName.trim()}$`, 'i') }
     });
-    
+
     if (existingCategory) {
       return res.status(400).json({ success: false, message: 'New category name already exists' });
     }
-    
+
     // Update all blogs that have this category
     const result = await Blog.updateMany(
       { category: oldName },
       { $set: { "category.$": newName.trim() } }
     );
-    
+
     // Update any system category setup blogs
     await Blog.updateMany(
       { title: `Category Setup - ${oldName}`, author: 'System' },
-      { 
-        $set: { 
+      {
+        $set: {
           title: `Category Setup - ${newName.trim()}`,
           category: [newName.trim()],
           excerpt: `Category setup for ${newName.trim()}`
-        } 
+        }
       }
     );
-    
-    res.json({ 
-      success: true, 
-      message: `Category updated in ${result.modifiedCount} blog(s)`, 
-      data: { oldName, newName: newName.trim() } 
+
+    res.json({
+      success: true,
+      message: `Category updated in ${result.modifiedCount} blog(s)`,
+      data: { oldName, newName: newName.trim() }
     });
   } catch (error) {
     res.status(400).json({ success: false, message: 'Error updating category', error: error.message });
@@ -325,22 +360,22 @@ export const updateCategory = async (req, res) => {
 export const deleteCategory = async (req, res) => {
   try {
     const categoryName = req.params.id;
-    
+
     // Remove this category from all blogs
     const result = await Blog.updateMany(
       { category: categoryName },
       { $pull: { category: categoryName } }
     );
-    
+
     // Also delete any system-created category setup blogs
     await Blog.deleteMany({
       title: { $regex: `Category Setup - ${categoryName}` },
       author: 'System'
     });
-    
-    res.json({ 
-      success: true, 
-      message: `Category removed from ${result.modifiedCount} blog(s)` 
+
+    res.json({
+      success: true,
+      message: `Category removed from ${result.modifiedCount} blog(s)`
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error deleting category', error: error.message });

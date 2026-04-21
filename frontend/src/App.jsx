@@ -31,11 +31,11 @@ const BlogPost = lazy(() => import('./pages/BlogPost'))
 // Loading Spinner - Using loader
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-white/50 backdrop-blur-sm">
-    <Loader 
-      text="Loading" 
-      size="xl" 
+    <Loader
+      text="Loading"
+      size="xl"
       color="rgb(84 119 55)"
-      
+
     />
   </div>
 )
@@ -126,13 +126,13 @@ const App = () => {
             <Route path='/collection' element={<Collection />} />
             <Route path='/about' element={<About />} />
             <Route path='/contact' element={<Contact />} />
-            <Route path='/product/:productId' element={<Product />} />
+            <Route path='/product/:slug' element={<Product />} />
             <Route path="/deal/:dealId" element={<Deal />} />
-            <Route path="/collection/product/:productId" element={<Product />} />
+            <Route path="/collection/product/:slug" element={<Product />} />
             <Route path='/login' element={<Login />} />
             <Route path='/cart' element={<Cart />} />
             <Route path='/blog' element={<Blog />} />
-            <Route path="/blog/:id" element={<BlogPost />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path='/orders' element={<Orders />} />
             <Route path='/place-order' element={<PlaceOrder />} />
           </Routes>

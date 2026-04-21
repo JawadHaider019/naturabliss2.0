@@ -28,7 +28,7 @@ const BestSeller = () => {
       // STRICT filtering - only products explicitly marked as bestsellers
       const bestProducts = publishedProducts.filter((item) => {
         // Check each possible bestseller field explicitly
-        const isExplicitBestSeller = 
+        const isExplicitBestSeller =
           (item.bestseller === true || item.bestseller === "true") ||
           (item.bestSeller === true || item.bestSeller === "true") ||
           (item.best_seller === true || item.best_seller === "true") ||
@@ -166,7 +166,7 @@ const BestSeller = () => {
       </div>
     ),
     customPaging: i => (
-      <button 
+      <button
         className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-300 transition-all duration-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
         aria-label={`Go to slide ${i + 1}`}
       />
@@ -194,7 +194,7 @@ const BestSeller = () => {
 
     updateSliderVisibility();
     window.addEventListener('resize', updateSliderVisibility);
-    
+
     return () => {
       window.removeEventListener('resize', updateSliderVisibility);
     };
@@ -219,7 +219,7 @@ const BestSeller = () => {
         <div className="py-4 text-center text-2xl md:text-3xl">
           <Title text1={"BEST"} text2={"SELLERS"} />
           <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4">
-From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+            From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
@@ -234,7 +234,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
       <div className="py-2 text-center text-2xl md:text-3xl">
         <Title text1={"BEST"} text2={"SELLERS"} />
         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
-From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+          From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
         </p>
       </div>
 
@@ -251,6 +251,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
                   <div className="h-full flex">
                     <ProductItem
                       id={item._id || item.id}
+                      slug={item.slug}
                       image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
                       name={item.name || "Unnamed Product"}
                       price={item.price || 0}
@@ -264,7 +265,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
               </div>
             ))}
           </Slider>
-          
+
           {bestSeller.length > Math.min(4, bestSeller.length) && (
             <>
               <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
@@ -278,6 +279,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
             <div key={item._id || item.id} className="flex justify-center">
               <ProductItem
                 id={item._id || item.id}
+                slug={item.slug}
                 image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
                 name={item.name || "Unnamed Product"}
                 price={item.price || 0}
@@ -290,7 +292,7 @@ From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's 
           ))}
         </div>
       )}
-      
+
       {/* Fixed style tag without jsx attribute */}
       <style>
         {`

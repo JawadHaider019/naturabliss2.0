@@ -1,12 +1,12 @@
-import { useContext, useState, useEffect, useRef ,useCallback } from 'react';
+import { useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import RelatedProduct from '../components/RelatedProduct';
-import { FaStar, FaStarHalf, FaRegStar,  FaWhatsapp, FaThumbsUp, FaThumbsDown, FaTimes, FaUserShield } from 'react-icons/fa';
+import { FaStar, FaStarHalf, FaRegStar, FaWhatsapp, FaThumbsUp, FaThumbsDown, FaTimes, FaUserShield } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const Product = () => {
-  const { productId } = useParams();
+  const { slug } = useParams();
   const { products, currency, addToCart, user, token, backendUrl } = useContext(ShopContext);
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState('');
@@ -27,57 +27,80 @@ const Product = () => {
 
   // Use ref to track if addToCart was called to prevent multiple calls
   const addToCartCalledRef = useRef(false);
-   const whatsappButtonRef = useRef(null);
+  const whatsappButtonRef = useRef(null);
 
   // Email masking function
   const maskEmail = (email) => {
     if (!email || typeof email !== 'string') return 'Unknown User';
-    
+
     if (email.includes('***@') || !email.includes('@')) return email;
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return email;
-    
+
     const [localPart, domain] = email.split('@');
-    
+
     if (localPart.length === 1) {
       return `${localPart}***@${domain}`;
     }
-    
+
     const firstChar = localPart[0];
     const maskedLocalPart = firstChar + '***';
-    
+
     return `${maskedLocalPart}@${domain}`;
   };
 
   // Fetch product data and reviews
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    
-    if (!productId) {
-      setError('Product ID not found');
-      setLoading(false);
-      return;
-    }
-
-    if (!products || products.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const product = products.find((item) => item._id === productId);
-
-    if (product) {
-      setProductData(product);
-      setImage(product.image?.[0] || '');
+    const fetchProductData = async () => {
+      setLoading(true);
       setError(null);
-      fetchProductReviews(productId);
-    } else {
-      setError('Product not found');
+
+      if (!slug) {
+        setError('Product not found');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Try finding in context first
+      const product = products.find((item) => item.slug === slug || item._id === slug);
+
+      if (product) {
+        setProductData(product);
+        setImage(product.image?.[0] || '');
+        setError(null);
+        fetchProductReviews(product._id);
+        setLoading(false);
+      } else {
+        // 2. If not found in context (e.g. direct land on page), fetch from API
+        try {
+          const response = await axios.post(`${backendUrl}/api/product/single`, { productId: slug });
+          if (response.data.success) {
+            const fetchedProduct = response.data.product;
+            setProductData(fetchedProduct);
+            setImage(fetchedProduct.image?.[0] || '');
+            fetchProductReviews(fetchedProduct._id);
+            setError(null);
+          } else {
+            setError('Product not found');
+          }
+        } catch (err) {
+          console.error("Fetch Product Error:", err);
+          setError('Failed to load product');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    if (products && products.length > 0) {
+      fetchProductData();
+    } else if (products !== undefined) {
+      // If products array is empty but defined, it might still be loading or truly empty
+      // We still try to fetch the single product
+      fetchProductData();
     }
-    setLoading(false);
-  }, [productId, products]);
+  }, [slug, products, backendUrl]);
 
   const stock = productData ? productData.quantity : 0;
 
@@ -97,10 +120,10 @@ const Product = () => {
     setLoadingReviews(true);
     try {
       const response = await fetch(`${backendUrl}/api/comments?productId=${productId}`);
-      
+
       if (response.ok) {
         const comments = await response.json();
-        
+
         // Transform backend comments to frontend review format with replies
         const productReviews = comments.map(comment => ({
           id: comment._id,
@@ -122,7 +145,7 @@ const Product = () => {
             date: new Date(comment.reply.date).toLocaleDateString()
           } : null
         }));
-        
+
         setReviews(productReviews);
       } else {
         toast.error('Failed to load reviews');
@@ -171,13 +194,13 @@ const Product = () => {
 
   const handleQuantityChange = (e) => {
     let value = Number(e.target.value);
-    
+
     if (isNaN(value) || value < 1) {
       value = 1;
     }
-    
+
     value = Math.min(value, stock);
-    
+
     setQuantity(value);
   };
 
@@ -246,7 +269,7 @@ const Product = () => {
       });
 
       const currentToken = token || localStorage.getItem('token');
-      
+
       const response = await fetch(`${backendUrl}/api/comments`, {
         method: 'POST',
         body: formData,
@@ -257,7 +280,7 @@ const Product = () => {
 
       if (response.ok) {
         const newComment = await response.json();
-        
+
         const newReview = {
           id: newComment._id,
           rating: newComment.rating,
@@ -284,7 +307,7 @@ const Product = () => {
         setComment('');
         reviewImages.forEach(image => URL.revokeObjectURL(image.url));
         setReviewImages([]);
-        
+
         toast.success('Review submitted successfully!');
       } else {
         toast.error('Failed to submit review');
@@ -299,10 +322,10 @@ const Product = () => {
   // Check if current user has liked/disliked a review
   const getUserInteractionStatus = (review) => {
     if (!user || !user._id) return { hasLiked: false, hasDisliked: false };
-    
+
     const hasLiked = review.likedBy?.includes(user._id) || false;
     const hasDisliked = review.dislikedBy?.includes(user._id) || false;
-    
+
     return { hasLiked, hasDisliked };
   };
 
@@ -339,11 +362,11 @@ const Product = () => {
       });
 
       if (response.ok) {
-        setReviews(prevReviews => 
+        setReviews(prevReviews =>
           prevReviews.map(review => {
             if (review.id === reviewId) {
               const updatedReview = { ...review };
-              
+
               if (hasLiked) {
                 updatedReview.likes = Math.max(0, (review.likes || 0) - 1);
                 updatedReview.likedBy = (review.likedBy || []).filter(id => id !== user._id);
@@ -356,7 +379,7 @@ const Product = () => {
                 updatedReview.likes = (review.likes || 0) + 1;
                 updatedReview.likedBy = [...(review.likedBy || []), user._id];
               }
-              
+
               return updatedReview;
             }
             return review;
@@ -403,11 +426,11 @@ const Product = () => {
       });
 
       if (response.ok) {
-        setReviews(prevReviews => 
+        setReviews(prevReviews =>
           prevReviews.map(review => {
             if (review.id === reviewId) {
               const updatedReview = { ...review };
-              
+
               if (hasDisliked) {
                 updatedReview.dislikes = Math.max(0, (review.dislikes || 0) - 1);
                 updatedReview.dislikedBy = (review.dislikedBy || []).filter(id => id !== user._id);
@@ -420,7 +443,7 @@ const Product = () => {
                 updatedReview.dislikes = (review.dislikes || 0) + 1;
                 updatedReview.dislikedBy = [...(review.dislikedBy || []), user._id];
               }
-              
+
               return updatedReview;
             }
             return review;
@@ -506,16 +529,16 @@ const Product = () => {
   };
   const handleOrderOnWhatsApp = useCallback(() => {
     if (!productData) return;
-    
+
     const message = `Assalam O Alaikum! I would like to order:\n\n` +
-                   `*Product:* ${productData.name}\n` +
-                   `*Quantity:* ${quantity}\n` +
-                   `*Price:* ${currency} ${(productData.discountprice || productData.price) * quantity}\n\n` +
-                   `Please let me know the next steps.`;
-    
+      `*Product:* ${productData.name}\n` +
+      `*Quantity:* ${quantity}\n` +
+      `*Price:* ${currency} ${(productData.discountprice || productData.price) * quantity}\n\n` +
+      `Please let me know the next steps.`;
+
     const encodedMessage = encodeURIComponent(message);
     const phoneNumber = "923241572294";
-    
+
     window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
   }, [productData, quantity, currency]);
 
@@ -530,14 +553,14 @@ const Product = () => {
       toast.error('This product is out of stock');
       return;
     }
-    
+
     const finalQuantity = Math.min(quantity, stock);
-    
+
     if (finalQuantity !== quantity) {
       setQuantity(finalQuantity);
       toast.info(`Quantity adjusted to available stock: ${finalQuantity}`);
     }
-    
+
     // Set loading state and mark as called
     setIsAddingToCart(true);
     addToCartCalledRef.current = true;
@@ -546,7 +569,7 @@ const Product = () => {
       // Call addToCart only once
       addToCart(productData._id, finalQuantity);
       setQuantity(1);
-    
+
     } catch (error) {
       toast.error('Failed to add product to cart');
     } finally {
@@ -581,7 +604,7 @@ const Product = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="btn bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
@@ -600,7 +623,7 @@ const Product = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading product...</p>
-            <p className="text-sm text-gray-500">Product ID: {productId}</p>
+            <p className="text-sm text-gray-500">Product: {slug}</p>
           </div>
         </div>
       </div>
@@ -608,15 +631,15 @@ const Product = () => {
   }
 
   // FIXED: Use the correct property name 'discountprice' (lowercase p)
-  const hasDiscount = productData.discountprice !== undefined && 
-                     productData.discountprice !== null && 
-                     productData.discountprice !== productData.price;
-  
+  const hasDiscount = productData.discountprice !== undefined &&
+    productData.discountprice !== null &&
+    productData.discountprice !== productData.price;
+
   const actualPrice = hasDiscount ? productData.discountprice : productData.price;
   const originalPrice = hasDiscount ? productData.price : null;
-  
+
   // Calculate discount percentage for badge
-  const discountPercentage = hasDiscount 
+  const discountPercentage = hasDiscount
     ? Math.round(((productData.price - productData.discountprice) / productData.price) * 100)
     : null;
 
@@ -632,7 +655,7 @@ const Product = () => {
                 src={item}
                 alt={`Product Thumbnail ${index + 1}`}
                 className="w-[24%] shrink-0 cursor-pointer sm:mb-3 sm:w-full object-cover h-20 sm:h-24"
-                onClick={() => setImage(item)} 
+                onClick={() => setImage(item)}
                 onError={(e) => {
                   e.target.src = 'https://via.placeholder.com/150?text=Image+Error';
                 }}
@@ -662,11 +685,11 @@ const Product = () => {
         <div className="flex-1">
           <h1 className="mt-2 text-2xl font-medium">{productData.name}</h1>
           <div className="mt-2 flex items-center gap-1">
-            {renderRating(averageRating)} 
+            {renderRating(averageRating)}
             <p className="pl-2">{averageRating.toFixed(1)}</p>
             <span className="text-sm text-gray-500">({reviews.length} reviews)</span>
           </div>
-          
+
           {/* PRICE DISPLAY - FIXED */}
           <div className="mt-5 flex items-center gap-4">
             <p className="text-3xl font-medium">
@@ -678,18 +701,17 @@ const Product = () => {
               </p>
             )}
           </div>
-          
+
           <p className="mt-5 text-gray-500 md:w-4/5">{productData.description}</p>
-          
+
           <div className="my-8 flex items-center gap-4">
             <p className="font-medium">Quantity</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={decrementQuantity}
                 disabled={quantity <= 1 || stock === 0}
-                className={`w-8 h-8 rounded border border-gray-300 flex items-center justify-center ${
-                  quantity <= 1 || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-                }`}
+                className={`w-8 h-8 rounded border border-gray-300 flex items-center justify-center ${quantity <= 1 || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                  }`}
               >
                 -
               </button>
@@ -711,50 +733,47 @@ const Product = () => {
               <button
                 onClick={incrementQuantity}
                 disabled={quantity >= stock || stock === 0}
-                className={`w-8 h-8 rounded border border-gray-300 flex items-center justify-center ${
-                  quantity >= stock || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-                }`}
+                className={`w-8 h-8 rounded border border-gray-300 flex items-center justify-center ${quantity >= stock || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                  }`}
               >
                 +
               </button>
             </div>
           </div>
-          
+
           {renderStockStatus()}
           <div className="mt-6 flex flex-col items-start gap-4">
-        <button
-            onClick={handleAddToCart}
-            className={`btn mt-4 ${
-              stock === 0 || isAddingToCart
-                ? 'opacity-50 cursor-not-allowed bg-gray-400' 
+            <button
+              onClick={handleAddToCart}
+              className={`btn mt-4 ${stock === 0 || isAddingToCart
+                ? 'opacity-50 cursor-not-allowed bg-gray-400'
                 : 'hover:bg-black hover:text-white transition-colors'
-            }`}
-            disabled={stock === 0 || isAddingToCart}
-          >
-            {isAddingToCart 
-              ? 'ADDING TO CART...' 
-              : stock === 0 
-                ? 'OUT OF STOCK' 
-                : quantity > stock 
-                  ? `ADD ${stock} TO CART` 
-                  : `ADD TO CART`
-            }
-          </button>
+                }`}
+              disabled={stock === 0 || isAddingToCart}
+            >
+              {isAddingToCart
+                ? 'ADDING TO CART...'
+                : stock === 0
+                  ? 'OUT OF STOCK'
+                  : quantity > stock
+                    ? `ADD ${stock} TO CART`
+                    : `ADD TO CART`
+              }
+            </button>
 
-                 <button  
-                    ref={whatsappButtonRef}
-                    onClick={handleOrderOnWhatsApp}
-                    disabled={stock === 0}
-                    className={`btn flex gap-2 bg-green-600 text-white  ${
-                      stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <FaWhatsapp className="w-5 h-5" />
-                    <span>Order on WhatsApp</span>
-                  </button>
-       
-            </div>
-            
+            <button
+              ref={whatsappButtonRef}
+              onClick={handleOrderOnWhatsApp}
+              disabled={stock === 0}
+              className={`btn flex gap-2 bg-green-600 text-white  ${stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+            >
+              <FaWhatsapp className="w-5 h-5" />
+              <span>Order on WhatsApp</span>
+            </button>
+
+          </div>
+
           <hr className="mt-8 sm:w-4/5" />
           <ul className="mt-5 flex flex-col gap-1 text-sm text-gray-700 leading-relaxed list-disc list-inside">
             <li>Made with pure, natural, and organic ingredients.</li>
@@ -785,9 +804,8 @@ const Product = () => {
               {ratingBreakdown.map(({ star, count }) => (
                 <div
                   key={star}
-                  className={`flex cursor-pointer items-center gap-2 p-1 rounded ${
-                    filterRating === star ? 'bg-yellow-50' : ''
-                  }`}
+                  className={`flex cursor-pointer items-center gap-2 p-1 rounded ${filterRating === star ? 'bg-yellow-50' : ''
+                    }`}
                   onClick={() => filterReviewsByRating(star)}
                 >
                   <div className="flex gap-1 text-xs sm:text-sm">{renderRating(star)}</div>
@@ -902,7 +920,7 @@ const Product = () => {
                 <>
                   {displayedReviews.map((review) => {
                     const { hasLiked, hasDisliked } = getUserInteractionStatus(review);
-                    
+
                     return (
                       <div key={review.id} className="mt-4 border-b pb-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -942,26 +960,24 @@ const Product = () => {
                         <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                           <span className="hidden sm:inline">Was this helpful?</span>
                           <span className="sm:hidden">Helpful?</span>
-                          <button 
+                          <button
                             onClick={() => handleLikeReview(review.id)}
-                            className={`flex items-center gap-1 transition-colors ${
-                              hasLiked 
-                                ? 'text-green-600 font-semibold' 
-                                : 'hover:text-green-600'
-                            }`}
+                            className={`flex items-center gap-1 transition-colors ${hasLiked
+                              ? 'text-green-600 font-semibold'
+                              : 'hover:text-green-600'
+                              }`}
                           >
-                            <FaThumbsUp size={12} className="sm:size-[14px]" /> 
+                            <FaThumbsUp size={12} className="sm:size-[14px]" />
                             <span className="text-xs sm:text-sm">{review.likes}</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDislikeReview(review.id)}
-                            className={`flex items-center gap-1 transition-colors ${
-                              hasDisliked 
-                                ? 'text-red-600 font-semibold' 
-                                : 'hover:text-red-600'
-                            }`}
+                            className={`flex items-center gap-1 transition-colors ${hasDisliked
+                              ? 'text-red-600 font-semibold'
+                              : 'hover:text-red-600'
+                              }`}
                           >
-                            <FaThumbsDown size={12} className="sm:size-[14px]" /> 
+                            <FaThumbsDown size={12} className="sm:size-[14px]" />
                             <span className="text-xs sm:text-sm">{review.dislikes}</span>
                           </button>
                         </div>

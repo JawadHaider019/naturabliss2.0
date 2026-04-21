@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import { notifyNewProduct } from '../controllers/newsletterController.js'; // ADDED IMPORT
 
@@ -8,6 +9,16 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Helper function to generate slug from name
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
 
 // ------------------- ADD PRODUCT -------------------
 const addProduct = async (req, res) => {
@@ -38,6 +49,7 @@ const addProduct = async (req, res) => {
       image: imagesUrl,
       status: status || 'draft',
       date: Date.now(),
+      slug: generateSlug(name)
     };
 
     const product = new productModel(productData);
@@ -66,18 +78,18 @@ const addProduct = async (req, res) => {
 const listProducts = async (req, res) => {
   try {
     const { status = 'all' } = req.query; // Default to 'all'
-    
+
     // Build query
     let query = {};
-    
+
     // If status is specified and not 'all', apply status filter
     if (status && status !== 'all') {
       query.status = status;
     }
     // If status is 'all' or not provided, no status filter (get all products)
-    
+
     const products = await productModel.find(query);
-    
+
     console.log('📦 Products found:', products.length);
     console.log('🔍 Query used:', query);
     console.log('📊 Status breakdown:', {
@@ -85,17 +97,17 @@ const listProducts = async (req, res) => {
       draft: products.filter(p => p.status === 'draft').length,
       archived: products.filter(p => p.status === 'archived').length
     });
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       products,
-      count: products.length 
+      count: products.length
     });
   } catch (error) {
     console.error("List Products Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 };
@@ -114,8 +126,27 @@ const removeProduct = async (req, res) => {
 const singleProduct = async (req, res) => {
   try {
     const { productId } = req.body;
-    const product = await productModel.findById(productId);
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    let product;
+
+    // Try finding by ID first if it looks like one
+    if (productId && productId.length === 24) {
+      try {
+        product = await productModel.findById(productId);
+      } catch (err) {
+        // Not a valid ID, ignore and move to slug
+      }
+    }
+
+    // If not found by ID, try finding by slug
+    if (!product) {
+      product = await productModel.findOne({ slug: productId });
+    }
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
     res.json({ success: true, product });
   } catch (error) {
     console.error("Single Product Error:", error);
@@ -170,7 +201,8 @@ const updateProduct = async (req, res) => {
       discountprice: Number(discountprice) || existingProduct.discountprice,
       quantity: Number(quantity) || existingProduct.quantity,
       bestseller: bestseller === 'true' || bestseller === true,
-      status: status || existingProduct.status // Use received status or keep existing
+      status: status || existingProduct.status, // Use received status or keep existing
+      slug: name ? generateSlug(name) : existingProduct.slug
     };
 
     console.log("=== UPDATE DATA TO BE SAVED ===");
@@ -226,8 +258,8 @@ const updateProduct = async (req, res) => {
 
     // Perform the update
     const updatedProduct = await productModel.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -242,10 +274,10 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
-      message: "Product updated successfully", 
-      product: updatedProduct 
+    res.json({
+      success: true,
+      message: "Product updated successfully",
+      product: updatedProduct
     });
 
   } catch (error) {

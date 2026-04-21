@@ -29,7 +29,7 @@ const LatestCollection = () => {
       const uniqueProducts = publishedProducts.filter((product, index, self) =>
         index === self.findIndex(p => p._id === product._id)
       );
-      
+
       const latestUniqueProducts = uniqueProducts.slice(0, 100);
 
       return latestUniqueProducts;
@@ -145,7 +145,7 @@ const LatestCollection = () => {
       </div>
     ),
     customPaging: i => (
-      <button 
+      <button
         className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-300 transition-all duration-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
         aria-label={`Go to slide ${i + 1}`}
       />
@@ -173,7 +173,7 @@ const LatestCollection = () => {
 
     updateSliderVisibility();
     window.addEventListener('resize', updateSliderVisibility);
-    
+
     return () => {
       window.removeEventListener('resize', updateSliderVisibility);
     };
@@ -197,8 +197,8 @@ const LatestCollection = () => {
       <div className="my-16 md:my-24">
         <div className="py-4 text-center text-2xl md:text-3xl">
           <Title text1={'LATEST'} text2={'COLLECTIONS'} />
-         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-2">
-   Experience the Beauty of Nature with Natura Bliss's Newest Organic Skincare Collection
+          <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-2">
+            Experience the Beauty of Nature with Natura Bliss's Newest Organic Skincare Collection
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
@@ -213,8 +213,8 @@ const LatestCollection = () => {
       <div className="py-2 text-center text-2xl md:text-3xl">
         <Title text1={'LATEST'} text2={'COLLECTIONS'} />
         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
-   Experience the Beauty of Nature with Natura Bliss's Newest Organic Skincare Collection
-  </p>
+          Experience the Beauty of Nature with Natura Bliss's Newest Organic Skincare Collection
+        </p>
       </div>
 
       {latestProducts.length === 0 ? (
@@ -230,6 +230,7 @@ const LatestCollection = () => {
                   <div className="h-full flex">
                     <ProductItem
                       id={item._id}
+                      slug={item.slug}
                       image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
                       name={item.name}
                       price={item.price}
@@ -243,7 +244,7 @@ const LatestCollection = () => {
               </div>
             ))}
           </Slider>
-          
+
           {latestProducts.length > Math.min(4, latestProducts.length) && (
             <>
               <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
@@ -257,6 +258,7 @@ const LatestCollection = () => {
             <div key={item._id} className="flex justify-center">
               <ProductItem
                 id={item._id}
+                slug={item.slug}
                 image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
                 name={item.name}
                 price={item.price}
@@ -269,7 +271,7 @@ const LatestCollection = () => {
           ))}
         </div>
       )}
-      
+
       {/* Fixed style tag without jsx attribute */}
       <style>
         {`

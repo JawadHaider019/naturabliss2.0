@@ -1,13 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 
-import { 
-  FaCalendarAlt, 
-  FaUser, 
-  FaClock, 
-  FaShare, 
- 
-  FaArrowLeft, 
+import {
+  FaCalendarAlt,
+  FaUser,
+  FaClock,
+  FaShare,
+
+  FaArrowLeft,
   FaSpinner,
   FaEye,
   FaTag,
@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa";
 
 const BlogPost = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,18 +34,21 @@ const BlogPost = () => {
     const fetchBlogPost = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${backendUrl}/api/blogs/${id}`);
-        
+        setError(null);
+
+        // Use slug in the URL which the backend now supports (supports both ID and SLUG)
+        const response = await fetch(`${backendUrl}/api/blogs/${slug}`);
+
         if (!response.ok) {
           throw new Error('Blog post not found');
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
           setBlog(result.data);
           // Fetch related blogs based on categories
-          fetchRelatedBlogs(result.data.category);
+          fetchRelatedBlogs(result.data.category, result.data._id);
         } else {
           throw new Error(result.message || 'Failed to fetch blog post');
         }
@@ -56,16 +59,16 @@ const BlogPost = () => {
       }
     };
 
-    const fetchRelatedBlogs = async (categories) => {
+    const fetchRelatedBlogs = async (categories, currentBlogId) => {
       try {
         if (!categories || categories.length === 0) return;
-        
+
         const response = await fetch(`${backendUrl}/api/blogs?category=${categories[0]}&limit=4`);
         if (response.ok) {
           const result = await response.json();
           if (result.success) {
             // Filter out the current blog post
-            const filtered = result.data.filter(blog => blog._id !== id);
+            const filtered = result.data.filter(blog => blog._id !== currentBlogId);
             setRelatedBlogs(filtered.slice(0, 4));
           }
         }
@@ -74,13 +77,13 @@ const BlogPost = () => {
       }
     };
 
-    if (backendUrl) {
+    if (backendUrl && slug) {
       fetchBlogPost();
-    } else {
+    } else if (!backendUrl) {
       setError('Backend URL not configured');
       setLoading(false);
     }
-  }, [id, backendUrl]);
+  }, [slug, backendUrl]);
 
   const shareBlog = (platform) => {
     const url = window.location.href;
@@ -115,7 +118,7 @@ const BlogPost = () => {
   // Function to format blog content with proper styling
   const formatBlogContent = (content) => {
     if (!content) return '';
-    
+
     // Replace markdown-style formatting
     let formattedContent = content
       // Bold text: **text** or __text__
@@ -170,7 +173,7 @@ const BlogPost = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Article Not Found</h3>
               <p className="text-gray-600 mb-6">{error || 'The requested article could not be found.'}</p>
-              <Link 
+              <Link
                 to="/blog"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 font-medium"
               >
@@ -192,16 +195,16 @@ const BlogPost = () => {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">Share this article</h3>
-              <button 
+              <button
                 onClick={closeShareModal}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <FaTimes className="text-lg" />
               </button>
             </div>
-            
+
             <div className="grid grid-cols-4 gap-4 mb-6">
-              <button 
+              <button
                 onClick={() => shareBlog('facebook')}
                 className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors group"
               >
@@ -210,8 +213,8 @@ const BlogPost = () => {
                 </div>
                 <span className="text-sm text-gray-700">Facebook</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => shareBlog('whatsapp')}
                 className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 transition-colors group"
               >
@@ -220,8 +223,8 @@ const BlogPost = () => {
                 </div>
                 <span className="text-sm text-gray-700">WhatsApp</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => {
                   const url = window.location.href;
                   navigator.clipboard.writeText(url);
@@ -237,8 +240,8 @@ const BlogPost = () => {
                   {copied ? 'Copied!' : 'Copy Link'}
                 </span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => {
                   const url = window.location.href;
                   navigator.clipboard.writeText(url);
@@ -255,7 +258,7 @@ const BlogPost = () => {
                 </span>
               </button>
             </div>
-            
+
             <div className="flex gap-2">
               <input
                 type="text"
@@ -263,7 +266,7 @@ const BlogPost = () => {
                 readOnly
                 className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50"
               />
-              <button 
+              <button
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
                   setCopied(true);
@@ -280,7 +283,7 @@ const BlogPost = () => {
 
       {/* Back Button */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <Link 
+        <Link
           to="/blog"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors duration-300 mb-8 group"
         >
@@ -311,7 +314,7 @@ const BlogPost = () => {
           {/* Categories */}
           <div className="flex flex-wrap gap-2 mb-4">
             {blog.category?.map((cat, index) => (
-              <span 
+              <span
                 key={index}
                 className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium border border-gray-300"
               >
@@ -324,12 +327,12 @@ const BlogPost = () => {
               </span>
             )}
           </div>
-          
+
           {/* Title */}
           <h1 className="text-4xl font-bold text-gray-900 mb-6 leading-tight">
             {blog.title}
           </h1>
-          
+
           {/* Meta Information */}
           <div className="flex flex-wrap items-center gap-6 text-gray-600">
             <div className="flex items-center gap-2">
@@ -338,10 +341,10 @@ const BlogPost = () => {
             </div>
             <div className="flex items-center gap-2">
               <FaCalendarAlt className="text-sm" />
-              <span>{new Date(blog.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              <span>{new Date(blog.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -369,7 +372,7 @@ const BlogPost = () => {
               <div className="flex flex-wrap items-center gap-4 mb-8 pb-8 border-b border-gray-200">
                 <span className="text-gray-700 font-medium">Share this article:</span>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={openShareModal}
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white transition-colors duration-300 border border-gray-300"
                   >
@@ -383,46 +386,46 @@ const BlogPost = () => {
               <div className="blog-content-container">
                 <div className="text-gray-800 leading-8">
                   {blog.content ? (
-                    <div 
+                    <div
                       className="blog-content"
-                      dangerouslySetInnerHTML={{ 
+                      dangerouslySetInnerHTML={{
                         __html: formatBlogContent(blog.content).replace(
-                          /!\[video\]\((.*?)\)/g, 
+                          /!\[video\]\((.*?)\)/g,
                           '<div class="video-container my-6"><video controls src="$1" class="w-full"></video></div>'
-                        ) 
-                      }} 
+                        )
+                      }}
                     />
                   ) : (
                     <div className="space-y-6">
                       <p className="text-lg text-gray-800">
-                        Welcome to our comprehensive guide on this important topic. In this detailed article, 
-                        we'll explore the key aspects and provide you with valuable insights that you can 
+                        Welcome to our comprehensive guide on this important topic. In this detailed article,
+                        we'll explore the key aspects and provide you with valuable insights that you can
                         apply in your daily life or professional work.
                       </p>
-                      
+
                       <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Understanding the Core Concepts</h2>
                       <p className="text-gray-800">
-                        Before diving into the specifics, it's essential to understand the fundamental 
-                        principles that form the foundation of this subject. These core concepts will 
+                        Before diving into the specifics, it's essential to understand the fundamental
+                        principles that form the foundation of this subject. These core concepts will
                         help you grasp the more complex ideas we'll discuss later.
                       </p>
 
                       <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-3">Key Insights and Analysis</h3>
                       <p className="text-gray-800">
-                        Through extensive research and careful analysis, we've identified several crucial 
-                        insights that can significantly impact your understanding and approach to this topic. 
+                        Through extensive research and careful analysis, we've identified several crucial
+                        insights that can significantly impact your understanding and approach to this topic.
                         These findings are based on real-world data and practical experience.
                       </p>
 
                       <blockquote className="border-l-4 border-gray-400 pl-6 italic text-gray-600 my-8 bg-gray-50 py-4">
-                        "The most profound discoveries often come from questioning what we take for granted 
+                        "The most profound discoveries often come from questioning what we take for granted
                         and exploring new perspectives on familiar challenges."
                       </blockquote>
 
                       <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Practical Applications</h2>
                       <p className="text-gray-800">
-                        Theory is important, but practical application is where real value is created. 
-                        We've compiled actionable strategies and step-by-step guidance to help you 
+                        Theory is important, but practical application is where real value is created.
+                        We've compiled actionable strategies and step-by-step guidance to help you
                         implement these concepts effectively in your specific context.
                       </p>
 
@@ -438,8 +441,8 @@ const BlogPost = () => {
 
                       <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Looking Forward</h2>
                       <p className="text-gray-800">
-                        As we continue to explore this evolving field, new opportunities and challenges 
-                        will undoubtedly emerge. Staying informed and adaptable will be key to long-term 
+                        As we continue to explore this evolving field, new opportunities and challenges
+                        will undoubtedly emerge. Staying informed and adaptable will be key to long-term
                         success and continued growth.
                       </p>
                     </div>
@@ -456,7 +459,7 @@ const BlogPost = () => {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {blog.tags.map((tag, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition-colors duration-300 border border-gray-300"
                       >
@@ -515,7 +518,7 @@ const BlogPost = () => {
 // Related Blog Card Component
 const RelatedBlogCard = ({ blog }) => {
   return (
-    <Link to={`/blog/${blog._id}`} className="group">
+    <Link to={`/blog/${blog.slug || blog._id}`} className="group">
       <div className="bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-300 h-full flex flex-col">
         {blog.imageUrl && (
           <div className="relative overflow-hidden">
@@ -526,18 +529,18 @@ const RelatedBlogCard = ({ blog }) => {
             />
           </div>
         )}
-        
+
         <div className="p-4 flex-1 flex flex-col">
           <div className="flex-1">
             <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-700 transition-colors duration-300 line-clamp-2 text-sm leading-tight">
               {blog.title}
             </h4>
-            
+
             <p className="text-gray-600 text-xs mb-3 line-clamp-2">
               {blog.excerpt || blog.metaDescription}
             </p>
           </div>
-          
+
           <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
             <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
             <span className="flex items-center gap-1">

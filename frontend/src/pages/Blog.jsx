@@ -17,13 +17,13 @@ const Blog = () => {
       try {
         setLoading(true);
         const response = await fetch(`${backendUrl}/api/blogs?status=published`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch blogs: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
           setBlogs(result.data || []);
         } else {
@@ -69,8 +69,8 @@ const Blog = () => {
             <div className="bg-red-50 border border-red-200   p-6 max-w-md mx-auto">
               <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Articles</h3>
               <p className="text-red-600 mb-4">{error}</p>
-              <button 
-                onClick={() => window.location.reload()} 
+              <button
+                onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-red-600 text-white   hover:bg-red-700 transition-colors"
               >
                 Try Again
@@ -109,7 +109,7 @@ const Blog = () => {
                 Must Read
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {heroFeatured.map((blog, index) => (
                 <HeroStory key={blog._id} blog={blog} isMain={index === 0} />
@@ -130,9 +130,9 @@ const Blog = () => {
                 <h2 className="text-2xl font-bold text-gray-900 border-l-4 border-black pl-3">
                   Latest Articles
                 </h2>
-              
+
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {latestBlogs.map((blog, index) => (
                   <NewsCard key={blog._id} blog={blog} featured={index < 2} />
@@ -208,7 +208,7 @@ const HeroStory = ({ blog, isMain }) => {
   if (isMain) {
     return (
       <div className="lg:col-span-2 group">
-        <Link to={`/blog/${blog._id}`} className="block">
+        <Link to={`/blog/${blog.slug || blog._id}`} className="block">
           <div className="relative overflow-hidden   bg-gray-900">
             {blog.imageUrl ? (
               <img
@@ -221,24 +221,24 @@ const HeroStory = ({ blog, isMain }) => {
                 <FaTag className="text-gray-400 text-4xl" />
               </div>
             )}
-            
+
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            
+
             <div className="absolute bottom-0 left-0 right-0 p-6">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                   Featured
                 </span>
               </div>
-              
+
               <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-gray-300 transition-colors">
                 {blog.title}
               </h3>
-              
+
               <p className="text-gray-200 mb-4 line-clamp-2">
                 {blog.excerpt || blog.metaDescription}
               </p>
-              
+
               <div className="flex items-center justify-between text-sm text-gray-300">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
@@ -264,7 +264,7 @@ const HeroStory = ({ blog, isMain }) => {
 
   return (
     <div className="group">
-      <Link to={`/blog/${blog._id}`} className="block">
+      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
         <div className="relative overflow-hidden   bg-white border border-gray-200 hover:shadow-lg transition-all duration-300">
           {blog.imageUrl ? (
             <img
@@ -277,18 +277,18 @@ const HeroStory = ({ blog, isMain }) => {
               <FaTag className="text-gray-400 text-xl" />
             </div>
           )}
-          
+
           <div className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded">
                 FEATURED
               </span>
             </div>
-            
+
             <h4 className="font-bold text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
               {blog.title}
             </h4>
-            
+
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
               <span>{blog.readTime || 5} min read</span>
@@ -305,7 +305,7 @@ const NewsCard = ({ blog, featured = false }) => {
   if (featured) {
     return (
       <div className="group">
-        <Link to={`/blog/${blog._id}`} className="block">
+        <Link to={`/blog/${blog.slug || blog._id}`} className="block">
           <div className="flex flex-col sm:flex-row gap-4 bg-white   border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden">
             <div className="sm:w-2/5 relative">
               {blog.imageUrl ? (
@@ -320,16 +320,16 @@ const NewsCard = ({ blog, featured = false }) => {
                 </div>
               )}
             </div>
-            
+
             <div className="sm:w-3/5 p-4">
               <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
                 {blog.title}
               </h3>
-              
+
               <p className="text-gray-600 text-sm mb-3 line-clamp-3">
                 {blog.excerpt || blog.metaDescription}
               </p>
-              
+
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
@@ -352,7 +352,7 @@ const NewsCard = ({ blog, featured = false }) => {
 
   return (
     <div className="group">
-      <Link to={`/blog/${blog._id}`} className="block">
+      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
         <div className="bg-white   border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden">
           {blog.imageUrl && (
             <div className="relative overflow-hidden">
@@ -363,16 +363,16 @@ const NewsCard = ({ blog, featured = false }) => {
               />
             </div>
           )}
-          
+
           <div className="p-4">
             <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
               {blog.title}
             </h3>
-            
+
             <p className="text-gray-600 text-sm mb-3 line-clamp-2">
               {blog.excerpt || blog.metaDescription}
             </p>
-            
+
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
               <span className="flex items-center gap-1">
@@ -391,7 +391,7 @@ const NewsCard = ({ blog, featured = false }) => {
 const FeaturedCard = ({ blog }) => {
   return (
     <div className="group">
-      <Link to={`/blog/${blog._id}`} className="block">
+      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
         <div className="bg-white   border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
           {blog.imageUrl ? (
             <img
@@ -404,18 +404,18 @@ const FeaturedCard = ({ blog }) => {
               <FaTag className="text-gray-400 text-xl" />
             </div>
           )}
-          
+
           <div className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
                 EXPERT'S PICK
               </span>
             </div>
-            
+
             <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-300 transition-colors line-clamp-2">
               {blog.title}
             </h4>
-            
+
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
               <span>{blog.readTime || 5} min read</span>
@@ -430,7 +430,7 @@ const FeaturedCard = ({ blog }) => {
 // Trending Story Component
 const TrendingStory = ({ blog, rank }) => {
   return (
-    <Link to={`/blog/${blog._id}`} className="flex items-start gap-3 group hover:bg-gray-50 p-2   transition-colors">
+    <Link to={`/blog/${blog.slug || blog._id}`} className="flex items-start gap-3 group hover:bg-gray-50 p-2   transition-colors">
       <div className="flex-shrink-0 w-6 h-6 bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center justify-center">
         {rank}
       </div>

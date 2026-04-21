@@ -3,7 +3,7 @@ import { ShopContext } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaStarHalf, FaRegStar } from 'react-icons/fa';
 
-const ProductItem = ({ id, image, name, price, discount, rating, status = 'published' }) => {
+const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 'published' }) => {
   const { currency } = useContext(ShopContext);
   const navigate = useNavigate();
 
@@ -17,7 +17,7 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
     if (window.fbq) {
       const actualPrice = discount ? discount : price;
       const discountPercentage = discount ? Math.round(((price - discount) / price) * 100) : 0;
-      
+
       window.fbq('track', 'ViewContent', {
         content_ids: [id],
         content_name: name,
@@ -28,16 +28,16 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
         has_discount: discount > 0,
         discount_percentage: discountPercentage || undefined
       });
-      
+
       console.log('📊 Facebook Pixel: Product view tracked', {
         product: name,
         price: actualPrice,
         id: id
       });
     }
-    
+
     // Navigate to product page
-    navigate(`/product/${id}`);
+    navigate(`/product/${slug || id}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -67,7 +67,7 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
     return stars;
   };
 
-  const actualPrice = discount ? discount : price; 
+  const actualPrice = discount ? discount : price;
 
   return (
     <div onClick={handleClick} className="cursor-pointer text-gray-700">
