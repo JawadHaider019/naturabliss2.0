@@ -645,6 +645,35 @@ const Product = () => {
 
   return (
     <div className="container mx-auto px-4 border-t-2 pt-10">
+      {/* Dynamic Structured Data (SEO) */}
+      {productData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              "name": productData.name,
+              "image": productData.image,
+              "description": productData.description,
+              "brand": {
+                "@type": "Brand",
+                "name": "Natura Bliss"
+              },
+              "sku": productData._id,
+              "offers": {
+                "@type": "AggregateOffer",
+                "url": `${window.location.origin}/product/${productData.slug}`,
+                "priceCurrency": "PKR",
+                "lowPrice": (productData.discountprice && productData.discountprice < productData.price)
+                  ? productData.discountprice.toString()
+                  : productData.price.toString(),
+                "highPrice": productData.price.toString()
+              }
+            })
+          }}
+        />
+      )}
       <div className="flex flex-col gap-12 sm:flex-row sm:gap-12">
         <div className="flex flex-1 flex-col-reverse gap-3 sm:flex-row">
           {/* Thumbnail Images */}
