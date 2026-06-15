@@ -1,16 +1,16 @@
 import { Link } from "react-router-dom"
 import { assets } from "../assets/assets"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { 
-  faFacebookF, 
-  faInstagram, 
-  faWhatsapp, 
-  faTiktok,
+import {
+    faFacebookF,
+    faInstagram,
+    faWhatsapp,
+    faTiktok,
 } from "@fortawesome/free-brands-svg-icons"
-import { 
-  faEnvelope, 
-  faPhone, 
-  faMapMarkerAlt,
+import {
+    faEnvelope,
+    faPhone,
+    faMapMarkerAlt,
 } from "@fortawesome/free-solid-svg-icons"
 import { useState, useEffect } from "react"
 import axios from "axios"
@@ -28,7 +28,7 @@ const Footer = () => {
             customerSupport: {
                 email: "naturabliss@gmail.com",
                 phone: "+92-333-3333",
-                
+
             }
         },
         location: {
@@ -52,7 +52,7 @@ const Footer = () => {
         const fetchBusinessDetails = async () => {
             try {
                 const response = await axios.get(`${backendUrl}/api/business-details`)
-                
+
                 if (response.data.success && response.data.data) {
                     setBusinessInfo(response.data.data)
                 }
@@ -72,30 +72,30 @@ const Footer = () => {
 
     // Social media platforms with their icons and data
     const socialPlatforms = [
-        { 
-            key: 'facebook', 
-            icon: faFacebookF, 
+        {
+            key: 'facebook',
+            icon: faFacebookF,
             color: "bg-black hover:bg-gray-900",
             label: "Facebook",
             baseUrl: "https://facebook.com/"
         },
-        { 
-            key: 'instagram', 
-            icon: faInstagram, 
+        {
+            key: 'instagram',
+            icon: faInstagram,
             color: "bg-black hover:bg-gray-900",
             label: "Instagram",
             baseUrl: "https://instagram.com/"
         },
-        { 
-            key: 'tiktok', 
-            icon: faTiktok, 
-        color: "bg-black hover:bg-gray-900",
+        {
+            key: 'tiktok',
+            icon: faTiktok,
+            color: "bg-black hover:bg-gray-900",
             label: "TikTok",
             baseUrl: "https://tiktok.com/@"
         },
-        { 
-            key: 'whatsapp', 
-            icon: faWhatsapp, 
+        {
+            key: 'whatsapp',
+            icon: faWhatsapp,
             color: "bg-black hover:bg-gray-900",
             label: "WhatsApp",
             baseUrl: "https://wa.me/"
@@ -105,14 +105,14 @@ const Footer = () => {
     // Get current year for copyright
     const currentYear = new Date().getFullYear()
     const copyrightText = `© ${currentYear} ${businessInfo.company?.name || 'Natura Bliss'}. All rights reserved.`
-       
+
     // Logo display component
     const LogoDisplay = () => {
         if (businessInfo.logos?.website?.url) {
             return (
-                <img 
-                    src={businessInfo.logos.website.url} 
-                    alt={`${businessInfo.company?.name || 'Natura Bliss'} Logo`} 
+                <img
+                    src={businessInfo.logos.website.url}
+                    alt={`${businessInfo.company?.name || 'Natura Bliss'} Logo`}
                     className="w-20 mb-4 object-contain"
                     onError={(e) => {
                         e.target.src = assets.logo
@@ -120,7 +120,7 @@ const Footer = () => {
                 />
             )
         }
-        
+
         return (
             <img src={assets.logo} className="w-20 mb-4" alt="Natura Bliss Logo" />
         )
@@ -152,7 +152,7 @@ const Footer = () => {
             <div className="max-w-7xl mx-auto px-6 py-16">
                 {/* 4 Column Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-                    
+
                     {/* Column 1: Brand */}
                     <div>
                         <LogoDisplay />
@@ -188,7 +188,7 @@ const Footer = () => {
                                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-black w-4 mt-1" />
                                 <span>{businessInfo.location?.displayAddress || "123 Natural Street, Green Valley, PK"}</span>
                             </div>
-                          
+
                         </div>
                     </div>
 
@@ -199,7 +199,7 @@ const Footer = () => {
                             {socialPlatforms.map((platform) => {
                                 const socialUrl = businessInfo.socialMedia?.[platform.key]
                                 const isActive = !!socialUrl
-                                
+
                                 return (
                                     <a
                                         key={platform.key}
@@ -216,12 +216,12 @@ const Footer = () => {
                                 )
                             })}
                         </div>
-                        
+
                         {/* Social Media Status */}
                         <div className="mt-4 text-xs text-gray-500">
                             <p>
-                                {Object.values(businessInfo.socialMedia || {}).filter(url => url).length > 0 
-                                    ? "Follow us for updates and promotions" 
+                                {Object.values(businessInfo.socialMedia || {}).filter(url => url).length > 0
+                                    ? "Follow us for updates and promotions"
                                     : "Social links coming soon"
                                 }
                             </p>
@@ -236,9 +236,7 @@ const Footer = () => {
                         <p className="text-gray-600 text-sm">
                             {copyrightText}
                         </p>
-                        <div className="text-gray-500 text-sm">
-                            A Project of <Link to='https://jawumitech.com/' className="text-gray-700 hover:text-gray-500">JawumiTech</Link>
-                        </div>
+
                     </div>
                 </div>
             </div>
