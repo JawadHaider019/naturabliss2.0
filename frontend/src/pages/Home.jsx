@@ -1,5 +1,6 @@
 import BestSeller from "../components/BestSeller"
 import Hero from "../components/Hero"
+import ShopByCategory from "../components/ShopByCategory"
 import LatestCollection from "../components/LatestCollection"
 import NewsletterBox from "../components/NewsletterBox"
 import OurPolicy from "../components/OurPolicy"
@@ -12,15 +13,16 @@ import WhatsApp from "../components/WhatsApp"
 const Home = () => {
   return (
     <div>
-      <Hero/>
+      <Hero />
+      <ShopByCategory />
       <DealCollection />
-      <LatestCollection/>
-      <BestSeller/>
-      <WhyChooseUs/>
-      <Testimonial/>
-      <OurPolicy/>
-      <NewsletterBox/>
-            <WhatsApp /> 
+      <LatestCollection />
+      <BestSeller />
+      <WhyChooseUs />
+      <Testimonial />
+      <OurPolicy />
+      {/* <NewsletterBox/> */}
+      <WhatsApp />
       <ScrollToTop />
     </div>
   )

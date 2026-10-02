@@ -258,7 +258,7 @@ const trackTikTokInitiateCheckout = (totalItems) => {
           <p className="text-gray-600 text-lg mb-4">Your cart is empty</p>
           <button
             onClick={() => navigate('/')}
-            className="bg-black text-white px-8 py-3 hover:bg-gray-800 transition-colors font-medium"
+            className="bg-[#587a3b] text-white px-8 py-3 hover:bg-[#486530] transition-colors font-medium rounded-md"
           >
             CONTINUE SHOPPING
           </button>
@@ -850,7 +850,7 @@ trackTikTokInitiateCheckout(totalItems);
               <h2 className="text-2xl font-bold text-black">{itemData.name}</h2>
               <button 
                 onClick={handleCloseDetails}
-                className="text-gray-500 hover:text-black text-2xl font-bold transition-colors"
+                className="text-gray-500 hover:text-[#587a3b] text-2xl font-bold transition-colors"
               >
                 ×
               </button>
@@ -984,7 +984,7 @@ trackTikTokInitiateCheckout(totalItems);
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p 
-                            className={`font-semibold text-base cursor-pointer hover:text-gray-700 transition-colors line-clamp-2 mb-2 ${
+                            className={`font-semibold text-base cursor-pointer hover:text-[#587a3b] transition-colors line-clamp-2 mb-2 ${
                               itemData.isOutOfStock ? 'text-gray-500' : 'text-black'
                             }`}
                             onClick={() => handleViewDetails(item)}
@@ -1022,7 +1022,7 @@ trackTikTokInitiateCheckout(totalItems);
                           </p>
                           <button
                             onClick={() => handleRemoveItem(item.id, 'product')}
-                            className="text-gray-500 hover:text-black transition-colors flex items-center gap-1 text-sm"
+                            className="text-gray-500 hover:text-[#587a3b] transition-colors flex items-center gap-1 text-sm"
                           >
                             <FaTrash className="w-3 h-3" />
                             <span>Remove</span>
@@ -1034,7 +1034,7 @@ trackTikTokInitiateCheckout(totalItems);
                         <div className="flex items-center gap-3">
                           <button 
                             onClick={() => handleViewDetails(item)}
-                            className="text-black hover:text-gray-700 transition-colors flex items-center gap-2 font-medium"
+                            className="text-gray-800 hover:text-[#587a3b] transition-colors flex items-center gap-2 font-medium"
                           >
                             <FaInfoCircle className="w-4 h-4" />
                             <span className="text-sm">View Details</span>
@@ -1100,15 +1100,15 @@ trackTikTokInitiateCheckout(totalItems);
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <p 
-                                className={`font-semibold text-base cursor-pointer hover:text-gray-700 transition-colors line-clamp-2 ${
+                                className={`font-semibold text-base cursor-pointer hover:text-[#587a3b] transition-colors line-clamp-2 ${
                                   itemData.isOutOfStock ? 'text-gray-500' : 'text-black'
                                 }`}
                                 onClick={() => handleViewDetails(item)}
                               >
                                 {itemData.name}
                               </p>
-                              <span className={`text-xs px-2 py-1 font-medium flex-shrink-0 ${
-                                itemData.isOutOfStock ? 'bg-gray-500 text-white' : 'bg-black text-white'
+                              <span className={`text-xs px-2 py-1 font-medium flex-shrink-0 rounded ${
+                                itemData.isOutOfStock ? 'bg-gray-500 text-white' : 'bg-[#587a3b] text-white'
                               }`}>
                                 DEAL
                               </span>
@@ -1156,7 +1156,7 @@ trackTikTokInitiateCheckout(totalItems);
                             </p>
                             <button
                               onClick={() => handleRemoveItem(item.id, 'deal')}
-                              className="text-gray-500 hover:text-black transition-colors flex items-center gap-1 text-sm"
+                              className="text-gray-500 hover:text-[#587a3b] transition-colors flex items-center gap-1 text-sm"
                             >
                               <FaTrash className="w-3 h-3" />
                               <span>Remove</span>
@@ -1168,7 +1168,7 @@ trackTikTokInitiateCheckout(totalItems);
                           <div className="flex items-center gap-3">
                             <button 
                               onClick={() => handleViewDetails(item)}
-                              className="text-black hover:text-gray-700 transition-colors flex items-center gap-2 font-medium"
+                              className="text-gray-800 hover:text-[#587a3b] transition-colors flex items-center gap-2 font-medium"
                             >
                               <FaInfoCircle className="w-4 h-4" />
                               <span className="text-sm">View Deal Details</span>
@@ -1223,10 +1223,10 @@ trackTikTokInitiateCheckout(totalItems);
               <button
                 onClick={handleProceedToCheckout}
                 disabled={hasOutOfStockItems}
-                className={`px-8 py-4 font-semibold transition-colors w-full md:w-auto text-base ${
+                className={`px-8 py-4 font-semibold transition-colors w-full md:w-auto text-base rounded-md shadow-sm ${
                   hasOutOfStockItems
                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-black text-white hover:bg-gray-800 active:bg-gray-900'
+                    : 'bg-[#587a3b] text-white hover:bg-[#486530] active:bg-[#3b5327]'
                 }`}
               >
                PROCEED TO CHECKOUT

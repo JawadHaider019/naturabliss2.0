@@ -178,9 +178,19 @@ const OrderItem = memo(({ item, currency, backendUrl }) => {
 });
 
 const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
-  const { subtotal, total, formattedDate, statusIcon, statusColor } = useMemo(() => {
+  const isAdvance = useMemo(() => {
+    return Boolean(
+      order.advanceAmount || 
+      order.paymentScreenshot || 
+      (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
+      order.advancePaymentStatus
+    );
+  }, [order]);
+
+  const { subtotal, total, formattedDate, displayStatus, statusIcon, statusColor } = useMemo(() => {
     const subtotal = order.items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-    const total = subtotal + (order.deliveryCharges || 0);
+    // When delivery is paid in advance, remaining total to pay on COD is product subtotal
+    const total = isAdvance ? subtotal : subtotal + (order.deliveryCharges || 0);
     const formattedDate = new Date(parseInt(order.date)).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -190,8 +200,10 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
     });
     
     const statusMap = {
-      'Order Placed': { icon: faClock, color: 'text-black bg-yellow-100 border-yellow-300' },
-      'Processing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
+      'Pending': { icon: faClock, color: 'text-black bg-amber-100 border-amber-300' },
+      'Pending Approval': { icon: faClock, color: 'text-black bg-amber-100 border-amber-300' },
+      'Order Placed': { icon: faCheckCircle, color: 'text-black bg-green-100 border-green-300' },
+      'Processing': { icon: faCheckCircle, color: 'text-black bg-green-100 border-green-300' },
       'Packing': { icon: faBox, color: 'text-black bg-blue-100 border-blue-300' },
       'Shipped': { icon: faShippingFast, color: 'text-black bg-purple-100 border-purple-300' },
       'Out for delivery': { icon: faMotorcycle, color: 'text-black bg-orange-100 border-orange-300' },
@@ -199,10 +211,30 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
       'Cancelled': { icon: faClock, color: 'text-black bg-red-100 border-red-300' }
     };
 
-    const status = statusMap[order.status] || statusMap['Order Placed'];
+    let displayStatus = order.status || 'Pending';
+    if (order.status === 'Pending' && order.advancePaymentStatus !== 'verified') {
+      displayStatus = 'Pending Approval';
+    } else if (order.status === 'Processing' || (order.advancePaymentStatus === 'verified' && order.status === 'Pending')) {
+      displayStatus = 'Order Placed';
+    }
 
-    return { subtotal, total, formattedDate, ...status };
-  }, [order]);
+    const status = statusMap[displayStatus] || statusMap['Pending'];
+
+    return { subtotal, total, formattedDate, displayStatus, ...status };
+  }, [order, isAdvance]);
+
+  const paymentDisplay = useMemo(() => {
+    if (isAdvance) {
+      if (order.advancePaymentStatus === 'verified') {
+        return `Rs. ${order.advanceAmount || 250} Advance (Verified) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
+      } else if (order.advancePaymentStatus === 'rejected') {
+        return `Rs. ${order.advanceAmount || 250} Advance (Rejected) • Action Required`;
+      } else {
+        return `Rs. ${order.advanceAmount || 250} Advance (Pending Verification) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
+      }
+    }
+    return `${order.paymentMethod || 'COD'} • ${order.payment ? 'Paid' : 'COD'}`;
+  }, [order, currency, subtotal, isAdvance]);
 
   useEffect(() => {
     const imagePromises = order.items.map(async (item) => {
@@ -240,7 +272,7 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
           </div>
           <div className={`inline-flex items-center px-3 py-2 border-2 font-semibold text-sm ${statusColor}`}>
             <FontAwesomeIcon icon={statusIcon} className="mr-2 text-base" />
-            <span className="font-semibold">{order.status}</span>
+            <span className="font-semibold">{displayStatus}</span>
           </div>
         </div>
       </div>
@@ -270,8 +302,8 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
             )}
             <div className="flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faCreditCard} className="text-gray-600 shrink-0 text-base" />
-              <span className="text-gray-700 font-medium capitalize">
-                {order.paymentMethod || 'COD'} • {order.payment ? 'Paid' : 'COD'}
+              <span className="text-gray-800 font-semibold">
+                {paymentDisplay}
               </span>
             </div>
             {order.customerDetails && (
@@ -282,23 +314,70 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
                 </span>
               </div>
             )}
+
+            {/* Advance Delivery Payment Status */}
+            {(order.advancePaymentStatus || order.paymentScreenshot) && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-600">Advance Delivery (Rs. {order.advanceAmount || 250}):</span>
+                  {order.advancePaymentStatus === 'verified' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-green-100 text-green-800 rounded border border-green-300">
+                      ✓ Advance Approved
+                    </span>
+                  )}
+                  {order.advancePaymentStatus === 'rejected' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-red-100 text-red-800 rounded border border-red-300">
+                      ✕ Advance Rejected
+                    </span>
+                  )}
+                  {(!order.advancePaymentStatus || order.advancePaymentStatus === 'pending') && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded border border-amber-300">
+                      ⏳ Verification Pending
+                    </span>
+                  )}
+                  {order.paymentScreenshot && (
+                    <a 
+                      href={order.paymentScreenshot} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline font-medium ml-1"
+                    >
+                      View Receipt ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="min-w-[140px]">
+          <div className="min-w-[170px]">
             <div className="bg-white border-2 border-gray-200 p-3 text-sm">
               <div className="flex justify-between mb-1">
                 <span className="text-gray-600 font-medium">Subtotal:</span>
                 <span className="font-semibold text-base">{currency}{subtotal.toFixed(2)}</span>
               </div>
-              {order.deliveryCharges > 0 && (
-                <div className="flex justify-between mb-1">
+              {isAdvance ? (
+                <div className="flex justify-between items-center mb-1 gap-2">
                   <span className="text-gray-600 font-medium">Delivery:</span>
-                  <span className="font-semibold">{currency}{order.deliveryCharges.toFixed(2)}</span>
+                  <span className="font-semibold text-xs">
+                    {order.advancePaymentStatus === 'verified' ? (
+                      <span className="text-green-700 font-bold">Rs. {order.advanceAmount || 250} (Paid)</span>
+                    ) : (
+                      <span className="text-amber-700 font-medium">Rs. {order.advanceAmount || 250} (Pending)</span>
+                    )}
+                  </span>
                 </div>
+              ) : (
+                order.deliveryCharges > 0 && (
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-600 font-medium">Delivery:</span>
+                    <span className="font-semibold">{currency}{order.deliveryCharges.toFixed(2)}</span>
+                  </div>
+                )
               )}
               <div className="flex justify-between pt-1 border-t border-gray-300">
-                <span className="text-gray-700 font-bold">Total:</span>
-                <span className="font-semibold text-lg text-black">{currency}{total.toFixed(2)}</span>
+                <span className="text-gray-700 font-bold">{isAdvance ? 'Total (COD):' : 'Total:'}</span>
+                <span className="font-bold text-lg text-black">{currency}{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -389,6 +468,9 @@ const Orders = () => {
 
         if (response.data.success) {
           newOrders = response.data.orders || [];
+          try {
+            localStorage.setItem('guestOrders', JSON.stringify(newOrders));
+          } catch(e) {}
         }
       } else {
         // Fallback to localStorage
@@ -464,17 +546,6 @@ const Orders = () => {
       isMounted.current = false;
     };
   }, [fetchOrders]);
-
-  // Set up polling for real-time updates
-  useEffect(() => {
-    if (!guestInfo && !token) return;
-
-    const intervalId = setInterval(() => {
-      fetchOrders(false);
-    }, 15000);
-
-    return () => clearInterval(intervalId);
-  }, [fetchOrders, guestInfo, token]);
 
   // Refresh when page becomes visible again
   useEffect(() => {
@@ -575,7 +646,7 @@ const Orders = () => {
               <div className="mt-4">
                 <button
                   onClick={() => window.location.href = '/place-order'}
-                  className="px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800"
+                  className="px-6 py-3 bg-[#587a3b] text-white font-semibold rounded-lg hover:bg-[#486530] transition-colors shadow-sm"
                 >
                   Place Your First Order
                 </button>

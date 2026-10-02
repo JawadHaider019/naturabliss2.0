@@ -11,6 +11,10 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     description: product.description || '',
     category: product.category || '',
     subcategory: product.subcategory || '',
+    ingredients: Array.isArray(product.ingredients) ? product.ingredients.join(', ') : (product.ingredients || ''),
+    howToUse: product.howToUse || '',
+    benefits: Array.isArray(product.benefits) ? product.benefits.join(', ') : (product.benefits || ''),
+    variants: Array.isArray(product.variants) ? product.variants : [],
     cost: product.cost || 0,
     price: product.price || 0,
     discountprice: product.discountprice || 0,
@@ -154,6 +158,43 @@ const fetchCategories = async () => {
     setNewImages(prev => prev.filter((_, i) => i !== index))
   }
 
+  const handleAddVariant = () => {
+    setFormData(prev => ({
+      ...prev,
+      variants: [...(prev.variants || []), { name: '', price: '', discountprice: '', quantity: '', image: '', imageFile: null, imagePreview: '' }]
+    }))
+  }
+
+  const handleRemoveVariant = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: (prev.variants || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleVariantChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: (prev.variants || []).map((v, i) => i === index ? { ...v, [field]: value } : v)
+    }))
+  }
+
+  const handleVariantImageChange = (index, file) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: (prev.variants || []).map((v, i) => {
+        if (i === index) {
+          return {
+            ...v,
+            imageFile: file,
+            imagePreview: file ? URL.createObjectURL(file) : ''
+          }
+        }
+        return v
+      })
+    }))
+  }
+
   const handleSave = async () => {
     try {
       setLoading(true)
@@ -167,6 +208,27 @@ const fetchCategories = async () => {
       formDataToSend.append('description', formData.description)
       formDataToSend.append('category', formData.category)
       formDataToSend.append('subcategory', formData.subcategory)
+      formDataToSend.append('ingredients', formData.ingredients || '')
+      formDataToSend.append('howToUse', formData.howToUse || '')
+      formDataToSend.append('benefits', formData.benefits || '')
+
+      const cleanVariants = (formData.variants || [])
+        .filter(v => v.name && v.name.trim())
+        .map((v, idx) => {
+          if (v.imageFile) {
+            formDataToSend.append(`variantImage_${idx}`, v.imageFile)
+          }
+          return {
+            name: v.name,
+            price: v.price,
+            discountprice: v.discountprice,
+            quantity: v.quantity,
+            sku: v.sku || '',
+            image: v.image || ''
+          }
+        })
+      formDataToSend.append('variants', JSON.stringify(cleanVariants))
+
       formDataToSend.append('cost', formData.cost.toString())
       formDataToSend.append('price', formData.price.toString())
       formDataToSend.append('discountprice', formData.discountprice.toString())
@@ -310,6 +372,11 @@ const fetchCategories = async () => {
                 onRemoveNewImage={removeNewImage}
                 // Pricing summary
                 pricingSummary={calculatePricingSummary()}
+                // Variants props
+                onAddVariant={handleAddVariant}
+                onRemoveVariant={handleRemoveVariant}
+                onVariantChange={handleVariantChange}
+                onVariantImageChange={handleVariantImageChange}
                 // Helper functions
                 getCategoryName={getCategoryName}
                 getSubcategoryName={getSubcategoryName}
@@ -347,6 +414,33 @@ const ViewMode = ({ product, getCategoryName, getSubcategoryName }) => (
         <div className="space-y-3 bg-gray-50 rounded-lg p-4">
           <DetailRow label="Name" value={product.name} />
           <DetailRow label="Description" value={product.description} />
+          <DetailRow label="Ingredients" value={Array.isArray(product.ingredients) ? product.ingredients.join(', ') : (product.ingredients || 'N/A')} />
+          <DetailRow label="How to Use" value={product.howToUse || 'N/A'} />
+          <DetailRow label="Benefits" value={Array.isArray(product.benefits) ? product.benefits.join(', ') : (product.benefits || 'N/A')} />
+          {product.variants && product.variants.length > 0 && (
+            <div className="py-2 border-b border-gray-200">
+              <span className="text-sm font-medium text-gray-700 block mb-2">Variants ({product.variants.length}):</span>
+              <div className="space-y-2 pl-2">
+                {product.variants.map((v, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-gray-200 gap-3">
+                    <div className="flex items-center gap-2.5">
+                      {v.image ? (
+                        <img src={v.image} alt={v.name} className="w-8 h-8 rounded object-cover border border-gray-200" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-[10px]">
+                          No img
+                        </div>
+                      )}
+                      <span className="font-semibold text-gray-900">{v.name}</span>
+                    </div>
+                    <span className="text-gray-600">
+                      Price: {currency}{v.price} {v.discountprice ? `(Disc: ${currency}${v.discountprice})` : ''} | Stock: {v.quantity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <DetailRow label="Category" value={getCategoryName(product.category)} />
           <DetailRow label="Subcategory" value={getSubcategoryName(product.subcategory) || 'N/A'} />
           <DetailRow label="Cost Price" value={`${currency}${product.cost}`} />
@@ -375,6 +469,10 @@ const EditMode = ({
   onRemoveExistingImage,
   onRemoveNewImage,
   pricingSummary,
+  onAddVariant,
+  onRemoveVariant,
+  onVariantChange,
+  onVariantImageChange,
   getCategoryName,
   getSubcategoryName
 }) => {
@@ -531,15 +629,166 @@ const EditMode = ({
               name="description"
               value={formData.description}
               onChange={onChange}
-              rows="4"
+              rows="3"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               placeholder="Enter product description..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ingredients (comma-separated)</label>
+            <textarea
+              name="ingredients"
+              value={formData.ingredients}
+              onChange={onChange}
+              rows="3"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              placeholder="e.g. Aloe Vera, Rose Water, Vitamin E"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">How to Use</label>
+            <textarea
+              name="howToUse"
+              value={formData.howToUse}
+              onChange={onChange}
+              rows="3"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              placeholder="Directions for using the product..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Benefits (comma-separated)</label>
+            <textarea
+              name="benefits"
+              value={formData.benefits}
+              onChange={onChange}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              placeholder="e.g. Deeply Hydrating, 100% Organic"
             />
           </div>
         </div>
       </div>
 
-      {/* Rest of the EditMode component remains the same */}
+      {/* Product Variants (e.g. 250ml, 500ml, 750ml) */}
+      <div className="border-t pt-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Product Variants (Sizes / Volumes)</h3>
+            <p className="text-sm text-gray-500">
+              Manage size variations (e.g. 250ml, 500ml, 1L) with custom pricing and stock.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onAddVariant}
+            className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+          >
+            + Add Variant
+          </button>
+        </div>
+
+        {(!formData.variants || formData.variants.length === 0) ? (
+          <div className="text-center py-4 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 bg-gray-50">
+            No variants created yet. Click &quot;+ Add Variant&quot; to add sizes like 250ml, 500ml, etc.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {formData.variants.map((v, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200 items-center">
+                {/* Variant Image */}
+                <div className="sm:col-span-2 flex flex-col items-center">
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Image</label>
+                  <label htmlFor={`editVariantImg_${idx}`} className="cursor-pointer relative group block w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 hover:border-black overflow-hidden flex items-center justify-center bg-white transition-colors">
+                    {v.imagePreview || v.image ? (
+                      <img src={v.imagePreview || v.image} alt={v.name || 'Variant'} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] text-gray-400">Photo</span>
+                    )}
+                    <input
+                      type="file"
+                      id={`editVariantImg_${idx}`}
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          onVariantImageChange(idx, e.target.files[0])
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Variant Name */}
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Variant Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 250ml"
+                    value={v.name || ''}
+                    onChange={(e) => onVariantChange(idx, 'name', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black bg-white"
+                    required
+                  />
+                </div>
+
+                {/* Price */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Price ({currency}) *</label>
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={v.price !== undefined ? v.price : ''}
+                    onChange={(e) => onVariantChange(idx, 'price', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black bg-white"
+                    required
+                  />
+                </div>
+
+                {/* Discount Price */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Disc Price</label>
+                  <input
+                    type="number"
+                    placeholder="Discount"
+                    value={v.discountprice !== undefined ? v.discountprice : ''}
+                    onChange={(e) => onVariantChange(idx, 'discountprice', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black bg-white"
+                  />
+                </div>
+
+                {/* Stock */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Stock</label>
+                  <input
+                    type="number"
+                    placeholder="Stock"
+                    value={v.quantity !== undefined ? v.quantity : ''}
+                    onChange={(e) => onVariantChange(idx, 'quantity', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black bg-white"
+                  />
+                </div>
+
+                {/* Remove Button */}
+                <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onRemoveVariant(idx)}
+                    className="p-2 text-red-500 hover:text-red-700 rounded transition-colors"
+                    title="Remove variant"
+                  >
+                    <FaTimes className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Image Management */}
       <div className="border-t pt-6">
         <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>

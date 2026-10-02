@@ -1,10 +1,12 @@
 import { useContext, useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
 import Title from '../components/Title';
 import ProductItem from "../components/ProductItem";
 
 const Collection = () => {
+  const [searchParams] = useSearchParams();
   const { products, search, showSearch } = useContext(ShopContext);
   const [showFilter, setShowFilter] = useState(false);
   const [filterProducts, setFilterProducts] = useState([]);
@@ -202,6 +204,21 @@ const Collection = () => {
     setSortType('default');
   }, []);
 
+  // Sync URL search parameters to category & bestseller filters
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategories([categoryParam]);
+    }
+    const subcategoryParam = searchParams.get('subcategory');
+    if (subcategoryParam) {
+      setSelectedSubCategories([subcategoryParam]);
+    }
+    if (searchParams.get('bestseller') === 'true') {
+      setSortType('bestseller');
+    }
+  }, [searchParams]);
+
   // Get available subcategories based on selected categories
   const getAvailableSubcategories = useCallback(() => {
     if (selectedCategories.length === 0) {
@@ -241,12 +258,20 @@ const Collection = () => {
     // Category filter
     if (selectedCategories.length > 0) {
       productsCopy = productsCopy.filter(item => {
-        const itemCategoryId = item.category;
-        const itemCategoryName = getCategoryName(itemCategoryId);
+        const itemCategoryId = String(typeof item.category === 'object' ? item.category?._id : item.category || '');
+        const itemCategoryName = String(getCategoryName(itemCategoryId) || (typeof item.category === 'object' ? item.category?.name : '') || item.category || '');
 
         return selectedCategories.some(selectedCat => {
-          const selectedCategoryId = getCategoryId(selectedCat);
-          return itemCategoryId === selectedCategoryId || itemCategoryName === selectedCat;
+          if (!selectedCat) return false;
+          const targetStr = String(selectedCat).trim().toLowerCase();
+          const selectedCategoryId = String(getCategoryId(selectedCat) || '').toLowerCase();
+
+          return (
+            (itemCategoryId && itemCategoryId.toLowerCase() === targetStr) ||
+            (selectedCategoryId && itemCategoryId && itemCategoryId.toLowerCase() === selectedCategoryId) ||
+            (itemCategoryName && itemCategoryName.toLowerCase() === targetStr) ||
+            (item.category && String(item.category).toLowerCase() === targetStr)
+          );
         });
       });
     }
@@ -254,12 +279,20 @@ const Collection = () => {
     // Sub-category filter
     if (selectedSubCategories.length > 0) {
       productsCopy = productsCopy.filter(item => {
-        const itemSubcategoryId = item.subcategory;
-        const itemSubcategoryName = getSubcategoryName(itemSubcategoryId);
+        const itemSubcategoryId = String(typeof item.subcategory === 'object' ? item.subcategory?._id : item.subcategory || '');
+        const itemSubcategoryName = String(getSubcategoryName(itemSubcategoryId) || (typeof item.subcategory === 'object' ? item.subcategory?.name : '') || item.subcategory || '');
 
         return selectedSubCategories.some(selectedSub => {
-          const selectedSubcategoryId = getSubcategoryId(selectedSub);
-          return itemSubcategoryId === selectedSubcategoryId || itemSubcategoryName === selectedSub;
+          if (!selectedSub) return false;
+          const targetStr = String(selectedSub).trim().toLowerCase();
+          const selectedSubcategoryId = String(getSubcategoryId(selectedSub) || '').toLowerCase();
+
+          return (
+            (itemSubcategoryId && itemSubcategoryId.toLowerCase() === targetStr) ||
+            (selectedSubcategoryId && itemSubcategoryId && itemSubcategoryId.toLowerCase() === selectedSubcategoryId) ||
+            (itemSubcategoryName && itemSubcategoryName.toLowerCase() === targetStr) ||
+            (item.subcategory && String(item.subcategory).toLowerCase() === targetStr)
+          );
         });
       });
     }
@@ -345,7 +378,7 @@ const Collection = () => {
         <div className="text-gray-500 text-sm">{error}</div>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-black text-white hover:bg-gray-900 transition-colors"
+          className="px-4 py-2 bg-[#587a3b] text-white hover:bg-[#486530] transition-colors rounded shadow-sm font-medium"
         >
           Retry
         </button>
@@ -394,7 +427,7 @@ const Collection = () => {
                 return (
                   <label key={cat.name} className="flex gap-2 items-center cursor-pointer">
                     <input
-                      className="w-4 h-4 accent-black text-black"
+                      className="w-4 h-4 accent-[#587a3b] cursor-pointer"
                       type="checkbox"
                       checked={selectedCategories.includes(cat.name)}
                       onChange={() => toggleCategory(cat.name)}
@@ -421,7 +454,7 @@ const Collection = () => {
                   return (
                     <label key={sub} className="flex gap-2 items-center cursor-pointer">
                       <input
-                        className="w-4 h-4 accent-black text-black"
+                        className="w-4 h-4 accent-[#587a3b] cursor-pointer"
                         type="checkbox"
                         checked={selectedSubCategories.includes(sub)}
                         onChange={() => toggleSubCategory(sub)}
@@ -444,7 +477,7 @@ const Collection = () => {
           {hasActiveFilters && (
             <button
               onClick={resetAllFilters}
-              className="mt-4 text-sm text-black hover:text-gray-500 underline"
+              className="mt-4 text-sm text-gray-800 hover:text-[#587a3b] underline transition-colors"
             >
               Clear all filters
             </button>
@@ -490,7 +523,7 @@ const Collection = () => {
                 {cat}
                 <button
                   onClick={() => setSelectedCategories(prev => prev.filter(c => c !== cat))}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-[#587a3b] transition-colors"
                 >
                   ×
                 </button>
@@ -504,7 +537,7 @@ const Collection = () => {
                 {sub}
                 <button
                   onClick={() => setSelectedSubCategories(prev => prev.filter(s => s !== sub))}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-[#587a3b] transition-colors"
                 >
                   ×
                 </button>
@@ -538,7 +571,7 @@ const Collection = () => {
             {hasActiveFilters && (
               <button
                 onClick={resetAllFilters}
-                className="mt-4 px-6 py-2 bg-black text-white hover:bg-gray-900 transition-colors"
+                className="mt-4 px-6 py-2 bg-[#587a3b] text-white hover:bg-[#486530] transition-colors"
               >
                 Clear all filters
               </button>

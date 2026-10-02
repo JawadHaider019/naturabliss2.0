@@ -89,7 +89,7 @@ const App = () => {
   }, [location])
 
   return (
-    <div className="px-4 sm:px-[2vw] md:px-[6vw] lg:px-[8vw]">
+    <div className="px-4 sm:px-[1vw] md:px-[3vw] lg:px-[5vw]">
 
       <Suspense fallback={<LoadingSpinner />}>
         <Favicon />
@@ -100,15 +100,19 @@ const App = () => {
           hideProgressBar={false}
           theme="colored"
           style={{
-            '--toastify-color-success': '#000000',
+            '--toastify-color-success': '#587a3b',
             '--toastify-text-color-success': '#ffffff',
             '--toastify-color-error': '#dc2626',
             '--toastify-text-color-error': '#ffffff',
+            '--toastify-color-info': '#587a3b',
+            '--toastify-text-color-info': '#ffffff',
+            '--toastify-color-warning': '#d97706',
+            '--toastify-text-color-warning': '#ffffff',
           }}
           toastStyle={{
             fontSize: '14px',
             fontWeight: '500',
-            borderRadius: '8px',
+            borderRadius: '0px',
           }}
         />
 

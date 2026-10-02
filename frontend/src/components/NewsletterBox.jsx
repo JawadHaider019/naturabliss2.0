@@ -132,7 +132,7 @@ const NewsletterBox = () => {
           <input 
             type="email" 
             placeholder={isUnsubscribing ? "Enter your email to unsubscribe..." : "Enter your email address..."}
-            className="w-full flex-1 rounded-full px-6 py-4 text-gray-700 outline-none border-0 focus:ring-2 focus:ring-black transition-all duration-200" 
+            className="w-full flex-1 rounded-full px-6 py-4 text-gray-700 outline-none border-0 focus:ring-2 focus:ring-[#587a3b] transition-all duration-200" 
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -144,7 +144,7 @@ const NewsletterBox = () => {
             className={`rounded-full px-8 py-4 font-semibold text-white transition-all disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105 duration-200 shadow-lg ${
               isUnsubscribing 
                 ? "bg-red-600 hover:bg-red-700" 
-                : "bg-black hover:bg-gray-900"
+                : "bg-[#587a3b] hover:bg-[#486530]"
             }`}
           >
             {loading ? (

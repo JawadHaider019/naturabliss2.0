@@ -188,7 +188,7 @@ const Blog = () => {
                     key={category}
                     className="flex items-center justify-between py-2 px-3   hover:bg-black/10 transition-colors group"
                   >
-                    <span className="text-gray-700 group-hover:text-gray-500">{category}</span>
+                    <span className="text-gray-700 group-hover:text-[#587a3b]">{category}</span>
                     <span className="text-gray-400 text-sm bg-gray-100 px-2 py-1 rounded-full">
                       {blogs.filter(blog => blog.category?.includes(category)).length}
                     </span>
@@ -285,7 +285,7 @@ const HeroStory = ({ blog, isMain }) => {
               </span>
             </div>
 
-            <h4 className="font-bold text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
+            <h4 className="font-bold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
               {blog.title}
             </h4>
 
@@ -322,7 +322,7 @@ const NewsCard = ({ blog, featured = false }) => {
             </div>
 
             <div className="sm:w-3/5 p-4">
-              <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
+              <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
                 {blog.title}
               </h3>
 
@@ -365,7 +365,7 @@ const NewsCard = ({ blog, featured = false }) => {
           )}
 
           <div className="p-4">
-            <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-500 transition-colors line-clamp-2">
+            <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
               {blog.title}
             </h3>
 
@@ -412,7 +412,7 @@ const FeaturedCard = ({ blog }) => {
               </span>
             </div>
 
-            <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-300 transition-colors line-clamp-2">
+            <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
               {blog.title}
             </h4>
 
@@ -435,7 +435,7 @@ const TrendingStory = ({ blog, rank }) => {
         {rank}
       </div>
       <div className="flex-1 min-w-0">
-        <h5 className="font-medium text-gray-900 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm">
+        <h5 className="font-medium text-gray-900 group-hover:text-[#587a3b] transition-colors line-clamp-2 text-sm">
           {blog.title}
         </h5>
         <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">

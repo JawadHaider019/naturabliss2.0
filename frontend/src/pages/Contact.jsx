@@ -487,7 +487,7 @@ const Contact = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-black text-white py-3 px-6 font-semibold text-base hover:bg-gray-800 transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+                  className="w-full bg-[#587a3b] text-white py-3 px-6 font-semibold text-base hover:bg-[#486530] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm"
                 >
                   {submitting ? 'Sending...' : 'Send Message'}
                 </button>
@@ -504,7 +504,7 @@ const Contact = () => {
 
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
-                  <div className="bg-black w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
+                  <div className="bg-[#587a3b] w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
                     <FontAwesomeIcon icon={faPhone} className="text-white text-lg" />
                   </div>
                   <div>
@@ -516,7 +516,7 @@ const Contact = () => {
                 </div>
 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-black w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
+                  <div className="bg-[#587a3b] w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
                     <FontAwesomeIcon icon={faEnvelope} className="text-white text-lg" />
                   </div>
                   <div>
@@ -528,7 +528,7 @@ const Contact = () => {
                 </div>
 
                 <div className="flex items-start space-x-4">
-                  <div className="bg-black w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
+                  <div className="bg-[#587a3b] w-12 h-12 flex items-center justify-center rounded-full flex-shrink-0">
                     <FontAwesomeIcon icon={faMapMarkerAlt} className="text-white text-lg" />
                   </div>
                   <div>
@@ -554,7 +554,7 @@ const Contact = () => {
                         href={isActive ? socialUrl : "#"}
                         target={isActive ? "_blank" : "_self"}
                         rel={isActive ? "noopener noreferrer" : ""}
-                        className={`bg-black w-10 h-10 flex items-center justify-center rounded-full text-white hover:bg-gray-800 transition-all ${!isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`bg-[#587a3b] w-10 h-10 flex items-center justify-center rounded-full text-white hover:bg-[#486530] transition-all ${!isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label={platform.label}
                         title={isActive ? `Follow us on ${platform.label}` : `${platform.label} link not set`}
                         onClick={!isActive ? (e) => e.preventDefault() : undefined}
@@ -606,7 +606,7 @@ const Contact = () => {
                 <div key={storeId} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 group">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <h4 className="font-bold text-gray-900 text-lg group-hover:text-black transition-colors">
+                      <h4 className="font-bold text-gray-900 text-lg group-hover:text-[#587a3b] transition-colors">
                         {store.storeName}
                       </h4>
                     </div>

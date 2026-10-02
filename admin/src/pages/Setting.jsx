@@ -20,7 +20,8 @@ import {
   faEdit,
   faTrash,
   faExternalLinkAlt,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faTicketAlt
 } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { backendUrl } from "../App";

@@ -19,35 +19,98 @@ import {
   faCube,
   faChevronDown,
   faChevronUp,
-  faMapMarkerAlt,
-  faCreditCard,
   faReceipt,
   faUser,
   faCalendar,
   faSearch,
   faFilter,
-  faEnvelope 
+  faEnvelope,
+  faEye,
+  faFileImage,
+  faCheck,
+  faTimes,
+  faHourglassHalf,
+  faXmark,
+  faMoneyBillWave,
+  faCreditCard,
+  faWallet,
+  faMoneyBill,
+  faCaretDown,
+  faExternalLinkAlt,
+  faFileAlt,
+  faPrint,
+  faSync
 } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 // Constants
 const STATUS_CONFIG = {
-  'Order Placed': { icon: faClock, color: 'blue', label: 'Pending' },
-  'Pending': { icon: faClock, color: 'blue', label: 'Pending' },
-  'Packing': { icon: faBox, color: 'amber', label: 'Packing' },
-  'Shipped': { icon: faShippingFast, color: 'purple', label: 'Shipped' },
-  'Out for delivery': { icon: faMotorcycle, color: 'orange', label: 'Delivery' },
-  'Delivered': { icon: faCheckCircle, color: 'green', label: 'Delivered' },
-  'Cancelled': { icon: faTimesCircle, color: 'red', label: 'Cancelled' },
+  'Pending Verification': { icon: faHourglassHalf, label: 'Pending Verification' },
+  'Order Placed': { icon: faClock, label: 'Order Placed' },
+  'Pending': { icon: faClock, label: 'Order Placed' },
+  'Processing': { icon: faClock, label: 'Processing' },
+  'Packing': { icon: faBox, label: 'Packing' },
+  'Shipped': { icon: faShippingFast, label: 'Shipped' },
+  'Out for delivery': { icon: faMotorcycle, label: 'Out for Delivery' },
+  'Delivered': { icon: faCheckCircle, label: 'Delivered' },
+  'Cancelled': { icon: faTimesCircle, label: 'Cancelled' },
+  'Payment Rejected': { icon: faTimesCircle, label: 'Payment Rejected' },
 };
 
-const TABS = [
-  { id: 'all', label: 'All Orders', icon: faList, color: 'gray' },
-  { id: 'pending', label: 'Pending', icon: faClock, color: 'blue' },
-  { id: 'packing', label: 'Packing', icon: faBox, color: 'amber' },
-  { id: 'shipped', label: 'Shipped', icon: faShippingFast, color: 'purple' },
-  { id: 'out_for_delivery', label: 'Delivery', icon: faMotorcycle, color: 'orange' },
-  { id: 'delivered', label: 'Delivered', icon: faCheckCircle, color: 'green' },
-  { id: 'cancelled', label: 'Cancelled', icon: faTimesCircle, color: 'red' },
+const PAYMENT_METHOD_CONFIG = {
+  'COD': {
+    icon: faMoneyBill,
+    label: 'Cash on Delivery',
+    color: 'text-gray-900',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    autoVerified: true
+  },
+  'Advance Delivery Fee': {
+    icon: faCreditCard,
+    label: 'Advance Delivery Fee + COD',
+    color: 'text-[#587a3b]',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    autoVerified: false
+  },
+  'online': {
+    icon: faCreditCard,
+    label: 'Online Payment',
+    color: 'text-[#587a3b]',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    autoVerified: false
+  },
+  'easypaisa': {
+    icon: faWallet,
+    label: 'Easypaisa',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    autoVerified: false
+  },
+  'jazzcash': {
+    icon: faWallet,
+    label: 'JazzCash',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    autoVerified: false
+  },
+};
+
+const FILTER_OPTIONS = [
+  { id: 'all', label: 'All Orders', icon: faList, count: 0 },
+  { id: 'pending_verification', label: 'Pending Verification', icon: faHourglassHalf, count: 0 },
+  { id: 'pending', label: 'Order Placed', icon: faClock, count: 0 },
+  { id: 'packing', label: 'Packing', icon: faBox, count: 0 },
+  { id: 'shipped', label: 'Shipped', icon: faShippingFast, count: 0 },
+  { id: 'out_for_delivery', label: 'Out for Delivery', icon: faMotorcycle, count: 0 },
+  { id: 'delivered', label: 'Delivered', icon: faCheckCircle, count: 0 },
+  { id: 'cancelled', label: 'Cancelled', icon: faTimesCircle, count: 0 },
+  { id: 'COD', label: 'COD Orders', icon: faMoneyBill, count: 0 },
+  { id: 'advance', label: 'Advance Paid Orders', icon: faCreditCard, count: 0 },
 ];
 
 const SORT_OPTIONS = [
@@ -57,17 +120,60 @@ const SORT_OPTIONS = [
   { value: 'total_low', label: 'Total: Low to High' },
 ];
 
-// Custom Hooks
-const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
-  return useMemo(() => {
-    let filtered = orders;
+// Image Modal Component
+const ImageModal = ({ imageUrl, isOpen, onClose }) => {
+  if (!isOpen || !imageUrl) return null;
 
-    // Filter by tab
-    if (activeTab !== 'all') {
+  return (
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 bg-black/85 flex items-center justify-center z-[110] p-4 backdrop-blur-sm cursor-zoom-out"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-w-4xl max-h-[90vh] bg-white p-3 shadow-2xl flex flex-col items-center"
+      >
+        <div className="flex justify-between items-center w-full pb-2 mb-2 border-b border-gray-200">
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-800">
+            Advance Payment Receipt Screenshot
+          </p>
+          <button
+            onClick={onClose}
+            className="bg-black text-white w-7 h-7 flex items-center justify-center text-sm font-bold hover:bg-gray-800 transition-colors cursor-pointer"
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        </div>
+        <img
+          src={imageUrl}
+          alt="Payment Screenshot"
+          className="max-w-full max-h-[80vh] object-contain"
+        />
+      </div>
+    </div>
+  );
+};
+
+// Custom Hooks
+const useOrdersFilter = (orders, activeFilter, searchTerm, sortBy) => {
+  return useMemo(() => {
+    let filtered = [...orders];
+
+    if (activeFilter !== 'all') {
       filtered = filtered.filter(order => {
-        switch (activeTab) {
+        const isAdvance = Boolean(
+          order.advanceAmount || 
+          order.paymentScreenshot || 
+          (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
+          order.advancePaymentStatus
+        );
+
+        switch (activeFilter) {
+          case 'pending_verification':
+            return isAdvance && order.advancePaymentStatus !== 'verified' && order.advancePaymentStatus !== 'rejected';
           case 'pending':
-            return order.status === 'Order Placed' || order.status === 'Pending';
+            return (order.status === 'Order Placed' || order.status === 'Pending' || order.status === 'Processing') &&
+              (!isAdvance || order.advancePaymentStatus === 'verified');
           case 'packing':
             return order.status === 'Packing';
           case 'shipped':
@@ -77,35 +183,48 @@ const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
           case 'delivered':
             return order.status === 'Delivered';
           case 'cancelled':
-            return order.status === 'Cancelled';
+            return order.status === 'Cancelled' || order.advancePaymentStatus === 'rejected';
+          case 'COD':
+            return !isAdvance;
+          case 'advance':
+            return isAdvance;
           default:
             return true;
         }
       });
     }
 
-    // Filter by search term - FIXED: Also search in customerDetails.phone
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(order => 
-        order._id.toLowerCase().includes(term) ||
-        (order.customerDetails?.name?.toLowerCase().includes(term)) ||
-        (order.customerDetails?.email?.toLowerCase().includes(term)) ||
-        (order.customerDetails?.phone?.includes(searchTerm)) ||
-        order.address?.phone?.includes(searchTerm)
-      );
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(order => {
+        const custInfo = getCustomerInfo(order);
+        const name = (custInfo.name || '').toLowerCase();
+        const email = (custInfo.email || '').toLowerCase();
+        const phone = (custInfo.phone || '').replace(/[\s+-]/g, '');
+        const searchPhone = term.replace(/[\s+-]/g, '');
+        const city = (order.address?.city || '').toLowerCase();
+        const coupon = (order.couponCode || '').toLowerCase();
+
+        return (
+          (order._id || '').toLowerCase().includes(term) ||
+          name.includes(term) ||
+          email.includes(term) ||
+          (searchPhone && phone.includes(searchPhone)) ||
+          city.includes(term) ||
+          coupon.includes(term)
+        );
+      });
     }
 
-    // Sort orders
-    filtered = [...filtered].sort((a, b) => {
-      const aTotal = a.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0) || 0;
-      const bTotal = b.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0) || 0;
+    filtered.sort((a, b) => {
+      const aTotal = Number(a.amount) || a.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0) || 0;
+      const bTotal = Number(b.amount) || b.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0) || 0;
 
       switch (sortBy) {
         case 'newest':
-          return new Date(b.date) - new Date(a.date);
+          return new Date(b.date || 0) - new Date(a.date || 0);
         case 'oldest':
-          return new Date(a.date) - new Date(b.date);
+          return new Date(a.date || 0) - new Date(b.date || 0);
         case 'total_high':
           return bTotal - aTotal;
         case 'total_low':
@@ -116,31 +235,30 @@ const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
     });
 
     return filtered;
-  }, [orders, activeTab, searchTerm, sortBy]);
+  }, [orders, activeFilter, searchTerm, sortBy]);
 };
 
 // Sub-components
 const LoadingSpinner = () => (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-      <p className="text-gray-600 text-lg font-medium">Loading orders...</p>
-      <p className="text-gray-400 text-sm mt-2">Please wait while we fetch your orders</p>
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="text-center bg-white p-8 border border-gray-200 shadow-sm max-w-sm w-full">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#587a3b] mx-auto mb-4"></div>
+      <p className="text-gray-900 text-lg font-bold">Loading orders...</p>
     </div>
   </div>
 );
 
 const AccessRequired = ({ navigate }) => (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-    <div className="text-center max-w-md">
-      <div className="mx-auto h-20 w-20 bg-gray-200 rounded-full flex items-center justify-center mb-6">
-        <FontAwesomeIcon icon={faReceipt} className="text-gray-500 text-2xl" />
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="text-center max-w-md bg-white p-8 border border-gray-200 shadow-sm w-full">
+      <div className="mx-auto h-16 w-16 bg-gray-100 flex items-center justify-center mb-4">
+        <FontAwesomeIcon icon={faReceipt} className="text-gray-600 text-2xl" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-3">Access Required</h3>
-      <p className="text-gray-600 mb-6">Please login to view and manage orders</p>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">Access Required</h3>
+      <p className="text-gray-600 text-sm mb-6">Please login to view and manage orders</p>
       <button
         onClick={() => navigate('/')}
-        className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium w-full sm:w-auto"
+        className="bg-black text-white px-6 py-3 font-semibold hover:bg-gray-800 transition-colors w-full"
       >
         Go to Login
       </button>
@@ -148,538 +266,516 @@ const AccessRequired = ({ navigate }) => (
   </div>
 );
 
-const EmptyState = ({ activeTab, searchTerm, onClearSearch }) => (
-  <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
-    <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-      <FontAwesomeIcon icon={faReceipt} className="text-gray-400 text-2xl" />
-    </div>
-    <h3 className="text-xl font-semibold text-gray-900 mb-3">
-      {searchTerm ? 'No orders found' : `No ${activeTab === 'all' ? '' : activeTab.replace('_', ' ')} orders`}
-    </h3>
-    <p className="text-gray-500 mb-6 max-w-md mx-auto">
-      {searchTerm 
-        ? 'Try adjusting your search terms to find what you\'re looking for.'
-        : activeTab !== 'all' 
-          ? `There are no ${activeTab.replace('_', ' ')} orders at the moment.`
-          : 'No orders have been placed yet.'
-      }
-    </p>
-    {searchTerm && (
-      <button
-        onClick={onClearSearch}
-        className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-      >
-        Clear Search
-      </button>
-    )}
-  </div>
-);
+const EmptyState = ({ activeFilter, searchTerm, onClearSearch }) => {
+  const getFilterLabel = (filterId) => {
+    const filter = FILTER_OPTIONS.find(f => f.id === filterId);
+    return filter ? filter.label : 'orders';
+  };
 
-const SearchAndFilterBar = ({ searchTerm, onSearchChange, sortBy, onSortChange }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-    <div className="flex flex-col lg:flex-row gap-4">
-      <div className="flex-1">
-        <div className="relative">
-          <FontAwesomeIcon 
-            icon={faSearch} 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
-          />
-          <input
-            type="text"
-            placeholder="Search orders by ID, customer name, or phone..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-          />
-        </div>
+  return (
+    <div className="text-center py-16 bg-white border border-gray-200 shadow-sm px-4">
+      <div className="mx-auto h-20 w-20 bg-gray-100 flex items-center justify-center mb-4">
+        <FontAwesomeIcon icon={faReceipt} className="text-gray-400 text-3xl" />
       </div>
-      <div className="flex gap-3">
-        <div className="relative">
-          <FontAwesomeIcon 
-            icon={faFilter} 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
-          />
-          <select
-            value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 bg-white appearance-none min-w-[160px]"
-          >
-            {SORT_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const TabsNavigation = ({ tabs, activeTab, onTabChange }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-    <div className="flex overflow-x-auto scrollbar-hide px-2 py-2">
-      {tabs.map((tab) => (
+      <h3 className="text-lg font-bold text-gray-900 mb-2">
+        {searchTerm ? 'No orders found' : `No ${activeFilter === 'all' ? '' : getFilterLabel(activeFilter).toLowerCase()}`}
+      </h3>
+      <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+        {searchTerm
+          ? 'Try adjusting your search terms.'
+          : activeFilter !== 'all'
+            ? `No ${getFilterLabel(activeFilter).toLowerCase()} available.`
+            : 'No orders have been placed yet.'
+        }
+      </p>
+      {searchTerm && (
         <button
-          key={tab.id}
-          onClick={() => onTabChange(tab.id)}
-          className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap flex-shrink-0 mx-1 rounded-lg ${
-            activeTab === tab.id
-              ? `border-${tab.color}-500 text-${tab.color}-700 bg-${tab.color}-50`
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          }`}
+          onClick={onClearSearch}
+          className="bg-black text-white px-6 py-2.5 text-xs font-bold hover:bg-gray-800 transition-colors uppercase tracking-wider"
         >
-          <FontAwesomeIcon 
-            icon={tab.icon} 
-            className={`text-sm mr-3 ${
-              activeTab === tab.id ? `text-${tab.color}-600` : 'text-gray-400'
-            }`} 
-          />
-          <span className="font-medium">{tab.label}</span>
-          <span className={`ml-2 px-2 py-1 text-xs rounded-full min-w-6 text-center ${
-            activeTab === tab.id 
-              ? `bg-${tab.color}-100 text-${tab.color}-700` 
-              : 'bg-gray-100 text-gray-600'
-          }`}>
-            {tab.count}
-          </span>
+          Clear Search
         </button>
-      ))}
-    </div>
-  </div>
-);
-
-const OrderCard = ({ 
-  order, 
-  onStatusChange, 
-  expandedDeals, 
-  onToggleDeal 
-}) => {
-  const { dealGroups, regularItems } = useMemo(() => 
-    groupItemsByDeal(order.items || []), 
-    [order.items]
-  );
-  
-  const allDeals = Object.values(dealGroups);
-  const totalItemsCount = order.items?.length || 0;
-
-  // Get customer info from order's customerDetails
-  const customerInfo = useMemo(() => 
-    getCustomerInfo(order), 
-    [order]
-  );
-
-  const subtotal = useMemo(() => 
-    (order.items || []).reduce(
-      (sum, item) => sum + ((item.price || 0) * (item.quantity || 1)),
-      0
-    ), 
-    [order.items]
-  );
-  
-  const total = subtotal + (order.deliveryCharges || 0);
-  const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG['Pending'];
-
-  return (
-    <div className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all duration-200 hover:shadow-md ${
-      order.status === 'Cancelled' ? 'border-red-200' : 'border-gray-200'
-    }`}>
-      <OrderHeader 
-        order={order} 
-        customerInfo={customerInfo} 
-        total={total} 
-        totalItemsCount={totalItemsCount}
-        statusConfig={statusConfig}
-      />
-      <OrderContent 
-        order={order}
-        allDeals={allDeals}
-        regularItems={regularItems}
-        customerInfo={customerInfo}
-        subtotal={subtotal}
-        total={total}
-        expandedDeals={expandedDeals}
-        onToggleDeal={onToggleDeal}
-        onStatusChange={onStatusChange}
-        statusConfig={statusConfig}
-      />
+      )}
     </div>
   );
 };
 
-const OrderHeader = ({ order, customerInfo, total, totalItemsCount, statusConfig }) => (
-  <div className={`px-4 sm:px-6 py-4 border-b ${
-    order.status === 'Cancelled' ? 'bg-red-50 border-red-200' : 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
-  }`}>
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div className="flex items-center flex-1 min-w-0">
-        <div className={`h-12 w-12 rounded-xl flex items-center justify-center mr-4 ${
-          order.status === 'Cancelled' ? 'bg-red-100' : 'bg-gray-100'
-        }`}>
-          <FontAwesomeIcon 
-            icon={statusConfig.icon} 
-            className={`text-lg ${order.status === 'Cancelled' ? 'text-red-600' : 'text-gray-600'}`} 
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-3">
-              <h4 className={`text-lg font-bold ${
-                order.status === 'Cancelled' ? 'text-red-800' : 'text-gray-900'
-              }`}>
-                #{order._id.substring(0, 8).toUpperCase()}
-              </h4>
-              <StatusBadge status={order.status} />
-            </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center">
-                <FontAwesomeIcon icon={faUser} className="mr-2" />
-                {customerInfo.name}
-              </div>
-              <div className="flex items-center">
-                <FontAwesomeIcon icon={faCalendar} className="mr-2" />
-                {new Date(order.date).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-          {order.cancellationReason && (
-            <p className="text-sm text-red-600 mt-2">
-              <span className="font-medium">Cancellation Reason:</span> {order.cancellationReason}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-lg font-bold text-gray-900">{currency}{total.toFixed(2)}</p>
-          <p className="text-sm text-gray-500">{totalItemsCount} items</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const StatusBadge = ({ status }) => {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG['Pending'];
-  const colorClass = `bg-${config.color}-50 text-${config.color}-700 border border-${config.color}-200`;
-  
-  return (
-    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${colorClass}`}>
-      <FontAwesomeIcon icon={config.icon} className="mr-2" />
-      {status}
-    </span>
-  );
-};
-
-const OrderContent = ({
-  order,
-  allDeals,
-  regularItems,
-  customerInfo,
-  subtotal,
-  total,
-  expandedDeals,
-  onToggleDeal,
-  onStatusChange,
-  statusConfig
+const SearchAndFilterBar = ({
+  searchTerm,
+  onSearchChange,
+  sortBy,
+  onSortChange,
+  activeFilter,
+  onFilterChange,
+  filterOptions
 }) => (
-  <div className="p-4 sm:p-6 flex flex-col xl:flex-row gap-6">
-    <OrderItems 
-      allDeals={allDeals}
-      regularItems={regularItems}
-      orderId={order._id}
-      expandedDeals={expandedDeals}
-      onToggleDeal={onToggleDeal}
-    />
-    <OrderSidebar 
-      order={order}
-      customerInfo={customerInfo}
-      subtotal={subtotal}
-      total={total}
-      onStatusChange={onStatusChange}
-    />
-  </div>
-);
-
-const OrderItems = ({ allDeals, regularItems, orderId, expandedDeals, onToggleDeal }) => (
-  <div className="xl:flex-1">
-    <div className="flex items-center justify-between mb-4">
-      <h5 className="text-lg font-semibold text-gray-900">Order Items</h5>
-      <div className="flex gap-2">
-        {allDeals.length > 0 && (
-          <span className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg text-sm border border-amber-200 font-medium">
-            <FontAwesomeIcon icon={faTag} className="mr-2" />
-            {allDeals.length} Deal{allDeals.length !== 1 ? 's' : ''}
-          </span>
-        )}
-        {regularItems.length > 0 && (
-          <span className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm border border-blue-200 font-medium">
-            <FontAwesomeIcon icon={faCube} className="mr-2" />
-            {regularItems.length} Product{regularItems.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-    </div>
-    
-    <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-y-auto border border-gray-200">
-      {allDeals.map((deal, dealIndex) => (
-        <DealItem
-          key={dealIndex}
-          deal={deal}
-          orderId={orderId}
-          expandedDeals={expandedDeals}
-          onToggleDeal={onToggleDeal}
-        />
-      ))}
-      {regularItems.map((item, idx) => (
-        <ProductItem key={idx} item={item} />
-      ))}
-    </div>
-  </div>
-);
-
-const DealItem = ({ deal, orderId, expandedDeals, onToggleDeal }) => {
-  const isExpanded = expandedDeals[`${orderId}-${deal.dealName}`];
-  
-  return (
-    <div className="mb-4 last:mb-0">
-      <div 
-        className={`flex justify-between items-center p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-          isExpanded ? 'bg-amber-50 border-amber-200 shadow-sm' : 'bg-white border-gray-200 hover:shadow-sm'
-        }`}
-        onClick={() => onToggleDeal(orderId, deal.dealName)}
-      >
-        <div className="flex items-center flex-1 min-w-0">
-          <span className="bg-amber-500 text-white px-3 py-1.5 rounded text-sm font-semibold mr-4">
-            <FontAwesomeIcon icon={faTag} className="mr-2" />
-            Deal
-          </span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-base">{deal.dealName}</p>
-            {deal.dealDescription && (
-              <p className="text-sm text-gray-600 mt-1 line-clamp-1">{deal.dealDescription}</p>
+  <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-8">
+    {/* Filter Pills */}
+    <div className="flex items-center gap-1.5 p-1 bg-gray-100 border border-gray-200 overflow-x-auto scrollbar-none max-w-full">
+      {filterOptions.map((option) => {
+        const isActive = activeFilter === option.id;
+        return (
+          <button
+            key={option.id}
+            onClick={() => onFilterChange(option.id)}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
+              isActive
+                ? 'bg-black text-white shadow-sm'
+                : 'text-gray-600 hover:text-black hover:bg-white'
+            }`}
+          >
+            <span>{option.label}</span>
+            {option.count > 0 && (
+              <span className={`px-1.5 py-0.5 text-[10px] font-extrabold ${
+                isActive ? 'bg-white text-black' : 'bg-gray-200 text-gray-700'
+              }`}>
+                {option.count}
+              </span>
             )}
-          </div>
-        </div>
-        <div className="flex items-center space-x-4 ml-4">
-          <div className="text-right">
-            <p className="font-semibold text-gray-900 text-base">
-              {currency}{deal.totalPrice.toFixed(2)}
-            </p>
-            <p className="text-sm text-gray-500">
-              {deal.totalQuantity} item{deal.totalQuantity !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <FontAwesomeIcon 
-            icon={isExpanded ? faChevronUp : faChevronDown} 
-            className="text-gray-400 text-lg" 
-          />
-        </div>
+          </button>
+        );
+      })}
+    </div>
+
+    {/* Search and Sort */}
+    <div className="flex items-center gap-3 w-full lg:w-auto">
+      <div className="relative flex-1 lg:w-72">
+        <FontAwesomeIcon
+          icon={faSearch}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+        />
+        <input
+          type="text"
+          placeholder="Search orders..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 focus:ring-1 focus:ring-black focus:border-black text-xs font-medium transition-all text-gray-900"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => onSearchChange('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-xs"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
-      {isExpanded && (
-        <div className="mt-3 space-y-2 pl-4">
-          {deal.items.map((item, itemIndex) => (
-            <div key={itemIndex} className="flex justify-between items-center py-3 px-4 bg-white rounded-lg border border-gray-200">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 text-sm sm:text-base">{item.name}</p>
-                <div className="flex items-center space-x-4 mt-1">
-                  <span className="text-sm text-gray-500">Qty: {item.quantity || 1}</span>
-                  <span className="text-sm text-gray-500">• {currency}{item.price?.toFixed(2)} each</span>
+      <div className="relative min-w-[140px]">
+        <select
+          value={sortBy}
+          onChange={(e) => onSortChange(e.target.value)}
+          className="w-full pl-4 pr-8 py-2.5 bg-white border border-gray-300 focus:ring-1 focus:ring-black appearance-none text-xs font-bold uppercase tracking-wider cursor-pointer"
+        >
+          {SORT_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none" />
+      </div>
+    </div>
+  </div>
+);
+
+// Order Details Modal Component
+const OrderDetailsModal = ({ order, customerInfo, isOpen, onClose, onVerifyPayment }) => {
+  if (!isOpen || !order) return null;
+
+  const isAdvance = Boolean(
+    order.advanceAmount || 
+    order.paymentScreenshot || 
+    (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
+    order.advancePaymentStatus
+  );
+
+  const subtotal = (order.items || []).reduce(
+    (sum, item) => sum + ((item.price || 0) * (item.quantity || 1)),
+    0
+  );
+  
+  const totalAmount = Number(order.amount) || (isAdvance ? subtotal : subtotal + (order.deliveryCharges || 0));
+  const rawPhone = (customerInfo.phone || '').replace(/[^0-9]/g, '');
+  const waPhone = rawPhone.startsWith('0') ? `92${rawPhone.slice(1)}` : rawPhone;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-gray-300 p-6 md:p-8 my-6 shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors z-10 text-xl font-bold"
+        >
+          <FontAwesomeIcon icon={faXmark} />
+        </button>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
+        <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-6">
+          Order Reference #{order._id?.substring(0, 12).toUpperCase()}
+        </p>
+
+        {/* Customer + Shipping */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-gray-50 p-4 border border-gray-200">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+              <FontAwesomeIcon icon={faUser} className="text-[#587a3b]" /> Customer
+            </h3>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-black flex items-center justify-center font-bold text-white text-xs shrink-0">
+                {customerInfo.name?.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">{customerInfo.name}</p>
+                <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">{order.isGuest ? 'Guest Checkout' : 'Registered User'}</p>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-2.5 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 text-gray-600">
+                <FontAwesomeIcon icon={faEnvelope} className="text-gray-400 w-3.5 shrink-0" />
+                <span className="break-all">{customerInfo.email}</span>
+              </div>
+              <div className="flex items-center justify-between text-gray-900 font-semibold">
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faPhone} className="text-gray-400 w-3.5 shrink-0" />
+                  <a href={`tel:${customerInfo.phone}`} className="hover:underline text-blue-700">{customerInfo.phone}</a>
+                </div>
+                {waPhone && (
+                  <a 
+                    href={`https://wa.me/${waPhone}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 font-bold flex items-center gap-1"
+                  >
+                    <FontAwesomeIcon icon={faWhatsapp} />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 p-4 border border-gray-200">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+              <FontAwesomeIcon icon={faShippingFast} className="text-[#587a3b]" /> Delivery Address
+            </h3>
+            <div className="space-y-1 text-xs mb-3 text-gray-700">
+              {order.address?.firstName && <p className="font-bold text-gray-900">{order.address.firstName} {order.address.lastName}</p>}
+              {order.address?.street && <p className="text-gray-800">{order.address.street}</p>}
+              <p className="text-gray-800">{[order.address?.city, order.address?.state, order.address?.zipcode || order.address?.zipCode].filter(Boolean).join(', ')}</p>
+            </div>
+            <div className="border-t border-gray-200 pt-2.5 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">Payment Mode</p>
+                <p className="font-bold text-gray-900">{isAdvance ? 'Advance Delivery Fee + COD' : 'Cash On Delivery'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">Order Date</p>
+                <p className="font-bold text-gray-900">{new Date(order.date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Advance Payment Verification Section (if applicable) */}
+        {isAdvance && (
+          <div className="bg-amber-50/80 border border-amber-200 p-4 mb-6 text-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faCreditCard} />
+                Advance Delivery Payment (Rs. {order.advanceAmount || 250})
+              </span>
+              <span className={`px-2 py-0.5 font-bold uppercase text-[10px] ${
+                order.advancePaymentStatus === 'verified'
+                  ? 'bg-green-100 text-green-800 border border-green-200'
+                  : order.advancePaymentStatus === 'rejected'
+                    ? 'bg-red-100 text-red-800 border border-red-200'
+                    : 'bg-amber-200 text-amber-900 animate-pulse'
+              }`}>
+                {order.advancePaymentStatus || 'pending review'}
+              </span>
+            </div>
+
+            {order.transactionId && (
+              <p className="text-gray-700 mb-2">
+                <strong>Transaction ID:</strong> <span className="font-mono">{order.transactionId}</span>
+              </p>
+            )}
+
+            {order.paymentScreenshot && (
+              <div className="mb-3">
+                <p className="text-gray-500 font-bold mb-1">Receipt Screenshot:</p>
+                <a href={order.paymentScreenshot} target="_blank" rel="noopener noreferrer">
+                  <img 
+                    src={order.paymentScreenshot} 
+                    alt="Receipt" 
+                    className="max-h-40 border border-amber-300 object-contain bg-white hover:opacity-90"
+                  />
+                </a>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 border-t border-amber-200">
+              <button
+                onClick={() => onVerifyPayment(order._id, 'verified')}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <FontAwesomeIcon icon={faCheck} />
+                <span>Approve Advance Payment</span>
+              </button>
+              <button
+                onClick={() => onVerifyPayment(order._id, 'rejected')}
+                className="px-4 py-2 bg-white border border-red-300 hover:bg-red-600 hover:text-white text-red-700 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+                <span>Reject</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Bar */}
+        <div className="bg-black text-white p-4 mb-6 flex flex-wrap gap-4 justify-between items-center">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Status</p>
+            <p className="text-white font-bold text-sm uppercase">{order.status}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Items Count</p>
+            <p className="text-white font-bold text-sm">{order.items?.length || 0}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Delivery Fee</p>
+            <p className="text-white font-bold text-sm">
+              {isAdvance ? `Rs. ${order.advanceAmount || 250} (Adv)` : order.deliveryCharges === 0 ? 'FREE' : `${currency}${order.deliveryCharges}`}
+            </p>
+          </div>
+          {order.couponCode && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-green-400 font-bold mb-0.5">Promo Discount</p>
+              <p className="text-green-400 font-bold text-sm">- {currency}{Number(order.couponDiscount || 0).toFixed(2)}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Order Total (COD)</p>
+            <p className="text-[#a4d47c] font-extrabold text-2xl">{currency}{totalAmount.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Products Ordered */}
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+          <FontAwesomeIcon icon={faBox} className="text-[#587a3b]" /> Products Ordered
+        </h3>
+        <div className="space-y-2.5">
+          {order.items?.map((item, idx) => {
+            const imgSrc = Array.isArray(item.image)
+              ? item.image[0]
+              : typeof item.image === 'string' && item.image.length > 10
+                ? item.image
+                : null;
+
+            return (
+              <div key={idx} className="flex items-center gap-3 bg-gray-50 p-3 border border-gray-200">
+                {imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt={item.name}
+                    className="w-14 h-14 object-contain bg-white border border-gray-200 shrink-0 p-0.5"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-14 h-14 bg-gray-200 flex items-center justify-center shrink-0">
+                    <FontAwesomeIcon icon={faBox} className="text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-gray-900 text-xs sm:text-sm truncate mb-0.5">{item.name}</h4>
+                  <div className="flex flex-wrap gap-1.5 text-xs text-gray-500">
+                    {item.variant && (
+                      <span className="px-1.5 py-0.2 bg-gray-200 text-gray-800 font-bold">{item.variant}</span>
+                    )}
+                    <span className="px-1.5 py-0.2 bg-gray-200 text-black font-bold">Qty: {item.quantity || 1}</span>
+                    <span>{currency}{Number(item.price || 0).toFixed(2)} each</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-gray-900 text-sm">{currency}{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
                 </div>
               </div>
-              <div className="text-right ml-4">
-                <p className="font-semibold text-gray-900 text-sm sm:text-base">
-                  {currency}{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                </p>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Order Card Component (Legacy Furniture Style)
+const OrderCard = ({
+  order,
+  onStatusChange,
+  onVerifyPayment,
+  onPreviewImage
+}) => {
+  const customerInfo = useMemo(() => getCustomerInfo(order), [order]);
+  const isAdvance = Boolean(
+    order.advanceAmount || 
+    order.paymentScreenshot || 
+    (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
+    order.advancePaymentStatus
+  );
+
+  const needsVerification = isAdvance && order.advancePaymentStatus !== 'verified' && order.advancePaymentStatus !== 'rejected';
+  const canUpdateStatus = (!isAdvance || order.advancePaymentStatus === 'verified') &&
+    order.status !== 'Cancelled' &&
+    order.status !== 'Delivered';
+
+  const screenshotUrl = order.paymentScreenshot;
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+
+  // Initials for avatar
+  const getInitials = (name) => {
+    return (name || 'C')
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Status badge styles
+  const getStatusStyles = (status) => {
+    switch (status) {
+      case 'Delivered': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'Packing': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'Shipped': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Out for delivery': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
+
+  const totalAmount = Number(order.amount) || (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+
+  return (
+    <div className="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-all duration-300 group">
+      {/* Card Header */}
+      <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 flex items-center justify-center font-bold text-white shadow-sm ${
+              isAdvance ? 'bg-[#587a3b]' : 'bg-black'
+            }`}>
+              {getInitials(customerInfo.name)}
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-gray-900 leading-tight">{customerInfo.name}</h3>
+              <p className="text-xs text-gray-500 font-mono mt-0.5">Order #{order._id.substring(0, 8).toUpperCase()}</p>
+            </div>
+          </div>
+          <div className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider border ${getStatusStyles(order.status)}`}>
+            {order.status}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5">
+            <FontAwesomeIcon icon={faCalendar} className="text-[#587a3b]" />
+            <span>{new Date(order.date || Date.now()).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <FontAwesomeIcon icon={faClock} className="text-[#587a3b]" />
+            <span>{new Date(order.date || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Items List */}
+      <div className="flex-1 p-5 space-y-3">
+        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400 pb-2 border-b border-gray-100">
+          <span>Items</span>
+          <div className="flex gap-8">
+            <span>Qty</span>
+            <span className="w-12 text-right">Price</span>
+          </div>
+        </div>
+
+        <div className="space-y-2.5 pr-1">
+          {(order.items || []).slice(0, 4).map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs">
+              <span className="font-medium text-gray-800 truncate flex-1 pr-3">{item.name}</span>
+              <div className="flex items-center gap-8 text-gray-600">
+                <span className="text-center w-6 font-bold text-black">{item.quantity || 1}</span>
+                <span className="font-bold text-gray-900 w-12 text-right">{currency}{Number(item.price || 0).toFixed(0)}</span>
               </div>
             </div>
           ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ProductItem = ({ item }) => (
-  <div className="flex justify-between items-center py-4 px-4 bg-white rounded-lg border border-gray-200 mb-3 last:mb-0 hover:bg-gray-50 transition-colors">
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center mb-2">
-        <p className="font-semibold text-gray-900 text-sm sm:text-base">{item.name}</p>
-        <span className="ml-3 bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs border border-blue-200 font-medium">
-          Product
-        </span>
-      </div>
-      {item.description && (
-        <p className="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">{item.description}</p>
-      )}
-      <div className="flex items-center space-x-4">
-        <span className="text-sm text-gray-500">Qty: {item.quantity || 1}</span>
-        <span className="text-sm text-gray-500">• {currency}{item.price?.toFixed(2)} each</span>
-      </div>
-    </div>
-    <div className="text-right ml-4">
-      <p className="font-semibold text-gray-900 text-base sm:text-lg">
-        {currency}{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-      </p>
-    </div>
-  </div>
-);
-
-const OrderSidebar = ({ order, customerInfo, subtotal, total, onStatusChange }) => (
-  <div className="flex flex-col gap-6 xl:w-80">
-    <CustomerInfo order={order} customerInfo={customerInfo} />
-    <OrderSummary 
-      order={order} 
-      subtotal={subtotal} 
-      total={total} 
-      onStatusChange={onStatusChange} 
-    />
-  </div>
-);
-
-// FIXED: CustomerInfo component now uses customerInfo.phone instead of order.address.phone
-const CustomerInfo = ({ order, customerInfo }) => {
-  // Check if phone is available and not the default placeholder
-  const phoneNumber = customerInfo.phone && customerInfo.phone !== 'Phone not available' 
-    ? customerInfo.phone 
-    : null;
-
-  return (
-    <div>
-      <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-        <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-400" />
-        Customer Information
-      </h5>
-      <div className="bg-gray-50 rounded-xl p-4 text-sm border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-          <div>
-            <p className="text-gray-500 text-xs font-medium mb-1">CUSTOMER NAME</p>
-            <p className="font-semibold text-gray-900 flex items-center">
-              {customerInfo.name}
+          {(order.items || []).length > 4 && (
+            <p className="text-center text-xs font-bold text-[#587a3b] py-1.5 bg-green-50 border border-green-100">
+              +{order.items.length - 4} more items
             </p>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs font-medium mb-1">EMAIL</p>
-            <p className="font-semibold text-gray-900 flex items-center">
-              {customerInfo.email}
-            </p>
-          </div>
-        </div>
-
-        {/* FIXED: Phone Number Section - Using customerInfo.phone */}
-        {phoneNumber && (
-          <div className="mb-3">
-            <p className="text-gray-500 text-xs font-medium mb-1">PHONE NUMBER</p>
-            <p className="text-gray-600 flex items-center">
-              <FontAwesomeIcon icon={faPhone} className="mr-2 text-gray-400 w-4 h-4" />
-              {phoneNumber}
-            </p>
-          </div>
-        )}
-
-        <div className="border-t border-gray-200 pt-3">
-          <p className="text-gray-500 text-xs font-medium mb-2">SHIPPING ADDRESS</p>
-          {order.address ? (
-            <>
-              <p className="text-gray-600 mb-1">{order.address.street || 'Street not specified'}</p>
-              <p className="text-gray-600 mb-1">
-                {order.address.city || 'City'}, {order.address.state || 'State'}
-              </p>
-              <p className="text-gray-600 mb-3">{order.address.zipcode || 'Zipcode'}</p>
-            </>
-          ) : (
-            <p className="text-gray-500 text-sm">Shipping address not available</p>
           )}
         </div>
       </div>
+
+      {/* Card Footer */}
+      <div className="p-5 bg-gray-50 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total COD</span>
+          <span className="text-xl font-extrabold text-gray-900">{currency}{totalAmount.toFixed(2)}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            onClick={() => setShowOrderDetailsModal(true)}
+            className="px-3 py-2.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-900 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <FontAwesomeIcon icon={faFileAlt} className="text-[#587a3b]" />
+            Details
+          </button>
+
+          {canUpdateStatus ? (
+            <div className="relative">
+              <select
+                onChange={(e) => onStatusChange(e, order._id)}
+                value={order.status}
+                className="w-full h-full px-3 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors cursor-pointer appearance-none text-center"
+              >
+                <option value="Order Placed">Process</option>
+                <option value="Packing">Packing</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Out for delivery">Transit</option>
+                <option value="Delivered">Finish</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <FontAwesomeIcon icon={faChevronDown} className="text-white/60 text-[10px]" />
+              </div>
+            </div>
+          ) : needsVerification ? (
+            <button
+              className="px-3 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              onClick={() => onPreviewImage(screenshotUrl)}
+            >
+              <FontAwesomeIcon icon={faHourglassHalf} />
+              Verify Proof
+            </button>
+          ) : (
+            <div className="px-3 py-2.5 bg-gray-200 text-gray-500 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-center">
+              Locked
+            </div>
+          )}
+        </div>
+      </div>
+
+      <OrderDetailsModal
+        order={order}
+        customerInfo={customerInfo}
+        isOpen={showOrderDetailsModal}
+        onClose={() => setShowOrderDetailsModal(false)}
+        onVerifyPayment={onVerifyPayment}
+      />
     </div>
   );
 };
 
-const OrderSummary = ({ order, subtotal, total, onStatusChange }) => (
-  <div className="space-y-6">
-    <div>
-      <h5 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-        <FontAwesomeIcon icon={faReceipt} className="mr-2 text-gray-400" />
-        Order Summary
-      </h5>
-      <div className={`rounded-xl p-4 border text-sm ${
-        order.status === 'Cancelled' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
-      }`}>
-        <div className="flex justify-between mb-3">
-          <span className="text-gray-600">Subtotal:</span>
-          <span className="font-semibold text-gray-900">{currency}{subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between mb-3">
-          <span className="text-gray-600">Delivery Fee:</span>
-          <span className="font-semibold text-gray-900">
-            {order.deliveryCharges === 0 ? 'FREE' : `${currency}${order.deliveryCharges.toFixed(2)}`}
-          </span>
-        </div>
-        <div className="pt-3 mt-3 border-t border-gray-300 flex justify-between font-semibold text-base">
-          <span className="text-gray-900">Total:</span>
-          <span className="text-gray-900">{currency}{total.toFixed(2)}</span>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <h5 className="text-lg font-semibold text-gray-900 mb-3">Update Status</h5>
-      <select
-        onChange={(e) => onStatusChange(e, order._id)}
-        value={order.status}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 bg-white shadow-sm text-sm font-medium"
-        disabled={order.status === 'Cancelled' || order.status === 'Delivered'}
-      >
-        <option value="Order Placed">Order Placed</option>
-        <option value="Packing">Packing</option>
-        <option value="Shipped">Shipped</option>
-        <option value="Out for delivery">Out for Delivery</option>
-        <option value="Delivered">Delivered</option>
-        <option value="Cancelled">Cancelled</option>
-      </select>
-      {(order.status === 'Cancelled' || order.status === 'Delivered') && (
-        <p className="text-sm text-gray-500 mt-2">
-          This order is {order.status.toLowerCase()} and cannot be updated.
-        </p>
-      )}
-    </div>
-  </div>
-);
-
-// Utility Functions
-const groupItemsByDeal = (items) => {
-  const dealGroups = {};
-  const regularItems = [];
-  
-  items.forEach(item => {
-    if (item.isFromDeal === true) {
-      const dealKey = item.dealName || 'Unknown Deal';
-      if (!dealGroups[dealKey]) {
-        dealGroups[dealKey] = {
-          dealName: dealKey,
-          dealDescription: item.dealDescription,
-          dealImage: item.dealImage,
-          items: [],
-          totalQuantity: 0,
-          totalPrice: 0
-        };
-      }
-      dealGroups[dealKey].items.push(item);
-      dealGroups[dealKey].totalQuantity += item.quantity || 1;
-      dealGroups[dealKey].totalPrice += (item.price || 0) * (item.quantity || 1);
-    } else {
-      regularItems.push(item);
-    }
-  });
-
-  return { dealGroups, regularItems };
-};
-
-// Get customer info from order's customerDetails
 const getCustomerInfo = (order) => {
-  // Use customerDetails from order if available (edited during checkout)
   if (order.customerDetails) {
     return {
       name: order.customerDetails.name || 'Customer',
@@ -688,7 +784,6 @@ const getCustomerInfo = (order) => {
     };
   }
 
-  // Fallback to address information
   if (order.address) {
     const addressName = `${order.address.firstName || ''} ${order.address.lastName || ''}`.trim();
     return {
@@ -698,7 +793,6 @@ const getCustomerInfo = (order) => {
     };
   }
 
-  // Final fallback
   return {
     name: 'Customer',
     email: 'Email not available',
@@ -706,17 +800,23 @@ const getCustomerInfo = (order) => {
   };
 };
 
-const calculateTabCounts = (orders) => {
-  return TABS.map(tab => {
+const calculateFilterCounts = (orders) => {
+  return FILTER_OPTIONS.map(filter => {
     let count = 0;
-    switch (tab.id) {
+    switch (filter.id) {
       case 'all':
         count = orders.length;
         break;
+      case 'pending_verification':
+        count = orders.filter(order => {
+          const isAdv = Boolean(order.advanceAmount || order.paymentScreenshot || order.advancePaymentStatus);
+          return isAdv && order.advancePaymentStatus !== 'verified' && order.advancePaymentStatus !== 'rejected';
+        }).length;
+        break;
       case 'pending':
         count = orders.filter(order =>
-          order.status === 'Order Placed' ||
-          order.status === 'Pending'
+          (order.status === 'Order Placed' || order.status === 'Pending' || order.status === 'Processing') &&
+          (!order.advanceAmount || order.advancePaymentStatus === 'verified')
         ).length;
         break;
       case 'packing':
@@ -732,12 +832,20 @@ const calculateTabCounts = (orders) => {
         count = orders.filter(order => order.status === 'Delivered').length;
         break;
       case 'cancelled':
-        count = orders.filter(order => order.status === 'Cancelled').length;
+        count = orders.filter(order =>
+          order.status === 'Cancelled' || order.advancePaymentStatus === 'rejected'
+        ).length;
+        break;
+      case 'COD':
+        count = orders.filter(order => !order.advanceAmount && !order.paymentScreenshot).length;
+        break;
+      case 'advance':
+        count = orders.filter(order => Boolean(order.advanceAmount || order.paymentScreenshot)).length;
         break;
       default:
         count = 0;
     }
-    return { ...tab, count };
+    return { ...filter, count };
   });
 };
 
@@ -745,16 +853,16 @@ const calculateTabCounts = (orders) => {
 const Orders = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
-  
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
-  const [expandedDeals, setExpandedDeals] = useState({});
+  const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [previewImage, setPreviewImage] = useState(null);
 
-  const filteredOrders = useOrdersFilter(orders, activeTab, searchTerm, sortBy);
-  const tabsWithCounts = useMemo(() => calculateTabCounts(orders), [orders]);
+  const filteredOrders = useOrdersFilter(orders, activeFilter, searchTerm, sortBy);
+  const filtersWithCounts = useMemo(() => calculateFilterCounts(orders), [orders]);
 
   const handleUnauthorized = useCallback((endpoint) => {
     toast.error('Session expired. Please login again.');
@@ -810,7 +918,8 @@ const Orders = () => {
 
       if (response.data.success) {
         toast.success(response.data.message || 'Order status updated');
-        fetchAllOrders();
+        // Optimistic update
+        setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
       } else if (response.data.message?.includes('Not Authorized') || response.status === 401) {
         handleUnauthorized('/api/order/status');
       } else {
@@ -823,18 +932,34 @@ const Orders = () => {
         toast.error(error.response?.data?.message || error.message);
       }
     }
+  }, [token, handleUnauthorized]);
+
+  const verifyPaymentHandler = useCallback(async (orderId, status) => {
+    if (!token) {
+      handleUnauthorized('/api/order/verify-payment');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/order/verify-payment`,
+        { orderId, status },
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message || `Payment marked as ${status}`);
+        fetchAllOrders();
+      } else {
+        toast.error(response.data.message || 'Failed to update payment status');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+    }
   }, [token, handleUnauthorized, fetchAllOrders]);
 
-  const handleTabChange = useCallback((tabId) => {
-    setActiveTab(tabId);
-  }, []);
-
-  const toggleDealExpansion = useCallback((orderId, dealName) => {
-    const key = `${orderId}-${dealName}`;
-    setExpandedDeals(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+  const handleFilterChange = useCallback((filterId) => {
+    setActiveFilter(filterId);
   }, []);
 
   useEffect(() => {
@@ -849,56 +974,73 @@ const Orders = () => {
   if (!token) return <AccessRequired navigate={navigate} />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-4 px-3 sm:py-6 sm:px-4 lg:px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+    <div className="w-full pb-10">
+      <div className="w-full">
+        {/* Header */}
+        <div className="mb-8 text-left">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-                Order Management
-              </h1>
-              <p className="text-gray-600 text-sm sm:text-base">
-                Manage and track all customer orders in one place
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Order Management</h1>
+              <p className="text-gray-500 mt-1 text-sm font-medium">
+                Manage all store orders, track live statuses, and verify advance delivery receipts.
               </p>
             </div>
+            
+            <div className="flex flex-wrap items-center gap-4 p-3 bg-gray-50 border border-gray-200">
+              <div className="flex items-center">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></div>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600">COD Orders</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 mr-2"></div>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600">Verified Advance</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 animate-pulse"></div>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-600">Pending Verification</span>
+              </div>
+            </div>
           </div>
-
-          <SearchAndFilterBar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-          />
         </div>
 
-        <TabsNavigation
-          tabs={tabsWithCounts}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
+        {/* Search & Filter Bar */}
+        <SearchAndFilterBar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          activeFilter={activeFilter}
+          onFilterChange={handleFilterChange}
+          filterOptions={filtersWithCounts}
         />
 
-        {/* Orders List */}
+        {/* Order Grid */}
         {filteredOrders.length === 0 ? (
           <EmptyState
-            activeTab={activeTab}
+            activeFilter={activeFilter}
             searchTerm={searchTerm}
             onClearSearch={() => setSearchTerm('')}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredOrders.map((order) => (
               <OrderCard
                 key={order._id}
                 order={order}
                 onStatusChange={statusHandler}
-                expandedDeals={expandedDeals}
-                onToggleDeal={toggleDealExpansion}
+                onVerifyPayment={verifyPaymentHandler}
+                onPreviewImage={setPreviewImage}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ImageModal
+        imageUrl={previewImage}
+        isOpen={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+      />
     </div>
   );
 };

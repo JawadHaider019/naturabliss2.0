@@ -14,7 +14,7 @@ import "slick-carousel/slick/slick-theme.css";
 // Memoized arrow components
 const NextArrow = memo(({ onClick }) => (
   <button
-    className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors border border-white/20"
+    className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-[#587a3b]/90 hover:bg-[#587a3b] text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors border border-white/20 shadow-md"
     onClick={onClick}
   >
     <FaChevronRight size={14} />
@@ -23,7 +23,7 @@ const NextArrow = memo(({ onClick }) => (
 
 const PrevArrow = memo(({ onClick }) => (
   <button
-    className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors border border-white/20"
+    className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-[#587a3b]/90 hover:bg-[#587a3b] text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors border border-white/20 shadow-md"
     onClick={onClick}
   >
     <FaChevronLeft size={14} />
@@ -262,7 +262,7 @@ const DealCollection = () => {
           No deals available
         </div>
       ) : viewConfig.showSlider ? (
-        <div className="relative px-2 sm:px-4">
+        <div className="deal-collection-slider relative px-2 sm:px-4">
           <Slider ref={sliderRef} {...viewConfig.sliderSettings}>
             {processedDeals.map((deal) => (
               <div key={deal._id} className="px-1 sm:px-2">
@@ -290,6 +290,47 @@ const DealCollection = () => {
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
         </div>
       )}
+
+      {/* Scoped style tag */}
+      <style>
+        {`
+          .deal-collection-slider .slick-slide > div {
+            height: 100%;
+          }
+          .deal-collection-slider .slick-track {
+            display: flex !important;
+          }
+          .deal-collection-slider .slick-slide {
+            height: inherit !important;
+          }
+          .deal-collection-slider .slick-dots {
+            position: static !important;
+            margin-top: 0.75rem !important;
+          }
+          .deal-collection-slider .slick-dots li {
+            margin: 0 !important;
+            width: auto !important;
+            height: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+          }
+          .deal-collection-slider .slick-dots li button:before {
+            display: none !important;
+          }
+          .deal-collection-slider .slick-dots li > div {
+            width: 7px !important;
+            height: 7px !important;
+            background-color: #d1d5db !important;
+            transition: all 0.2s ease !important;
+          }
+          .deal-collection-slider .slick-dots li.slick-active > div {
+            background-color: #587a3b !important;
+            width: 16px !important;
+            border-radius: 9999px !important;
+            transform: none !important;
+          }
+        `}
+      </style>
     </div>
   );
 };

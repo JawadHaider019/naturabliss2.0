@@ -23,6 +23,7 @@ const OtherTab = () => {
   const [deliverySettings, setDeliverySettings] = useState({
     mode: "fixed",
     fixedCharge: 0,
+    enableFreeDelivery: false,
     freeDeliveryAbove: 0,
   });
   const [loading, setLoading] = useState(false);
@@ -30,7 +31,6 @@ const OtherTab = () => {
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
   // API base URL - use the same as your dashboard
-
   const API_BASE = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
   // Show toast function
@@ -59,13 +59,16 @@ const OtherTab = () => {
         }
         
         const data = await res.json();
-        setDeliverySettings(data);
+        setDeliverySettings({
+          mode: data.mode || "fixed",
+          fixedCharge: data.fixedCharge || 0,
+          enableFreeDelivery: Boolean(data.enableFreeDelivery),
+          freeDeliveryAbove: data.freeDeliveryAbove || 0,
+        });
         showToast("Delivery settings loaded successfully", "success");
       } catch (err) {
         console.error("Error fetching delivery settings:", err);
-        // If endpoint doesn't exist, use default values
         showToast("Using default delivery settings", "error");
-        console.log("Using default delivery settings");
       } finally {
         setLoading(false);
       }
@@ -106,7 +109,7 @@ const OtherTab = () => {
   }
 
   return (
-    <div className="p-4 bg-gray-50 rounded-lg space-y-6">
+    <div className="p-6 bg-gray-50 rounded-xl space-y-6 max-w-3xl">
       {/* Toast Notification */}
       {toast.show && (
         <Toast 
@@ -117,47 +120,21 @@ const OtherTab = () => {
       )}
 
       {/* Delivery Settings */}
-      <div>
-        <h3 className="font-medium text-gray-900 mb-3">Delivery Settings</h3>
-
-        {/* Delivery Mode Toggle - Only Fixed Mode Enabled */}
-        <div className="flex items-center gap-4 mb-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="deliveryMode"
-              value="fixed"
-              checked={deliverySettings.mode === "fixed"}
-              onChange={() =>
-                setDeliverySettings({ ...deliverySettings, mode: "fixed" })
-              }
-              className="w-4 h-4 text-black focus:ring-black border-gray-300"
-            />
-            Fixed Charges
-          </label>
-
-          {/* Disabled API option */}
-          <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-            <input 
-              type="radio" 
-              name="deliveryMode" 
-              value="api" 
-              disabled 
-              className="w-4 h-4 text-gray-400 border-gray-300"
-            />
-            From API (This feature is not available for now)
-          </label>
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">Delivery & Shipping Settings</h3>
+          <p className="text-sm text-gray-500">Configure standard shipping charges and optional free delivery threshold.</p>
         </div>
 
         {/* Fixed Charges Input */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Fixed Delivery Charges (Rs)
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1">
+            Standard Delivery Charges (Rs) *
           </label>
           <input
             type="number"
             min="0"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
             value={deliverySettings.fixedCharge}
             onChange={(e) =>
               setDeliverySettings({
@@ -165,62 +142,107 @@ const OtherTab = () => {
                 fixedCharge: parseInt(e.target.value) || 0,
               })
             }
-            placeholder="Enter delivery charge"
+            placeholder="e.g. 250"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Standard delivery charge applied to all orders
+            Standard delivery fee charged to customers for regular orders.
           </p>
         </div>
 
-        {/* Free Delivery Above */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Free Delivery Above (Rs)
-          </label>
-          <input
-            type="number"
-            min="0"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
-            value={deliverySettings.freeDeliveryAbove}
-            onChange={(e) =>
-              setDeliverySettings({
-                ...deliverySettings,
-                freeDeliveryAbove: parseInt(e.target.value) || 0,
-              })
-            }
-            placeholder="Enter minimum order amount for free delivery"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Orders above this amount qualify for free delivery
-          </p>
+        {/* Free Delivery Toggle Box */}
+        <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Free Delivery Option</h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Allow customers to get free shipping when their order reaches a specific amount.
+              </p>
+            </div>
+            {/* Toggle Button */}
+            <button
+              type="button"
+              onClick={() =>
+                setDeliverySettings({
+                  ...deliverySettings,
+                  enableFreeDelivery: !deliverySettings.enableFreeDelivery,
+                })
+              }
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                deliverySettings.enableFreeDelivery ? "bg-green-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  deliverySettings.enableFreeDelivery ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* If Free Delivery is Enabled */}
+          {deliverySettings.enableFreeDelivery ? (
+            <div className="pt-3 border-t border-gray-200 animate-in fade-in duration-200 space-y-2">
+              <label className="block text-sm font-semibold text-gray-800">
+                Minimum Order Amount for Free Delivery (Rs) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-colors"
+                value={deliverySettings.freeDeliveryAbove}
+                onChange={(e) =>
+                  setDeliverySettings({
+                    ...deliverySettings,
+                    freeDeliveryAbove: parseInt(e.target.value) || 0,
+                  })
+                }
+                placeholder="e.g. 2000"
+              />
+              <p className="text-xs text-green-700 font-medium">
+                ✓ Orders of Rs. {deliverySettings.freeDeliveryAbove || 0} or more will automatically receive free shipping.
+              </p>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-gray-200 text-xs text-gray-500">
+              <span className="font-semibold text-gray-700">Free delivery is currently OFF.</span> Standard fee of Rs. {deliverySettings.fixedCharge} will apply to all orders regardless of cart total.
+            </div>
+          )}
         </div>
 
-        {/* Settings Preview */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h4 className="font-medium text-gray-900 mb-2">Current Settings Preview:</h4>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>• Delivery Mode: <span className="font-medium">Fixed Charges</span></p>
-            <p>• Delivery Charge: <span className="font-medium">Rs {deliverySettings.fixedCharge}</span></p>
-            <p>• Free Delivery: <span className="font-medium">Orders above Rs {deliverySettings.freeDeliveryAbove}</span></p>
+        {/* Settings Live Preview */}
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+          <h4 className="font-bold text-xs uppercase tracking-wider text-blue-900 mb-2">Live Rules Summary:</h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p>• Standard Delivery Charge: <span className="font-bold">Rs. {deliverySettings.fixedCharge}</span></p>
+            <p>
+              • Free Delivery Status:{" "}
+              {deliverySettings.enableFreeDelivery ? (
+                <span className="font-bold text-green-700">
+                  ON (Free on orders above Rs. {deliverySettings.freeDeliveryAbove})
+                </span>
+              ) : (
+                <span className="font-bold text-red-600">OFF (Disabled)</span>
+              )}
+            </p>
           </div>
         </div>
+
+        {/* Save Button */}
+        <button
+          className="px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          onClick={saveSettings}
+          disabled={saving}
+        >
+          {saving ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Saving...
+            </div>
+          ) : (
+            "Save Delivery Settings"
+          )}
+        </button>
       </div>
-
-      {/* Save Button */}
-      <button
-        className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        onClick={saveSettings}
-        disabled={saving}
-      >
-        {saving ? (
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            Saving...
-          </div>
-        ) : (
-          "Save Delivery Settings"
-        )}
-      </button>
     </div>
   );
 };

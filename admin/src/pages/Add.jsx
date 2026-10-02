@@ -37,12 +37,49 @@ const Add = () => {
   const [images, setImages] = useState([null, null, null, null]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [howToUse, setHowToUse] = useState("");
+  const [benefits, setBenefits] = useState("");
+  const [variants, setVariants] = useState([]);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [discountprice, setDiscountprice] = useState("");
   const [cost, setCost] = useState("");
   const [bestseller, setBestseller] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Variant handlers
+  const handleAddVariant = useCallback(() => {
+    setVariants((prev) => [
+      ...prev,
+      { name: "", price: "", discountprice: "", quantity: "", imageFile: null, imagePreview: "" }
+    ]);
+  }, []);
+
+  const handleRemoveVariant = useCallback((index) => {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleVariantChange = useCallback((index, field, value) => {
+    setVariants((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
+    );
+  }, []);
+
+  const handleVariantImageChange = useCallback((index, file) => {
+    setVariants((prev) =>
+      prev.map((v, i) => {
+        if (i === index) {
+          return {
+            ...v,
+            imageFile: file,
+            imagePreview: file ? URL.createObjectURL(file) : ""
+          };
+        }
+        return v;
+      })
+    );
+  }, []);
 
   // --- Deal State ---
   const [activeTab, setActiveTab] = useState('products'); // 'products' or 'deals'
@@ -220,6 +257,10 @@ const Add = () => {
   const resetForm = useCallback(() => {
     setName("");
     setDescription("");
+    setIngredients("");
+    setHowToUse("");
+    setBenefits("");
+    setVariants([]);
     setImages([null, null, null, null]);
     setQuantity("");
     setCost("");
@@ -271,6 +312,26 @@ const Add = () => {
         formData.append("description", description);
         formData.append("category", category);
         formData.append("subcategory", subCategory);
+        formData.append("ingredients", ingredients);
+        formData.append("howToUse", howToUse);
+        formData.append("benefits", benefits);
+
+        const cleanVariants = variants
+          .filter(v => v.name && v.name.trim())
+          .map((v, idx) => {
+            if (v.imageFile) {
+              formData.append(`variantImage_${idx}`, v.imageFile);
+            }
+            return {
+              name: v.name,
+              price: v.price,
+              discountprice: v.discountprice,
+              quantity: v.quantity,
+              image: v.image || ''
+            };
+          });
+        formData.append("variants", JSON.stringify(cleanVariants));
+
         formData.append("quantity", Number(quantity));
         formData.append("bestseller", bestseller);
         formData.append("cost", Number(cost || 0));
@@ -367,7 +428,7 @@ const Add = () => {
       setLoading(false);
     }
   }, [
-    activeTab, name, description, category, subCategory, quantity, bestseller, cost, price, discountprice, images,
+    activeTab, name, description, category, subCategory, ingredients, howToUse, benefits, variants, quantity, bestseller, cost, price, discountprice, images,
     dealName, dealDescription, dealType, dealDiscountType, dealDiscountValue, dealTotal, finalPrice, dealStartDate,
     dealEndDate, dealProducts, dealImages, token, resetForm, backendUrl, logout
   ]);
@@ -392,6 +453,17 @@ const Add = () => {
       setName={setName}
       description={description}
       setDescription={setDescription}
+      ingredients={ingredients}
+      setIngredients={setIngredients}
+      howToUse={howToUse}
+      setHowToUse={setHowToUse}
+      benefits={benefits}
+      setBenefits={setBenefits}
+      variants={variants}
+      handleAddVariant={handleAddVariant}
+      handleRemoveVariant={handleRemoveVariant}
+      handleVariantChange={handleVariantChange}
+      handleVariantImageChange={handleVariantImageChange}
       cost={cost}
       setCost={setCost}
       price={price}
@@ -407,7 +479,7 @@ const Add = () => {
       productProfit={productProfit}
       productProfitPercentage={productProfitPercentage}
     />
-  ), [categories, category, subCategory, name, description, cost, price, discountprice, quantity, bestseller, productSavings, productDiscountPercentage, productProfit, productProfitPercentage]);
+  ), [categories, category, subCategory, name, description, ingredients, howToUse, benefits, variants, handleAddVariant, handleRemoveVariant, handleVariantChange, handleVariantImageChange, cost, price, discountprice, quantity, bestseller, productSavings, productDiscountPercentage, productProfit, productProfitPercentage]);
 
   const dealSection = useMemo(() => (
     <DealSection
@@ -603,6 +675,17 @@ const ProductSection = memo(({
   setName,
   description,
   setDescription,
+  ingredients,
+  setIngredients,
+  howToUse,
+  setHowToUse,
+  benefits,
+  setBenefits,
+  variants = [],
+  handleAddVariant,
+  handleRemoveVariant,
+  handleVariantChange,
+  handleVariantImageChange,
   cost,
   setCost,
   price,
@@ -621,6 +704,10 @@ const ProductSection = memo(({
   const finalPrice = discountprice && discountprice > 0 ? Number(discountprice) : Number(price);
   const hasDiscount = discountprice && discountprice > 0 && discountprice < price;
   const hasCost = cost && cost > 0;
+
+  // Count ingredients & benefits for display
+  const ingredientCount = ingredients ? ingredients.split(/[,\n]/).filter(i => i.trim()).length : 0;
+  const benefitCount = benefits ? benefits.split(/[,\n]/).filter(b => b.trim()).length : 0;
 
   // Get current category's subcategories
   const currentCategory = categories.find(cat => cat._id === category);
@@ -648,6 +735,57 @@ const ProductSection = memo(({
           placeholder="Describe your product in detail..."
           required
           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors h-24 sm:h-32 resize-none text-sm sm:text-base"
+        />
+      </div>
+
+      {/* Ingredients Section */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Ingredients (Optional)
+          </label>
+          <span className="text-xs text-gray-500">{ingredientCount} ingredient(s)</span>
+        </div>
+        <textarea
+          value={ingredients}
+          onChange={(e) => setIngredients(e.target.value)}
+          placeholder="Enter ingredients separated by commas (e.g. Aloe Vera, Rose Water, Vitamin E, Argan Oil)"
+          rows="3"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-sm sm:text-base"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Separate multiple ingredients with commas or line breaks.
+        </p>
+      </div>
+
+      {/* How To Use Section */}
+      <div className="mb-4 sm:mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          How to Use (Optional)
+        </label>
+        <textarea
+          value={howToUse}
+          onChange={(e) => setHowToUse(e.target.value)}
+          placeholder="Provide instructions and directions for using this product..."
+          rows="3"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-sm sm:text-base"
+        />
+      </div>
+
+      {/* Benefits Section */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Key Benefits (Optional)
+          </label>
+          <span className="text-xs text-gray-500">{benefitCount} benefit(s)</span>
+        </div>
+        <textarea
+          value={benefits}
+          onChange={(e) => setBenefits(e.target.value)}
+          placeholder="Enter key benefits separated by commas (e.g. Deeply Hydrating, Nourishes Hair, 100% Organic)"
+          rows="2"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-sm sm:text-base"
         />
       </div>
 
@@ -694,12 +832,135 @@ const ProductSection = memo(({
         </div>
       </div>
 
-      {/* Prices / Quantity */}
+      {/* Product Variants (e.g. 250ml, 500ml, 750ml) */}
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+          <div>
+            <h4 className="text-sm font-bold text-gray-800 flex items-center">
+              <FontAwesomeIcon icon={faBoxes} className="mr-2 text-black" />
+              Product Variants (Sizes / Volumes e.g., 250ml, 500ml)
+            </h4>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Add individual size variants with specific images, prices and stock for this product.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddVariant}
+            className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded hover:bg-gray-800 flex items-center transition-colors shadow-sm"
+          >
+            <FontAwesomeIcon icon={faPlusCircle} className="mr-1.5" />
+            Add Variant
+          </button>
+        </div>
+
+        {variants.length === 0 ? (
+          <div className="text-center py-4 border border-dashed border-gray-300 rounded text-xs text-gray-500 bg-white">
+            No size variants added yet. Click &quot;+ Add Variant&quot; if this product comes in multiple sizes with individual photos.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {variants.map((v, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white p-3 rounded-lg border border-gray-200 items-center shadow-sm">
+                {/* Variant Image */}
+                <div className="sm:col-span-2 flex flex-col items-center">
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Image</label>
+                  <label htmlFor={`variantImg_${idx}`} className="cursor-pointer relative group block w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 hover:border-black overflow-hidden flex items-center justify-center bg-gray-50 transition-colors">
+                    {v.imagePreview || v.image ? (
+                      <img src={v.imagePreview || v.image} alt={v.name || 'Variant'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-400 p-0.5">
+                        <FontAwesomeIcon icon={faCloudUploadAlt} className="text-xs mb-0.5" />
+                        <span className="text-[9px] leading-tight">Photo</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      id={`variantImg_${idx}`}
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleVariantImageChange(idx, e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Variant Name */}
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Variant Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 250ml"
+                    value={v.name}
+                    onChange={(e) => handleVariantChange(idx, 'name', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black"
+                    required
+                  />
+                </div>
+
+                {/* Price */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Price (Rs.) *</label>
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={v.price}
+                    onChange={(e) => handleVariantChange(idx, 'price', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black"
+                    required
+                  />
+                </div>
+
+                {/* Discount Price */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Disc Price</label>
+                  <input
+                    type="number"
+                    placeholder="Discount"
+                    value={v.discountprice}
+                    onChange={(e) => handleVariantChange(idx, 'discountprice', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black"
+                  />
+                </div>
+
+                {/* Stock */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Stock</label>
+                  <input
+                    type="number"
+                    placeholder="Stock"
+                    value={v.quantity}
+                    onChange={(e) => handleVariantChange(idx, 'quantity', e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-black"
+                  />
+                </div>
+
+                {/* Remove Button */}
+                <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVariant(idx)}
+                    className="p-2 text-red-500 hover:text-red-700 rounded transition-colors"
+                    title="Remove variant"
+                  >
+                    <FontAwesomeIcon icon={faTrashAlt} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Base Prices / Quantity */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <InputField label="Cost Price" value={cost} onChange={setCost} />
-        <InputField label="Selling Price *" value={price} onChange={setPrice} required />
-        <InputField label="Discount Price" value={discountprice} onChange={setDiscountprice} />
-        <InputField label="Quantity *" value={quantity} onChange={setQuantity} required />
+        <InputField label="Base Selling Price *" value={price} onChange={setPrice} required />
+        <InputField label="Base Discount Price" value={discountprice} onChange={setDiscountprice} />
+        <InputField label="Base Stock / Quantity *" value={quantity} onChange={setQuantity} required />
       </div>
 
       {/* Product Summary */}

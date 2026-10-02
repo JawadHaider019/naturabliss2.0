@@ -12,30 +12,30 @@ const OurPolicy = () => {
       icon: faShieldAlt,
       title: "Quality Guaranteed",
       description: "100% authentic, premium quality natural ingredients in all our skincare and beauty products",
-      color: "text-black"
+      color: "text-[#587a3b]"
     },
     {
       icon: faAward,
       title: "Natural & Safe",
       description: "All products made with pure, certified natural ingredients safe for sensitive skin types",
-      color: "text-black"
+      color: "text-[#587a3b]"
     },
     {
       icon: faShippingFast,
       title: "Fast Delivery",
       description: "Quick and reliable shipping service for natural skincare products throughout Pakistan",
-      color: "text-black"
+      color: "text-[#587a3b]"
     }
   ];
 
   return (
-    <div className="py-20 border-y border-gray-200">
+    <div className="py-16 border-t border-gray-200">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
-             <div className="text-center text-3xl">
+          <div className="text-center text-3xl">
             <Title text1={'OUR'} text2={'POLICIES'} />
           </div>
-          
+
           <p className="text-gray-600 max-w-2xl mx-auto">
             Discover our customer-first policies designed for your complete satisfaction with Natura Bliss natural skincare products
           </p>
@@ -43,27 +43,27 @@ const OurPolicy = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {policies.map((policy, index) => (
-            <div 
+            <div
               key={index}
-              className="bg-white p-8 border border-gray-200 text-center group hover:shadow-lg transition-all duration-300 hover:border-green-200"
+              className="bg-white p-8 border border-gray-200 text-center group hover:shadow-lg transition-all duration-300 hover:border-[#587a3b]/40 rounded-sm"
             >
-              <div className={`w-16 h-16 bg-white border border-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 ${policy.color}`}>
-                <FontAwesomeIcon 
-                  icon={policy.icon} 
-                  className="text-2xl" 
+              <div className={`w-16 h-16 bg-white border border-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:border-[#587a3b]/30 group-hover:bg-[#587a3b]/10 transition-all duration-300 ${policy.color}`}>
+                <FontAwesomeIcon
+                  icon={policy.icon}
+                  className="text-2xl"
                 />
               </div>
-              
-              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4">
+
+              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">
                 {policy.title}
               </h3>
-              
+
               <p className="text-gray-600 leading-relaxed text-sm">
                 {policy.description}
               </p>
-              
+
               {/* Hover effect line */}
-              <div className="w-0 group-hover:w-12 h-0.5 bg-green-500 mx-auto mt-4 transition-all duration-300"></div>
+              <div className="w-0 group-hover:w-12 h-0.5 bg-[#587a3b] mx-auto mt-4 transition-all duration-300"></div>
             </div>
           ))}
         </div>

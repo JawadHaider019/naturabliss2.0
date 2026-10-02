@@ -20,27 +20,111 @@ const generateSlug = (name) => {
     .replace(/^-+|-+$/g, '');
 };
 
+// Helper function to parse array fields (JSON string, comma-separated string, or array)
+const parseArrayField = (field) => {
+  if (!field) return [];
+  if (Array.isArray(field)) return field.map(item => String(item).trim()).filter(Boolean);
+  if (typeof field === 'string') {
+    try {
+      const parsed = JSON.parse(field);
+      if (Array.isArray(parsed)) return parsed.map(item => String(item).trim()).filter(Boolean);
+    } catch (e) {
+      // If not JSON, split by comma or newline
+      return field
+        .split(/[,\n]/)
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+};
+
+// Helper function to extract a file by fieldname whether req.files is array or object
+const getFileByFieldname = (files, fieldname) => {
+  if (!files) return null;
+  if (Array.isArray(files)) {
+    return files.find(f => f.fieldname === fieldname) || null;
+  }
+  if (typeof files === 'object') {
+    const val = files[fieldname];
+    if (Array.isArray(val)) return val[0] || null;
+    return val || null;
+  }
+  return null;
+};
+
+// Helper function to parse variants and upload variant images if provided
+const parseVariantsField = async (field, files) => {
+  if (!field) return [];
+  let arr = field;
+  if (typeof field === 'string') {
+    try {
+      arr = JSON.parse(field);
+    } catch (e) {
+      return [];
+    }
+  }
+  if (Array.isArray(arr)) {
+    const parsedList = [];
+    for (let idx = 0; idx < arr.length; idx++) {
+      const v = arr[idx];
+      if (!v || (!v.name && v.price === undefined)) continue;
+
+      let variantImage = typeof v.image === 'string' ? v.image.trim() : '';
+
+      // Check if a file was uploaded for this variant
+      const variantFile = getFileByFieldname(files, `variantImage_${idx}`);
+      if (variantFile) {
+        try {
+          const uploadRes = await cloudinary.uploader.upload(variantFile.path, { resource_type: 'image', folder: 'products' });
+          variantImage = uploadRes.secure_url;
+        } catch (uploadErr) {
+          console.error(`Error uploading variant image at index ${idx}:`, uploadErr);
+        }
+      }
+
+      parsedList.push({
+        name: String(v.name || '').trim(),
+        price: Number(v.price) || 0,
+        discountprice: Number(v.discountprice) || 0,
+        quantity: Number(v.quantity) || 0,
+        sku: String(v.sku || '').trim(),
+        image: variantImage
+      });
+    }
+    return parsedList.filter(v => v.name.length > 0);
+  }
+  return [];
+};
+
 // ------------------- ADD PRODUCT -------------------
 const addProduct = async (req, res) => {
   try {
-    const { name, description, cost, price, discountprice, quantity, category, subcategory, bestseller, status } = req.body;
+    const { name, description, cost, price, discountprice, quantity, category, subcategory, bestseller, status, ingredients, howToUse, benefits, variants } = req.body;
 
-    const imagesFiles = ['image1', 'image2', 'image3', 'image4']
-      .map(key => req.files[key]?.[0])
+    const mainImageKeys = ['image1', 'image2', 'image3', 'image4'];
+    const imagesFiles = mainImageKeys
+      .map(key => getFileByFieldname(req.files, key))
       .filter(Boolean);
 
     const imagesUrl = await Promise.all(
       imagesFiles.map(async file => {
-        const result = await cloudinary.uploader.upload(file.path, { resource_type: 'image' });
+        const result = await cloudinary.uploader.upload(file.path, { resource_type: 'image', folder: 'products' });
         return result.secure_url;
       })
     );
+
+    const parsedVariants = await parseVariantsField(variants, req.files);
 
     const productData = {
       name,
       description,
       category,
       subcategory,
+      ingredients: parseArrayField(ingredients),
+      howToUse: typeof howToUse === 'string' ? howToUse.trim() : (howToUse || ''),
+      benefits: parseArrayField(benefits),
+      variants: parsedVariants,
       cost: Number(cost),
       price: Number(price),
       discountprice: Number(discountprice),
@@ -157,7 +241,7 @@ const singleProduct = async (req, res) => {
 // ------------------- UPDATE PRODUCT -------------------
 const updateProduct = async (req, res) => {
   try {
-    const fields = ['id', 'name', 'description', 'cost', 'price', 'discountprice', 'quantity', 'category', 'subcategory', 'bestseller', 'status', 'removedImages'];
+    const fields = ['id', 'name', 'description', 'cost', 'price', 'discountprice', 'quantity', 'category', 'subcategory', 'bestseller', 'status', 'ingredients', 'howToUse', 'benefits', 'variants', 'removedImages'];
     fields.forEach(field => {
       console.log(`${field}:`, req.body[field]);
     });
@@ -174,6 +258,10 @@ const updateProduct = async (req, res) => {
       subcategory,
       bestseller,
       status,
+      ingredients,
+      howToUse,
+      benefits,
+      variants,
       removedImages
     } = req.body;
 
@@ -196,6 +284,10 @@ const updateProduct = async (req, res) => {
       description: description || existingProduct.description,
       category: category || existingProduct.category,
       subcategory: subcategory || existingProduct.subcategory,
+      ingredients: ingredients !== undefined ? parseArrayField(ingredients) : existingProduct.ingredients,
+      howToUse: howToUse !== undefined ? (typeof howToUse === 'string' ? howToUse.trim() : howToUse) : existingProduct.howToUse,
+      benefits: benefits !== undefined ? parseArrayField(benefits) : existingProduct.benefits,
+      variants: variants !== undefined ? await parseVariantsField(variants, req.files) : existingProduct.variants,
       cost: Number(cost) || existingProduct.cost,
       price: Number(price) || existingProduct.price,
       discountprice: Number(discountprice) || existingProduct.discountprice,
@@ -238,20 +330,27 @@ const updateProduct = async (req, res) => {
     }
 
     // Handle new image uploads
-    if (req.files && Object.keys(req.files).length > 0) {
-      const newImages = [];
+    const newMainFiles = [];
+    if (Array.isArray(req.files)) {
+      req.files.forEach(file => {
+        if (/^image\d+$/.test(file.fieldname)) {
+          newMainFiles.push(file);
+        }
+      });
+    } else if (req.files && typeof req.files === 'object') {
       let index = 1;
       while (req.files[`image${index}`]) {
-        newImages.push(req.files[`image${index}`][0]);
+        const file = req.files[`image${index}`][0] || req.files[`image${index}`];
+        if (file) newMainFiles.push(file);
         index++;
       }
+    }
 
-      if (newImages.length > 0) {
-        const newImageUrls = await Promise.all(
-          newImages.map(file => cloudinary.uploader.upload(file.path, { resource_type: "image", folder: "products" }).then(res => res.secure_url))
-        );
-        finalImages = [...finalImages, ...newImageUrls];
-      }
+    if (newMainFiles.length > 0) {
+      const newImageUrls = await Promise.all(
+        newMainFiles.map(file => cloudinary.uploader.upload(file.path, { resource_type: "image", folder: "products" }).then(res => res.secure_url))
+      );
+      finalImages = [...finalImages, ...newImageUrls];
     }
 
     updateData.image = finalImages;

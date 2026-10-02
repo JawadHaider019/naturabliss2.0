@@ -25,7 +25,7 @@ const FlipUnit = ({ value }) => (
         animate={{ rotateX: 0, opacity: 1 }}
         exit={{ rotateX: -90, opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="absolute inset-0 bg-black text-white  flex items-center justify-center text-lg sm:text-xl font-bold shadow-md"
+        className="absolute inset-0 bg-[#587a3b] text-white  flex items-center justify-center text-lg sm:text-xl font-bold shadow-md"
       >
         {value}
       </motion.div>
@@ -305,7 +305,7 @@ const DealItem = memo(
             {dealTypeBadge.label}
           </div>
           {hasDiscount && (
-            <div className="rounded-full bg-black text-white px-2 py-1 text-xs">
+            <div className="rounded-full bg-[#587a3b] text-white px-2 py-1 text-xs">
               {discountPercentage}% OFF
             </div>
           )}
@@ -347,7 +347,7 @@ const DealItem = memo(
               {currency} {displayPrice.toFixed(2)}
             </p>
             {hasDiscount && (
-              <p className="text-sm text-gray-500 line-through font-medium">
+              <p className="text-sm text-gray-500 line-through font-medium hidden sm:inline">
                 {currency} {price.toFixed(2)}
               </p>
             )}
@@ -362,7 +362,7 @@ const DealItem = memo(
           {isFlashSale && endDate && <CountdownTimer endDate={endDate} />}
 
           <div className="pt-2">
-            <button className="w-full bg-black text-white py-2 text-sm font-semibold hover:bg-gray-800 transition-colors duration-200 uppercase tracking-wide">
+            <button className="w-full bg-[#587a3b] text-white py-2 text-sm font-semibold hover:bg-[#486530] transition-colors duration-200 uppercase tracking-wide">
               View Deal
             </button>
           </div>

@@ -34,6 +34,17 @@ const ShopContextProvider = ({ children }) => {
   const [deliverySettings, setDeliverySettings] = useState(null);
   const [deliverySettingsLoading, setDeliverySettingsLoading] = useState(false);
 
+  // ==================== COUPON / PROMO CODE STATE ====================
+  const [appliedCoupon, setAppliedCoupon] = useState(() => {
+    try {
+      const saved = localStorage.getItem('appliedCoupon');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const [loading, setLoading] = useState({
     products: { status: false, message: "Loading products..." },
     categories: { status: false, message: "Loading categories..." },
@@ -230,9 +241,11 @@ const ShopContextProvider = ({ children }) => {
     // Use functional updates and create new objects to ensure re-render
     setCartItems({});
     setCartDeals({});
+    setAppliedCoupon(null);
     
     localStorage.removeItem('cartItems');
     localStorage.removeItem('cartDeals');
+    localStorage.removeItem('appliedCoupon');
     
     // Force state synchronization
     setTimeout(() => {
@@ -861,9 +874,11 @@ const ShopContextProvider = ({ children }) => {
 
   const getDeliveryCharge = useCallback((subtotal = 0) => {
     if (!deliverySettings) return 0;
-    const { mode, fixedCharge, freeDeliveryAbove } = deliverySettings;
+    const { mode, fixedCharge, enableFreeDelivery, freeDeliveryAbove } = deliverySettings;
 
-    if (freeDeliveryAbove > 0 && subtotal >= freeDeliveryAbove) {
+    const isFreeEnabled = enableFreeDelivery ?? (freeDeliveryAbove > 0);
+
+    if (isFreeEnabled && freeDeliveryAbove > 0 && subtotal >= freeDeliveryAbove) {
       return 0;
     }
 
@@ -872,14 +887,16 @@ const ShopContextProvider = ({ children }) => {
 
   const isFreeDeliveryAvailable = useCallback((subtotal = 0) => {
     if (!deliverySettings) return false;
-    const { freeDeliveryAbove } = deliverySettings;
-    return freeDeliveryAbove > 0 && subtotal >= freeDeliveryAbove;
+    const { enableFreeDelivery, freeDeliveryAbove } = deliverySettings;
+    const isFreeEnabled = enableFreeDelivery ?? (freeDeliveryAbove > 0);
+    return isFreeEnabled && freeDeliveryAbove > 0 && subtotal >= freeDeliveryAbove;
   }, [deliverySettings]);
 
   const getAmountForFreeDelivery = useCallback((subtotal = 0) => {
     if (!deliverySettings) return 0;
-    const { freeDeliveryAbove } = deliverySettings;
-    return freeDeliveryAbove > 0 && subtotal < freeDeliveryAbove ? freeDeliveryAbove - subtotal : 0;
+    const { enableFreeDelivery, freeDeliveryAbove } = deliverySettings;
+    const isFreeEnabled = enableFreeDelivery ?? (freeDeliveryAbove > 0);
+    return isFreeEnabled && freeDeliveryAbove > 0 && subtotal < freeDeliveryAbove ? freeDeliveryAbove - subtotal : 0;
   }, [deliverySettings]);
 
   const getCart = useCallback(async (token) => {
@@ -997,6 +1014,72 @@ const ShopContextProvider = ({ children }) => {
     }
   }, [token, getCart]);
 
+  // ==================== COUPON FUNCTIONS ====================
+
+  const getCouponDiscount = useCallback((subtotalOverride) => {
+    if (!appliedCoupon) return 0;
+    const subtotal = subtotalOverride !== undefined ? subtotalOverride : getCartSubtotal();
+    if (subtotal <= 0) return 0;
+
+    if (appliedCoupon.minOrderAmount > 0 && subtotal < appliedCoupon.minOrderAmount) {
+      return 0;
+    }
+
+    let discount = 0;
+    if (appliedCoupon.discountType === 'percentage') {
+      discount = (subtotal * appliedCoupon.discountValue) / 100;
+      if (appliedCoupon.maxDiscountAmount > 0 && discount > appliedCoupon.maxDiscountAmount) {
+        discount = appliedCoupon.maxDiscountAmount;
+      }
+    } else {
+      discount = Math.min(appliedCoupon.discountValue, subtotal);
+    }
+    return Math.round(discount * 100) / 100;
+  }, [appliedCoupon, getCartSubtotal]);
+
+  const applyCoupon = useCallback(async (code) => {
+    if (!code || !code.trim()) {
+      toast.error('Please enter a promo code');
+      return { success: false, message: 'Please enter a promo code' };
+    }
+
+    const subtotal = getCartSubtotal();
+    if (subtotal <= 0) {
+      toast.error('Your cart is empty');
+      return { success: false, message: 'Your cart is empty' };
+    }
+
+    setCouponLoading(true);
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/coupon/validate`, {
+        code: code.trim().toUpperCase(),
+        cartAmount: subtotal,
+      });
+
+      if (res.data.success) {
+        setAppliedCoupon(res.data.coupon);
+        localStorage.setItem('appliedCoupon', JSON.stringify(res.data.coupon));
+        toast.success(res.data.message || 'Promo code applied!');
+        return { success: true, coupon: res.data.coupon };
+      } else {
+        toast.error(res.data.message || 'Invalid promo code');
+        return { success: false, message: res.data.message };
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to validate promo code';
+      toast.error(msg);
+      return { success: false, message: msg };
+    } finally {
+      setCouponLoading(false);
+    }
+  }, [BACKEND_URL, getCartSubtotal]);
+
+  const removeCoupon = useCallback(() => {
+    setAppliedCoupon(null);
+    localStorage.removeItem('appliedCoupon');
+    toast.info('Promo code removed');
+  }, []);
+
   // ==================== CONTEXT VALUE ====================
 
   const contextValue = useMemo(() => ({
@@ -1046,6 +1129,13 @@ const ShopContextProvider = ({ children }) => {
     getCart,
     clearCart,
     
+    // Coupon functions & state
+    appliedCoupon,
+    couponLoading,
+    getCouponDiscount,
+    applyCoupon,
+    removeCoupon,
+
     // Deal functions
     getDealById,
     isDealInCart,
@@ -1100,6 +1190,11 @@ const ShopContextProvider = ({ children }) => {
     getCartSubtotal,
     getTotalDiscount,
     getCartTotal,
+    appliedCoupon,
+    couponLoading,
+    getCouponDiscount,
+    applyCoupon,
+    removeCoupon,
     getDealById,
     isDealInCart,
     getDealQuantityInCart,

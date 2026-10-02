@@ -14,20 +14,23 @@ import {
   markAllNotificationsAsRead,
   getOrderDetails,
   getGuestOrderDetails,
-  getGuestOrders
+  getGuestOrders,
+  verifyAdvancePayment
 } from "../controllers/orderController.js"
 import { authUser } from "../middleware/auth.js"
 import adminAuth from "../middleware/adminAuth.js"
+import upload from "../middleware/multer.js"
 
 const orderRoutes = express.Router()
 
 // Admin routes
 orderRoutes.get("/list", adminAuth, allOrders)
 orderRoutes.post("/status", adminAuth, updateStatus)
+orderRoutes.post("/verify-payment", adminAuth, verifyAdvancePayment)
 orderRoutes.get("/admin/notifications", adminAuth, getAdminNotifications)
 
-// 🆕 PUBLIC ORDER PLACEMENT (for both guest and logged-in users)
-orderRoutes.post("/place", placeOrder) // No auth middleware!
+// 🆕 PUBLIC ORDER PLACEMENT (with optional payment screenshot file)
+orderRoutes.post("/place", upload.any(), placeOrder)
 
 // User routes (require auth)
 orderRoutes.post("/userorders", authUser, userOrders)

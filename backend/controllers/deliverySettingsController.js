@@ -14,6 +14,7 @@ export const getDeliverySettings = async (req, res) => {
     res.json({
       mode: "fixed",
       fixedCharge: 0,
+      enableFreeDelivery: false,
       freeDeliveryAbove: 0,
     });
   } catch (err) {
@@ -25,7 +26,7 @@ export const getDeliverySettings = async (req, res) => {
 // Create or update delivery settings
 export const saveDeliverySettings = async (req, res) => {
   try {
-    const { mode, fixedCharge, freeDeliveryAbove } = req.body;
+    const { mode, fixedCharge, enableFreeDelivery, freeDeliveryAbove } = req.body;
 
     // Basic validation
     if (!["fixed", "api"].includes(mode)) {
@@ -38,7 +39,12 @@ export const saveDeliverySettings = async (req, res) => {
     // Update existing or create if not exists
     const updatedSettings = await DeliverySettings.findOneAndUpdate(
       {}, // filter: empty means latest
-      { mode, fixedCharge, freeDeliveryAbove },
+      { 
+        mode, 
+        fixedCharge: Number(fixedCharge) || 0, 
+        enableFreeDelivery: Boolean(enableFreeDelivery), 
+        freeDeliveryAbove: Number(freeDeliveryAbove) || 0 
+      },
       { new: true, upsert: true } // upsert = create if not exists
     );
 

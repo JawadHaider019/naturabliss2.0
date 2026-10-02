@@ -12,6 +12,10 @@ const deliverySettingsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    enableFreeDelivery: {
+      type: Boolean,
+      default: false,
+    },
     freeDeliveryAbove: {
       type: Number,
       default: 0,

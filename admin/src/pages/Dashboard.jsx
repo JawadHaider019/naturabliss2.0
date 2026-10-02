@@ -10,7 +10,7 @@ import {
   faComments, faStar, faReply, faChartBar, faCalendarAlt,
   faMoneyBillTrendUp, faChartSimple, faCalendarWeek
 } from '@fortawesome/free-solid-svg-icons';
-import { backendUrl } from "../App";
+import { backendUrl, currency } from "../App";
 
 import {
   Chart as ChartJS,
@@ -46,7 +46,7 @@ const StatCard = React.memo(({ title, value, icon, color, change, subtitle, tren
       <div className="flex-1 min-w-0">
         <p className="text-gray-600 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 lg:mb-2 truncate">{title}</p>
         <p className="text-base sm:text-lg lg:text-2xl font-bold text-gray-900 truncate">
-          {typeof value === 'number' && value >= 1000 ? `₹${value.toLocaleString()}` : value}
+          {typeof value === 'number' && value >= 1000 ? `Rs. ${value.toLocaleString()}` : value}
         </p>
         {subtitle && <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 truncate">{subtitle}</p>}
         {change && (
@@ -362,7 +362,7 @@ const Dashboard = () => {
         data: {
           labels: profitTrend.map(item => item.period),
           datasets: [{
-            label: 'Profit (₹)',
+            label: 'Profit (Rs.)',
             data: profitTrend.map(item => item.profit),
             backgroundColor: 'rgba(16, 185, 129, 0.8)',
             borderColor: 'rgb(16, 185, 129)',
@@ -385,7 +385,7 @@ const Dashboard = () => {
               beginAtZero: true,
               ticks: {
                 callback: function(value) {
-                  return '₹' + value.toLocaleString();
+                  return 'Rs. ' + value.toLocaleString();
                 },
                 font: { size: window.innerWidth < 640 ? 8 : 10 }
               }
@@ -525,7 +525,7 @@ const Dashboard = () => {
               beginAtZero: true,
               ticks: {
                 callback: function(value) {
-                  return '₹' + value.toLocaleString();
+                  return 'Rs. ' + value.toLocaleString();
                 },
                 font: { size: window.innerWidth < 640 ? 8 : 10 }
               }
@@ -574,7 +574,7 @@ const Dashboard = () => {
           data: {
             labels: ['Product Revenue', 'Deal Revenue', 'Total Cost', 'Total Profit'],
             datasets: [{
-              label: 'Amount (₹)',
+              label: 'Amount (Rs.)',
               data: [combinedMetrics.productRevenue, combinedMetrics.dealRevenue, combinedMetrics.totalCost, combinedMetrics.totalProfit],
               backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(239, 68, 68, 0.8)', 'rgba(16, 185, 129, 0.8)'],
               borderColor: ['rgb(59, 130, 246)', 'rgb(139, 92, 246)', 'rgb(239, 68, 68)', 'rgb(16, 185, 129)'],
@@ -596,7 +596,7 @@ const Dashboard = () => {
               y: {
                 ticks: {
                   callback: function(value) {
-                    return '₹' + value.toLocaleString();
+                    return 'Rs. ' + value.toLocaleString();
                   },
                   font: { size: window.innerWidth < 640 ? 8 : 10 }
                 }
@@ -843,14 +843,14 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-5 lg:mb-6">
         <StatCard 
           title="Total Profit" 
-          value={`₹${totalProfit.toLocaleString()}`}
+          value={`Rs. ${totalProfit.toLocaleString()}`}
           icon={faMoneyBillTrendUp}
           color="bg-green-500"
           subtitle={`${totalMonths} months`}
         />
         <StatCard 
           title="Avg Monthly" 
-          value={`₹${averageMonthlyProfit.toLocaleString()}`}
+          value={`Rs. ${averageMonthlyProfit.toLocaleString()}`}
           icon={faChartSimple}
           color="bg-blue-500"
           subtitle={`${profitabilityRate.toFixed(1)}% profitable`}
@@ -864,7 +864,7 @@ const Dashboard = () => {
         />
         <StatCard 
           title="Best Month" 
-          value={bestMonth ? `₹${bestMonth.profit.toLocaleString()}` : 'N/A'}
+          value={bestMonth ? `Rs. ${bestMonth.profit.toLocaleString()}` : 'N/A'}
           icon={faChartLine}
           color="bg-purple-500"
           subtitle={bestMonth ? bestMonth.period : 'No data'}
@@ -992,22 +992,22 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4 lg:mb-6">
           <StatCard 
             title="Total Revenue" 
-            value={`₹${combinedMetrics.totalRevenue?.toLocaleString()}`} 
-            subtitle={`P: ₹${combinedMetrics.productRevenue?.toLocaleString()} | D: ₹${combinedMetrics.dealRevenue?.toLocaleString()}`}
+            value={`Rs. ${combinedMetrics.totalRevenue?.toLocaleString()}`} 
+            subtitle={`P: Rs. ${combinedMetrics.productRevenue?.toLocaleString()} | D: Rs. ${combinedMetrics.dealRevenue?.toLocaleString()}`}
             icon={faDollarSign} 
             color="bg-green-500" 
           />
           <StatCard 
             title="Total Cost" 
-            value={`₹${combinedMetrics.totalCost?.toLocaleString()}`} 
-            subtitle={`P: ₹${combinedMetrics.productCost?.toLocaleString()} | D: ₹${combinedMetrics.dealCost?.toLocaleString()}`}
+            value={`Rs. ${combinedMetrics.totalCost?.toLocaleString()}`} 
+            subtitle={`P: Rs. ${combinedMetrics.productCost?.toLocaleString()} | D: Rs. ${combinedMetrics.dealCost?.toLocaleString()}`}
             icon={faChartLine} 
             color="bg-red-500" 
           />
           <StatCard 
             title="Total Profit" 
-            value={`₹${combinedMetrics.totalProfit?.toLocaleString()}`} 
-            subtitle={`P: ₹${combinedMetrics.productProfit?.toLocaleString()} | D: ₹${combinedMetrics.dealProfit?.toLocaleString()}`}
+            value={`Rs. ${combinedMetrics.totalProfit?.toLocaleString()}`} 
+            subtitle={`P: Rs. ${combinedMetrics.productProfit?.toLocaleString()} | D: Rs. ${combinedMetrics.dealProfit?.toLocaleString()}`}
             icon={faChartPie} 
             color="bg-blue-500" 
           />
@@ -1045,10 +1045,10 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4 lg:mb-6">
           <StatCard 
             title="Inventory Value" 
-            value={`₹${combinedMetrics.totalInventoryValue?.toLocaleString()}`} 
-            subtitle={`P: ₹${stats.inventoryValue?.toLocaleString()} | D: ₹${stats.dealInventoryValue?.toLocaleString()}`}
-            icon={faWarehouse} 
-            color="bg-green-500" 
+            value={`Rs. ${combinedMetrics.totalInventoryValue?.toLocaleString()}`} 
+            subtitle={`P: Rs. ${stats.inventoryValue?.toLocaleString()} | D: Rs. ${stats.dealInventoryValue?.toLocaleString()}`}
+            icon={faWarehouse}
+            color="bg-green-500"
           />
           <StatCard 
             title="Total Orders" 
@@ -1190,7 +1190,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right ml-1 sm:ml-2 flex-shrink-0">
-                      <p className="font-semibold text-gray-900 text-[10px] sm:text-xs">₹{order.amount}</p>
+                      <p className="font-semibold text-gray-900 text-[10px] sm:text-xs">Rs. {order.amount}</p>
                       <StatusBadge status={order.status} />
                     </div>
                   </div>
@@ -1224,7 +1224,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right ml-1 sm:ml-2 flex-shrink-0">
                       <StockBadge stock={product.quantity} />
-                      <p className="text-[8px] sm:text-xs text-gray-600">₹{(product.quantity * product.cost).toLocaleString()}</p>
+                      <p className="text-[8px] sm:text-xs text-gray-600">Rs. {(product.quantity * product.cost).toLocaleString()}</p>
                     </div>
                   </div>
                 ))

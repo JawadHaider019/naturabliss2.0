@@ -59,7 +59,7 @@ const BestSeller = () => {
   const NextArrow = ({ onClick }) => {
     return (
       <button
-        className="absolute right-2 top-1/2 z-10 -translate-y-1/2 bg-black/90 hover:bg-black text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
+        className="absolute right-2 top-1/2 z-10 -translate-y-1/2 bg-[#587a3b]/90 hover:bg-[#587a3b] text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
         onClick={onClick}
         aria-label="Next products"
       >
@@ -72,7 +72,7 @@ const BestSeller = () => {
   const PrevArrow = ({ onClick }) => {
     return (
       <button
-        className="absolute left-2 top-1/2 z-10 -translate-y-1/2 bg-black/90 hover:bg-black text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
+        className="absolute left-2 top-1/2 z-10 -translate-y-1/2 bg-[#587a3b]/90 hover:bg-[#587a3b] text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 border border-white/20 hidden sm:flex"
         onClick={onClick}
         aria-label="Previous products"
       >
@@ -161,13 +161,13 @@ const BestSeller = () => {
       }
     ],
     appendDots: dots => (
-      <div className="mt-6 md:mt-8">
-        <ul className="flex justify-center space-x-1 md:space-x-2"> {dots} </ul>
+      <div className="mt-4">
+        <ul className="flex justify-center items-center gap-1.5 m-0 p-0"> {dots} </ul>
       </div>
     ),
     customPaging: i => (
       <button
-        className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-300 transition-all duration-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        className="w-2 h-2 rounded-full bg-gray-300 transition-colors duration-200 hover:bg-gray-400 focus:outline-none"
         aria-label={`Go to slide ${i + 1}`}
       />
     )
@@ -219,7 +219,7 @@ const BestSeller = () => {
         <div className="py-4 text-center text-2xl md:text-3xl">
           <Title text1={"BEST"} text2={"SELLERS"} />
           <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4">
-            From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+            From Nature to Your Shelf. Discover the Organic Skincare Products Everyone's Talking About.
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
@@ -230,11 +230,11 @@ const BestSeller = () => {
   }
 
   return (
-    <div className="my-16 md:my-24">
+    <div className="my-10 md:my-16">
       <div className="py-2 text-center text-2xl md:text-3xl">
         <Title text1={"BEST"} text2={"SELLERS"} />
         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
-          From Nature to Your Shelf — Discover the Organic Skincare Products Everyone's Talking About.
+          From Nature to Your Shelf. Discover the Organic Skincare Products Everyone's Talking About.
         </p>
       </div>
 
@@ -243,7 +243,7 @@ const BestSeller = () => {
           No best sellers available at the moment. Check back soon!
         </div>
       ) : showSlider ? (
-        <div className="relative px-2 sm:px-4">
+        <div className="bestseller-slider relative px-2 sm:px-4">
           <Slider ref={sliderRef} {...sliderSettings}>
             {bestSeller.map((item) => (
               <div key={item._id || item.id} className="px-1 sm:px-2">
@@ -293,24 +293,51 @@ const BestSeller = () => {
         </div>
       )}
 
-      {/* Fixed style tag without jsx attribute */}
+      {/* Scoped style tag */}
       <style>
         {`
-          .slick-slide > div {
+          .bestseller-slider .slick-slide > div {
             height: 100%;
           }
-          .slick-track {
+          .bestseller-slider .slick-track {
             display: flex !important;
           }
-          .slick-slide {
+          .bestseller-slider .slick-slide {
             height: inherit !important;
+          }
+          .bestseller-slider .slick-dots {
+            position: static !important;
+            margin-top: 0.75rem !important;
+          }
+          .bestseller-slider .slick-dots li {
+            margin: 0 !important;
+            width: auto !important;
+            height: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+          }
+          .bestseller-slider .slick-dots li button:before {
+            display: none !important;
+          }
+          .bestseller-slider .slick-dots li button {
+            padding: 0 !important;
+            width: 7px !important;
+            height: 7px !important;
+            border-radius: 9999px !important;
+            background-color: #d1d5db !important;
+            transition: all 0.2s ease !important;
+          }
+          .bestseller-slider .slick-dots li.slick-active button {
+            background-color: #587a3b !important;
+            width: 16px !important;
+            border-radius: 9999px !important;
           }
           /* Ensure proper spacing for 2 items on mobile */
           @media (max-width: 480px) {
-            .slick-slide {
+            .bestseller-slider .slick-slide {
               padding: 0 8px;
             }
-            .slick-list {
+            .bestseller-slider .slick-list {
               margin: 0 -8px;
             }
           }

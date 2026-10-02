@@ -672,7 +672,7 @@ const Deal = () => {
           animate={{ rotateX: 0, opacity: 1 }}
           exit={{ rotateX: -90, opacity: 0 }}
           transition={{ duration: 0.4 }}
-          className="absolute inset-0 bg-black text-white rounded-md flex items-center justify-center text-sm sm:text-base font-bold shadow-md"
+          className="absolute inset-0 bg-[#587a3b] text-white rounded-md flex items-center justify-center text-sm sm:text-base font-bold shadow-md"
         >
           {value}
         </motion.div>

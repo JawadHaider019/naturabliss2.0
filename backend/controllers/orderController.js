@@ -1,8 +1,10 @@
+import { v2 as cloudinary } from 'cloudinary';
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
 import notificationModel from "../models/notifcationModel.js";
 import Comment from "../models/commentModel.js";
+import couponModel from "../models/couponModel.js";
 
 // 🆕 Notification Types
 const NOTIFICATION_TYPES = {
@@ -344,23 +346,60 @@ const reduceInventory = async (validatedItems) => {
   }
 };
 
-// 🆕 MAIN ORDER PLACEMENT FUNCTION (Handles both logged-in and guest users)
+// 🆕 MAIN ORDER PLACEMENT FUNCTION (Handles both logged-in and guest users with Advance Payment Proof)
 const placeOrder = async (req, res) => {
   try {
     console.log("🛒 ========== ORDER PLACEMENT ==========");
     
-    const { items, amount, address, deliveryCharges, customerDetails } = req.body;
+    const body = req.body || {};
+    let { 
+      items, 
+      amount, 
+      address, 
+      deliveryCharges, 
+      customerDetails,
+      paymentScreenshot,
+      advanceAmount,
+      transactionId,
+      advancePaymentNote,
+      couponCode,
+      couponDiscount
+    } = body;
+    
+    // Parse JSON fields if sent via FormData
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items); } catch(e) {}
+    }
+    if (typeof address === 'string') {
+      try { address = JSON.parse(address); } catch(e) {}
+    }
+    if (typeof customerDetails === 'string') {
+      try { customerDetails = JSON.parse(customerDetails); } catch(e) {}
+    }
+
+    // Handle uploaded payment screenshot file
+    let screenshotUrl = paymentScreenshot || "";
+    const screenshotFile = req.file || (req.files && (
+      (Array.isArray(req.files) ? req.files.find(f => f.fieldname === 'paymentScreenshot' || f.fieldname === 'screenshot') : req.files.paymentScreenshot?.[0])
+    ));
+
+    if (screenshotFile) {
+      try {
+        const uploadRes = await cloudinary.uploader.upload(screenshotFile.path, {
+          resource_type: "image",
+          folder: "payment_proofs"
+        });
+        screenshotUrl = uploadRes.secure_url;
+        console.log("✅ Payment screenshot uploaded to Cloudinary:", screenshotUrl);
+      } catch (uploadErr) {
+        console.error("❌ Error uploading payment screenshot:", uploadErr);
+      }
+    }
     
     // 🆕 IMPORTANT: req.userId will be undefined for guests
-    // The auth middleware is removed from the route, so we need to check if token exists
     let userId = null;
-    
-    // Check if token is provided in headers (logged-in user)
     if (req.headers.token) {
-      // In a real implementation, you would verify the token here
-      // For now, we'll assume the auth middleware sets req.userId for logged-in users
-      // If auth middleware is completely removed, you might need to verify token manually
-      userId = req.userId; // This might be undefined if auth middleware is removed
+      userId = req.userId;
     }
     
     const isGuest = !userId;
@@ -368,7 +407,8 @@ const placeOrder = async (req, res) => {
     console.log("👤 User info for order:", {
       userId: userId || 'undefined (guest)',
       isGuest: isGuest,
-      hasToken: !!req.headers.token
+      hasToken: !!req.headers.token,
+      hasScreenshot: !!screenshotUrl
     });
 
     // Basic validations
@@ -414,6 +454,9 @@ const placeOrder = async (req, res) => {
     console.log("📦 Reducing inventory quantity...");
     await reduceInventory(validatedItems);
 
+    const deliveryFee = Number(deliveryCharges !== undefined && deliveryCharges !== null ? deliveryCharges : 250);
+    const advanceFee = Number(advanceAmount || deliveryFee || 250);
+
     // Create order data
     const orderData = {
       userId: userId || null,
@@ -431,10 +474,17 @@ const placeOrder = async (req, res) => {
       })),
       amount: Number(amount),
       address,
-      deliveryCharges: deliveryCharges || 0,
-      paymentMethod: "COD",
+      deliveryCharges: deliveryFee,
+      paymentMethod: "COD (Advance Delivery Paid)",
       payment: false,
-      status: "Order Placed",
+      paymentScreenshot: screenshotUrl,
+      advanceAmount: advanceFee,
+      advancePaymentStatus: screenshotUrl ? "pending" : "pending",
+      transactionId: transactionId || "",
+      advancePaymentNote: advancePaymentNote || "",
+      couponCode: couponCode ? String(couponCode).toUpperCase().trim() : "",
+      couponDiscount: Number(couponDiscount) || 0,
+      status: "Pending",
       date: Date.now(),
       customerDetails: {
         name: customerDetails.name.trim(),
@@ -444,11 +494,24 @@ const placeOrder = async (req, res) => {
       isGuest: isGuest
     };
 
+    // Increment coupon used count if coupon applied
+    if (orderData.couponCode) {
+      try {
+        await couponModel.findOneAndUpdate(
+          { code: orderData.couponCode },
+          { $inc: { usedCount: 1 } }
+        );
+      } catch (couponErr) {
+        console.error("Error updating coupon used count:", couponErr);
+      }
+    }
+
     console.log("📝 ORDER DATA SAVED:", {
       userId: orderData.userId,
       isGuest: orderData.isGuest,
       customerName: orderData.customerDetails.name,
-      totalItems: orderData.items.length
+      totalItems: orderData.items.length,
+      screenshot: !!orderData.paymentScreenshot
     });
 
     // Save order
@@ -529,8 +592,6 @@ const getGuestOrders = async (req, res) => {
   try {
     const { email, phone } = req.body;
     
-    console.log("🔍 getGuestOrders called with:", { email, phone });
-    
     if (!email && !phone) {
       return res.json({ 
         success: false, 
@@ -563,11 +624,7 @@ const getGuestOrders = async (req, res) => {
       $or: orConditions
     };
     
-    console.log("🔍 Final query:", JSON.stringify(query, null, 2));
-    
     const orders = await orderModel.find(query).sort({ date: -1 });
-    
-    console.log(`📦 Found ${orders.length} guest orders`);
     
     // Return full order details including category and subcategory
     const safeOrders = orders.map(order => ({
@@ -593,12 +650,17 @@ const getGuestOrders = async (req, res) => {
       deliveryCharges: order.deliveryCharges,
       address: order.address,
       customerDetails: {
-        name: order.customerDetails.name,
-        email: order.customerDetails.email,
-        phone: order.customerDetails.phone
+        name: order.customerDetails?.name || '',
+        email: order.customerDetails?.email || '',
+        phone: order.customerDetails?.phone || ''
       },
       paymentMethod: order.paymentMethod,
       payment: order.payment,
+      paymentScreenshot: order.paymentScreenshot || '',
+      advanceAmount: order.advanceAmount || 250,
+      advancePaymentStatus: order.advancePaymentStatus || 'pending',
+      transactionId: order.transactionId || '',
+      advancePaymentNote: order.advancePaymentNote || '',
       isGuest: true
     }));
     
@@ -1161,6 +1223,41 @@ const checkStock = async (req, res) => {
   }
 };
 
+// 🆕 Admin Verify Advance Payment Proof
+const verifyAdvancePayment = async (req, res) => {
+  try {
+    const { orderId, status, note } = req.body; // status: 'verified' | 'rejected' | 'pending'
+    if (!orderId || !status) {
+      return res.status(400).json({ success: false, message: "Order ID and status are required" });
+    }
+
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    order.advancePaymentStatus = status;
+    if (status === 'verified') {
+      order.payment = true;
+      order.status = 'Order Placed'; // Order is officially placed once payment is approved
+    } else if (status === 'rejected') {
+      order.payment = false;
+      order.status = 'Pending';
+    }
+
+    if (note) {
+      order.advancePaymentNote = note;
+    }
+    order.updatedAt = Date.now();
+    await order.save();
+
+    res.json({ success: true, message: `Advance payment marked as ${status}`, order });
+  } catch (error) {
+    console.error("❌ Error verifying advance payment:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export { 
   placeOrder, 
   allOrders, 
@@ -1169,6 +1266,7 @@ export {
   getGuestOrderDetails,
   getGuestOrders,
   updateStatus, 
+  verifyAdvancePayment,
   cancelOrder,
   cancelGuestOrder,
   getCancellationReasons,

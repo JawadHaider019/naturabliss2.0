@@ -17,6 +17,31 @@ const productSchema = new mongoose.Schema({
         type: String, 
         required: true 
     },
+    ingredients: { 
+        type: [String], 
+        required: false,
+        default: []
+    },
+    howToUse: { 
+        type: String, 
+        required: false,
+        default: "" 
+    },
+    benefits: { 
+        type: [String], 
+        required: false,
+        default: []
+    },
+    variants: [
+        {
+            name: { type: String, required: true },
+            price: { type: Number, required: true },
+            discountprice: { type: Number, default: 0 },
+            quantity: { type: Number, default: 0 },
+            sku: { type: String, default: "" },
+            image: { type: String, default: "" }
+        }
+    ],
     bestseller: { type: Boolean, default: false },
     date: { type: Number, required: true },  
     status: {

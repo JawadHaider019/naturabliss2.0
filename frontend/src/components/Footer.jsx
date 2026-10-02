@@ -75,28 +75,28 @@ const Footer = () => {
         {
             key: 'facebook',
             icon: faFacebookF,
-            color: "bg-black hover:bg-gray-900",
+            color: "bg-[#587a3b] hover:bg-[#486530]",
             label: "Facebook",
             baseUrl: "https://facebook.com/"
         },
         {
             key: 'instagram',
             icon: faInstagram,
-            color: "bg-black hover:bg-gray-900",
+            color: "bg-[#587a3b] hover:bg-[#486530]",
             label: "Instagram",
             baseUrl: "https://instagram.com/"
         },
         {
             key: 'tiktok',
             icon: faTiktok,
-            color: "bg-black hover:bg-gray-900",
+            color: "bg-[#587a3b] hover:bg-[#486530]",
             label: "TikTok",
             baseUrl: "https://tiktok.com/@"
         },
         {
             key: 'whatsapp',
             icon: faWhatsapp,
-            color: "bg-black hover:bg-gray-900",
+            color: "bg-[#587a3b] hover:bg-[#486530]",
             label: "WhatsApp",
             baseUrl: "https://wa.me/"
         }
@@ -165,10 +165,10 @@ const Footer = () => {
                     <div>
                         <h3 className="font-semibold text-gray-900 mb-4">COMPANY</h3>
                         <ul className="space-y-2 text-gray-600">
-                            <li><Link to="/about" className="hover:text-gray-300 transition-colors">ABOUT</Link></li>
-                            <li><Link to="/collection" className="hover:text-gray-300 transition-colors">PRODUCTS</Link></li>
-                            <li><Link to="/blog" className="hover:text-gray-300 transition-colors">BLOGS</Link></li>
-                            <li><Link to="/contact" className="hover:text-gray-300 transition-colors">CONTACT</Link></li>
+                            <li><Link to="/about" className="hover:text-[#587a3b] transition-colors">ABOUT</Link></li>
+                            <li><Link to="/collection" className="hover:text-[#587a3b] transition-colors">PRODUCTS</Link></li>
+                            <li><Link to="/blog" className="hover:text-[#587a3b] transition-colors">BLOGS</Link></li>
+                            <li><Link to="/contact" className="hover:text-[#587a3b] transition-colors">CONTACT</Link></li>
                         </ul>
                     </div>
 
@@ -177,15 +177,15 @@ const Footer = () => {
                         <h3 className="font-semibold text-gray-900 mb-4">CONTACT</h3>
                         <div className="space-y-3 text-gray-600 text-sm">
                             <div className="flex items-center space-x-2">
-                                <FontAwesomeIcon icon={faPhone} className="text-black w-4" />
+                                <FontAwesomeIcon icon={faPhone} className="text-[#587a3b] w-4" />
                                 <span>{businessInfo.contact?.customerSupport?.phone || "+92-333-3333"}</span>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <FontAwesomeIcon icon={faEnvelope} className="text-black w-4" />
+                                <FontAwesomeIcon icon={faEnvelope} className="text-[#587a3b] w-4" />
                                 <span>{businessInfo.contact?.customerSupport?.email || "naturabliss@gmail.com"}</span>
                             </div>
                             <div className="flex items-start space-x-2">
-                                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-black w-4 mt-1" />
+                                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[#587a3b] w-4 mt-1" />
                                 <span>{businessInfo.location?.displayAddress || "123 Natural Street, Green Valley, PK"}</span>
                             </div>
 

@@ -13,8 +13,8 @@ const upload = multer({
   limits: {
     fieldSize: 10 * 1024 * 1024, // 10MB
     fileSize: 10 * 1024 * 1024, // 10MB per file
-    fields: 50,
-    files: 10,
+    fields: 100,
+    files: 30,
   }
 });
 

@@ -1,45 +1,61 @@
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { assets } from '../assets/assets'
+import { assets } from '../assets/assets';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
+// Pre-loaded default banner from local assets - ALWAYS AVAILABLE INSTANTLY
+const defaultBanner = {
+  _id: 'default-banner',
+  desktopImageUrl: assets.banner1,
+  mobileImageUrl: assets.banner1,
+  altText: 'Natura Bliss Natural & Organic Skincare'
+};
+
+// Helper to preload an image into browser cache
+const preloadImage = (url) => {
+  return new Promise((resolve) => {
+    if (!url) return resolve();
+    const img = new Image();
+    img.src = url;
+    if (img.complete) {
+      resolve();
+    } else {
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+    }
+  });
+};
+
 const Hero = () => {
-  const [banners, setBanners] = useState([]);
-  const [error, setError] = useState(null);
+  const [banners, setBanners] = useState([defaultBanner]);
+  const [isDbLoaded, setIsDbLoaded] = useState(false);
+  const [screenSize, setScreenSize] = useState(() => 
+    (typeof window !== 'undefined' && window.innerWidth < 1024) ? 'mobile' : 'desktop'
+  );
   const sliderRef = useRef(null);
   const hasFetchedRef = useRef(false);
   const navigate = useNavigate();
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // Pre-loaded default banner from assets - ALWAYS AVAILABLE
-  const defaultBanner = {
-    _id: 'default-banner',
-    desktopImageUrl: assets.banner1,
-    mobileImageUrl: assets.banner1,
-    altText: 'Default banner image'
-  };
-
-  // Simple fetch function with better error handling
+  // Fetch banners from backend and PRELOAD before swapping
   const fetchBanners = async () => {
     if (hasFetchedRef.current) return;
     
     try {
       hasFetchedRef.current = true;
-      setError(null);
       
-      // Create axios instance with timeout
       const api = axios.create({
         baseURL: backendUrl,
-        timeout: 3000,
+        timeout: 4000,
       });
       
       const response = await api.get('/api/banners/active');
       
-      if (response.data.success) {
+      if (response.data?.success) {
         const data = response.data.data;
         
         if (Array.isArray(data) && data.length > 0) {
@@ -48,57 +64,47 @@ const Hero = () => {
           );
           
           if (validBanners.length > 0) {
-            // Sort by order
             const sortedBanners = validBanners.sort((a, b) => a.order - b.order);
+            
+            // PRELOAD all banner images into browser cache first!
+            // This prevents ANY blank / white / black gap during state switch
+            const preloadPromises = sortedBanners.map(b => [
+              preloadImage(b.desktopImageUrl),
+              preloadImage(b.mobileImageUrl)
+            ]).flat();
+            
+            await Promise.all(preloadPromises);
+            
+            // Now that images are 100% in browser memory, update state
             setBanners(sortedBanners);
+            setIsDbLoaded(true);
+            return;
           }
-          // If no valid banners, keep default banner
         }
-        // If no data, keep default banner
       }
-      // If not successful, keep default banner
     } catch (err) {
-      console.log('Failed to fetch banners:', err.message);
-      setError(err.message);
-      // Keep default banner on error
+      console.log('Using local fallback banner:', err.message);
     }
   };
 
-  // Start with default banner immediately
   useEffect(() => {
-    // ALWAYS show default banner first
-    setBanners([defaultBanner]);
-    
-    // Then fetch from backend with delay
-    const timer = setTimeout(() => {
-      fetchBanners();
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    fetchBanners();
   }, []);
 
-  // Check screen size
-  const [screenSize, setScreenSize] = useState('desktop');
-
+  // Screen resize listener
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      if (width < 1024) {
-        setScreenSize('mobile');
-      } else {
-        setScreenSize('desktop');
-      }
+      setScreenSize(width < 1024 ? 'mobile' : 'desktop');
     };
     
-    checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
-    
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   // Handle banner click
   const handleBannerClick = (banner) => {
-    if (banner.linkUrl && banner.linkUrl !== '') {
+    if (banner?.linkUrl) {
       if (banner.openInNewTab) {
         window.open(banner.linkUrl, '_blank', 'noopener,noreferrer');
       } else {
@@ -143,7 +149,7 @@ const Hero = () => {
   const settings = {
     dots: true,
     infinite: banners.length > 1,
-    speed: 500,
+    speed: 600,
     slidesToShow: 1,
     slidesToScroll: 1,
     autoplay: banners.length > 1,
@@ -154,7 +160,7 @@ const Hero = () => {
     appendDots: dots => screenSize === 'mobile' ? <MobileCustomDots dots={dots} /> : <CustomDots dots={dots} />,
     customPaging: i => (
       <button 
-        className="w-2 h-2 rounded-full bg-white/50 transition-all duration-300 hover:bg-white/80 hover:scale-110 focus:outline-none"
+        className="w-2.5 h-2.5 rounded-full bg-white/60 transition-all duration-300 hover:bg-[#587a3b] hover:scale-110 focus:outline-none shadow-sm"
         aria-label={`Go to slide ${i + 1}`}
       />
     ),
@@ -163,14 +169,14 @@ const Hero = () => {
       : "slick-dots !flex !flex-col !static !w-auto !m-0",
   };
 
-  // Banner Item Component - SIMPLIFIED
+  // Banner Item Component
   const BannerItem = ({ banner, index }) => {
     const imageUrl = getImageUrl(banner);
-    const isClickable = banner.linkUrl && banner.linkUrl !== '';
+    const isClickable = banner?.linkUrl && banner.linkUrl !== '';
 
     return (
       <div 
-        className="relative w-full"
+        className="relative w-full select-none"
         role="group"
         aria-roledescription="slide"
         aria-label={`${index + 1} of ${banners.length}`}
@@ -179,28 +185,26 @@ const Hero = () => {
           cursor: isClickable ? 'pointer' : 'default',
         }}
       >
-        {/* Image container */}
-        <div className="relative w-full" style={{
-          height: screenSize === 'mobile' ? 'auto' : '90vh'
-        }}>
+        <div 
+          className="relative w-full overflow-hidden" 
+          style={{
+            height: screenSize === 'mobile' ? 'auto' : '90vh'
+          }}
+        >
           <img
-            src={imageUrl}
-            alt={banner.altText || "Banner image"}
-            className={`w-full ${screenSize === 'mobile' ? 'h-auto' : 'h-full object-cover'}`}
-            loading={index === 0 ? "eager" : "lazy"}
+            src={imageUrl || assets.banner1}
+            alt={banner?.altText || "Natura Bliss Banner"}
+            className={`w-full ${screenSize === 'mobile' ? 'h-auto block' : 'h-full object-cover'}`}
+            loading="eager"
+            fetchPriority="high"
+            decoding="sync"
             onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = assets.banner1; // Fallback to default
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = assets.banner1;
             }}
           />
         </div>
 
-        {/* Light overlay for better contrast (optional) - only on desktop */}
-        {screenSize === 'desktop' && (
-          <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
-        )}
-
-        {/* Accessibility indicator */}
         {isClickable && (
           <div className="sr-only">
             Clickable banner - {banner.openInNewTab ? 'Opens in new tab' : 'Navigate to link'}
@@ -210,80 +214,93 @@ const Hero = () => {
     );
   };
 
-  // ALWAYS show at least the default banner
   const displayBanners = banners.length > 0 ? banners : [defaultBanner];
 
   return (
     <div 
-      className="relative w-full bg-gray-900" 
+      className="hero-slider-container relative w-full overflow-hidden" 
       aria-label="Featured banners"
       role="region"
       aria-roledescription="carousel"
+      style={{
+        backgroundColor: '#FAF8F5'
+      }}
     >
       <style>{`
-        .slick-dots li.slick-active button {
-          background: white !important;
-          transform: scale(1.2);
+        .hero-slider-container {
+          background-color: #FAF8F5 !important;
         }
-        .slick-slider, .slick-list, .slick-track {
+        .hero-slider-container .slick-dots li.slick-active button {
+          background: #587a3b !important;
+          transform: scale(1.3);
+          box-shadow: 0 0 8px rgba(88, 122, 59, 0.7);
+        }
+        .hero-slider-container .slick-slider, 
+        .hero-slider-container .slick-list, 
+        .hero-slider-container .slick-track {
           height: auto !important;
-        }
-        .slick-slide > div {
-          height: auto !important;
-        }
-        .slick-slide {
           background: transparent !important;
         }
-        .slick-track {
+        .hero-slider-container .slick-slide > div {
+          height: auto !important;
+          background: transparent !important;
+        }
+        .hero-slider-container .slick-slide {
+          background: transparent !important;
+          display: block !important;
+        }
+        .hero-slider-container .slick-track {
           background: transparent !important;
           display: flex !important;
         }
-        .slick-list {
+        .hero-slider-container .slick-list {
           background: transparent !important;
           overflow: hidden !important;
         }
         
         /* Desktop specific styles */
         @media (min-width: 1024px) {
-          .slick-slider, .slick-list, .slick-track {
+          .hero-slider-container .slick-slider, 
+          .hero-slider-container .slick-list, 
+          .hero-slider-container .slick-track {
             height: 90vh !important;
           }
-          .slick-slide > div {
+          .hero-slider-container .slick-slide > div {
             height: 90vh !important;
           }
         }
         
         /* Hide dots if only one banner */
-        .slick-dots[style*="display: none !important"] {
+        .hero-slider-container .slick-dots[style*="display: none !important"] {
           display: none !important;
         }
       `}</style>
       
-      {/* Container */}
-      <div className="relative w-full">
-        {displayBanners.length === 1 ? (
-          // Single banner - no slider needed
-          <BannerItem banner={displayBanners[0]} index={0} />
-        ) : (
-          // Multiple banners - use slider
-          <Slider ref={sliderRef} {...settings}>
-            {displayBanners.map((banner, index) => (
-              <BannerItem 
-                key={`${banner._id}-${index}`} 
-                banner={banner} 
-                index={index}
-              />
-            ))}
-          </Slider>
-        )}
-        
-        {/* Error message (debug only) */}
-        {error && process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-4 right-4 bg-red-500/80 text-white text-xs p-2 rounded z-30">
-            Error: {error}
-          </div>
-        )}
-      </div>
+      {/* Fallback Image Layer: Always immediately rendered underneath until DB banners are ready */}
+      {!isDbLoaded && (
+        <div className="w-full">
+          <BannerItem banner={defaultBanner} index={0} />
+        </div>
+      )}
+
+      {/* Main Banner Slider Layer */}
+      {isDbLoaded && (
+        <div className="relative w-full transition-opacity duration-500 ease-in opacity-100">
+          {displayBanners.length === 1 ? (
+            <BannerItem banner={displayBanners[0]} index={0} />
+          ) : (
+            <Slider ref={sliderRef} {...settings}>
+              {displayBanners.map((banner, index) => (
+                <BannerItem 
+                  key={`${banner._id || 'banner'}-${index}`} 
+                  banner={banner} 
+                  index={index}
+                />
+              ))}
+            </Slider>
+          )}
+        </div>
+      )}
     </div>
   );
 };

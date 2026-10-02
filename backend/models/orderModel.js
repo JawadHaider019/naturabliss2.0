@@ -10,7 +10,7 @@ const orderSchema = new mongoose.Schema({
     items: {type: Array, required: true},
     amount: {type: Number, required: true},
     address: {type: Object, required: true},
-    status: {type: String, required: true, default: "Order Placed"},
+    status: {type: String, required: true, default: "Pending"},
     paymentMethod: {type: String, required: true},
     payment: {type: Boolean, required: true, default: false},
     date: {type: Number, required: true},
@@ -25,6 +25,21 @@ const orderSchema = new mongoose.Schema({
         email: {type: String, required: true},
         phone: {type: String, default: ''}
     },
+
+    // 🆕 ADVANCE DELIVERY PAYMENT PROOF
+    paymentScreenshot: { type: String, default: "" },
+    advanceAmount: { type: Number, default: 250 },
+    advancePaymentStatus: { 
+        type: String, 
+        enum: ['pending', 'verified', 'rejected', 'not_required'], 
+        default: 'pending' 
+    },
+    transactionId: { type: String, default: "" },
+    advancePaymentNote: { type: String, default: "" },
+
+    // 🆕 PROMO CODE / DISCOUNT
+    couponCode: { type: String, default: "" },
+    couponDiscount: { type: Number, default: 0 },
 
     cancellationReason: {type: String, default: null},
     cancelledAt: {type: Date, default: null},

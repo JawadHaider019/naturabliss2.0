@@ -9,7 +9,8 @@ import {
   faBars,
   faTimes,
   faLayerGroup,
-  faStore
+  faStore,
+  faTicketAlt
 } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { backendUrl } from "../App";
@@ -179,6 +180,21 @@ const Navbar = () => {
               <FontAwesomeIcon icon={faShoppingCart} />
               <span className="font-medium">Orders</span>
             </NavLink>
+
+            <NavLink
+              to="/coupons"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  isActive
+                    ? "text-black border-l-4 border-black"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`
+              }
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <FontAwesomeIcon icon={faTicketAlt} />
+              <span className="font-medium">Promo Codes</span>
+            </NavLink>
           </div>
         </div>
       )}
@@ -250,6 +266,20 @@ const Navbar = () => {
               >
                 <FontAwesomeIcon icon={faShoppingCart} />
                 <span className="font-medium">Orders</span>
+              </NavLink>
+
+              <NavLink
+                to="/coupons"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-6 py-3 border-b-2 transition ${
+                    isActive
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-black"
+                  }`
+                }
+              >
+                <FontAwesomeIcon icon={faTicketAlt} />
+                <span className="font-medium">Promo Codes</span>
               </NavLink>
             </nav>
 

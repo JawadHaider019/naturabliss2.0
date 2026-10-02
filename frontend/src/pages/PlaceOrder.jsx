@@ -24,6 +24,41 @@ const PlaceOrder = () => {
   // Add state for category mappings
   const [categoryIdMap, setCategoryIdMap] = useState({});
   const [subcategoryIdMap, setSubcategoryIdMap] = useState({});
+
+  // Advance delivery payment state
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
+  const [transactionId, setTransactionId] = useState('');
+  const [activePaymentTab, setActivePaymentTab] = useState('easypaisa');
+
+  const handleScreenshotChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file (PNG, JPG, JPEG)');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be under 10MB');
+        return;
+      }
+      setScreenshotFile(file);
+      setScreenshotPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeScreenshot = () => {
+    setScreenshotFile(null);
+    if (screenshotPreview) {
+      URL.revokeObjectURL(screenshotPreview);
+      setScreenshotPreview(null);
+    }
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  };
   
   const {
     backendUrl,
@@ -36,7 +71,9 @@ const PlaceOrder = () => {
     getDeliveryCharge,
     products,
     deals,
-    getCart
+    getCart,
+    appliedCoupon,
+    getCouponDiscount
   } = useContext(ShopContext);
   
   const navigate = useNavigate();
@@ -111,6 +148,18 @@ const PlaceOrder = () => {
     
     return defaultData;
   });
+
+  // Check if all required fields are filled and screenshot is uploaded
+  const isFormComplete = Boolean(
+    formData.fullName?.trim() &&
+    formData.email?.trim() &&
+    formData.street?.trim() &&
+    formData.state?.trim() &&
+    formData.city?.trim() &&
+    formData.zipcode?.toString().trim() &&
+    formData.phone?.trim() &&
+    screenshotFile
+  );
 
   // Load Pakistan states
   useEffect(() => {
@@ -693,8 +742,10 @@ const PlaceOrder = () => {
       }
 
       const { orderItems, calculatedAmount } = processCartItems();
-      const deliveryCharge = getDeliveryCharge(calculatedAmount);
-      const finalAmount = calculatedAmount + deliveryCharge;
+      const couponDiscount = getCouponDiscount ? getCouponDiscount(calculatedAmount) : 0;
+      const discountedSubtotal = Math.max(0, calculatedAmount - couponDiscount);
+      const deliveryCharge = getDeliveryCharge(discountedSubtotal);
+      const finalAmount = discountedSubtotal + deliveryCharge;
 
       if (orderItems.length === 0) {
         toast.error('Your cart is empty');
@@ -702,42 +753,47 @@ const PlaceOrder = () => {
         return;
       }
 
-      // Prepare order data
-      const orderData = {
-        address: {
-          street: formData.street.trim(),
-          city: formData.city.trim(),
-          state: formData.state,
-          zipcode: formData.zipcode.trim()
-        },
-        items: orderItems,
-        amount: finalAmount,
-        deliveryCharges: deliveryCharge,
-        method: 'COD',
-        addressVerified: addressValidation.isValid && !addressValidation.requiresManualVerification,
-        customerDetails: {
-          name: formData.fullName.trim(),
-          email: formData.email.trim(),
-          phone: digitsOnly
-        }
-      };
+      if (!screenshotFile) {
+        toast.error('Please upload the payment screenshot of Rs. 250 advance delivery fee');
+        setLoading(false);
+        setIsValidatingAddress(false);
+        return;
+      }
+
+      // Prepare order FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('items', JSON.stringify(orderItems));
+      formDataToSend.append('amount', finalAmount.toString());
+      formDataToSend.append('deliveryCharges', deliveryCharge.toString());
+      formDataToSend.append('advanceAmount', '250');
+      formDataToSend.append('transactionId', transactionId.trim());
+      formDataToSend.append('couponCode', appliedCoupon?.code || '');
+      formDataToSend.append('couponDiscount', couponDiscount.toString());
+      formDataToSend.append('address', JSON.stringify({
+        street: formData.street.trim(),
+        city: formData.city.trim(),
+        state: formData.state,
+        zipcode: formData.zipcode.trim()
+      }));
+      formDataToSend.append('customerDetails', JSON.stringify({
+        name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: digitsOnly
+      }));
+      formDataToSend.append('paymentScreenshot', screenshotFile);
 
       // Config for both guest and logged-in users
       const config = {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'multipart/form-data',
+          ...(token ? { token } : {})
         }
       };
-
-      // Add token only if it exists (for logged-in users)
-      if (token) {
-        config.headers.token = token;
-      }
 
       // Call the unified order endpoint
       const response = await axios.post(
         `${backendUrl}/api/order/place`,
-        orderData,
+        formDataToSend,
         config
       );
       
@@ -814,9 +870,13 @@ const PlaceOrder = () => {
               state: formData.state,
               zipcode: formData.zipcode.trim()
             },
-            paymentMethod: 'COD',
+            paymentMethod: 'COD (Rs. 250 Advance)',
             payment: false,
-            status: 'Order Placed',
+            paymentScreenshot: screenshotPreview || "",
+            advanceAmount: 250,
+            advancePaymentStatus: 'pending',
+            transactionId: transactionId.trim(),
+            status: 'Pending',
             date: Date.now(),
             customerDetails: {
               name: formData.fullName.trim(),
@@ -1109,9 +1169,157 @@ const PlaceOrder = () => {
     
         <div className='mt-12'>
           <Title text1={'PAYMENT'} text2={'METHOD'}/>
-          <div className='flex flex-col gap-3 lg:flex-row'>
-            <div className='flex cursor-pointer items-center gap-3 border border-gray-300 p-3 px-4 bg-gray-50'>
-              <p className='text-sm font-medium text-gray-700'>CASH ON DELIVERY</p>
+          {/* ADVANCE DELIVERY FEE BANNER */}
+          <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+            <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+              <span>⚠️</span>
+              <span>Rs. 250 Advance Delivery Fee Required</span>
+            </div>
+            <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
+              To confirm your order, please transfer <strong className="font-bold underline">Rs. 250 (Delivery Charges)</strong> in advance. The remaining cart amount will be paid via <strong>Cash on Delivery (COD)</strong> upon receiving your parcel.
+            </p>
+          </div>
+
+          {/* PAYMENT ACCOUNTS SELECTOR */}
+          <div className="mt-5 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+            <div className="flex border-b border-gray-200 bg-gray-50 text-center">
+              <button
+                type="button"
+                onClick={() => setActivePaymentTab('easypaisa')}
+                className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
+                  activePaymentTab === 'easypaisa'
+                    ? 'bg-white text-green-700 border-b-2 border-green-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Easypaisa
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaymentTab('bank')}
+                className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
+                  activePaymentTab === 'bank'
+                    ? 'bg-white text-blue-700 border-b-2 border-blue-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                UBL Bank Transfer
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              {activePaymentTab === 'easypaisa' && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
+                      <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">EASYPAISA NUMBER</p>
+                      <p className="text-sm font-mono font-bold text-gray-900">0324 1572294</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('03241572294', 'Easypaisa Number')}
+                      className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activePaymentTab === 'bank' && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">BANK NAME</p>
+                      <p className="text-sm font-bold text-gray-900">UBL (United Bank Limited)</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
+                      <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">IBAN</p>
+                      <p className="text-sm font-mono font-bold text-gray-900 break-all">PK78UNIL0109000339235351</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('PK78UNIL0109000339235351', 'IBAN')}
+                      className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SCREENSHOT UPLOAD & TRANSACTION ID */}
+          <div className="mt-5 border border-gray-200 rounded-xl p-4 sm:p-5 bg-white shadow-sm">
+            <label className="block text-sm font-bold text-gray-900 mb-1">
+              Upload Payment Screenshot (Required) *
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Attach a screenshot of your Rs. 250 advance delivery fee payment receipt.
+            </p>
+
+            {screenshotPreview ? (
+              <div className="relative w-full max-w-xs border rounded-xl p-2 bg-gray-50 flex flex-col items-center">
+                <img
+                  src={screenshotPreview}
+                  alt="Payment Screenshot Preview"
+                  className="max-h-52 w-auto object-contain rounded-lg shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={removeScreenshot}
+                  className="mt-2 text-xs font-semibold text-red-600 hover:text-red-800 underline"
+                >
+                  Remove & Upload Another
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-colors">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg className="w-8 h-8 mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700">
+                    <span className="font-bold underline">Click to upload</span> payment screenshot
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScreenshotChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+
+            {/* Optional Transaction ID Input */}
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Transaction ID / Reference Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                placeholder="e.g. TID-1234567890"
+                className="w-full border border-gray-300 px-3.5 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#587a3b] focus:outline-none"
+              />
             </div>
           </div>
           
@@ -1129,11 +1337,11 @@ const PlaceOrder = () => {
             <button 
               type='submit' 
               className={`relative px-8 py-4 font-semibold w-full md:w-auto text-base ${
-                loading || !isDataReady || isValidatingAddress
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                  : 'bg-black text-white hover:bg-gray-800 active:bg-gray-900 hover:shadow-lg transform hover:-translate-y-0.5'
+                loading || !isDataReady || isValidatingAddress || !isFormComplete
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                  : 'bg-[#587a3b] text-white hover:bg-[#486530] active:bg-[#3b5327] hover:shadow-lg transform hover:-translate-y-0.5'
               } transition-all duration-200 rounded-md`}
-              disabled={loading || !isDataReady || isValidatingAddress}
+              disabled={loading || !isDataReady || isValidatingAddress || !isFormComplete}
             >
               {isValidatingAddress ? (
                 <span className="flex items-center justify-center">
@@ -1153,12 +1361,24 @@ const PlaceOrder = () => {
                 </span>
               ) : !isDataReady ? (
                 'LOADING CART...'
+              ) : !isFormComplete ? (
+                !screenshotFile && (formData.fullName && formData.email && formData.street && formData.state && formData.city && formData.zipcode && formData.phone)
+                  ? 'UPLOAD SCREENSHOT TO PROCEED'
+                  : 'FILL ALL FIELDS TO PLACE ORDER'
               ) : (
                 'PLACE ORDER'
               )}
             </button>
             
-            {!token && !loading && isDataReady && (
+            {!isFormComplete && isDataReady && !loading && (
+              <p className="text-xs text-amber-700 mt-2 text-center md:text-end font-medium">
+                {!screenshotFile && (formData.fullName && formData.email && formData.street && formData.state && formData.city && formData.zipcode && formData.phone)
+                  ? '⚠️ Please upload advance payment screenshot'
+                  : '⚠️ Please fill all delivery fields and upload payment screenshot'}
+              </p>
+            )}
+
+            {!token && !loading && isDataReady && isFormComplete && (
               <p className="text-xs text-gray-500 mt-2 text-center">
                 By placing this order, you agree to our Terms of Service
               </p>

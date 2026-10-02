@@ -25,6 +25,7 @@ import businessDetailsRoutes from './routes/businessDetailsRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import newsletterRoutes from './routes/NewsletterRoutes.js'
 import locationRoutes from './routes/locationsRoutes.js';
+import couponRoutes from './routes/couponRoutes.js';
 // App Config    
 const app = express();
 const port = process.env.PORT || 4000;
@@ -34,6 +35,7 @@ connectCloudinary();
 
 // Middlewares
 app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 
@@ -65,6 +67,7 @@ app.use('/api/business-details', businessDetailsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/coupon', couponRoutes);
 
 app.get('/', (req, res) => {
     res.send("API Working ✅");

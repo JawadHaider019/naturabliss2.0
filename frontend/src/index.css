@@ -9,39 +9,53 @@
 html {
   scroll-behavior: smooth;
 }
+
 /* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 }
-*{
 
-    font-family: Outfit;
+* {
+  font-family: Outfit;
 }
-a.active hr{
-    display: block;
+
+/* Brand Theme: Clean Sharp Edges - Strictly No Rounded Corners on Buttons, Divs, Sections, Tabs, Modals, Inputs */
+*, *::before, *::after {
+  border-radius: 0px !important;
 }
+
+/* Exception: ONLY the Cart Count badge and loading spinner are rounded */
+.cart-badge,
+.animate-spin {
+  border-radius: 9999px !important;
+}
+
+a.active hr {
+  display: block;
+}
+
 .prata-regular {
-    font-family: "Prata", serif;
-    font-weight: 400;
-    font-style: normal;
+  font-family: "Prata", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+@media (max-width:640px) {
+  a.active {
+    background-color: #587a3b;
+    color: white;
   }
-  
-  @media (max-width:640px)
-  {
-    a.active{
-        background-color: black;
-        color: white;
-    }
+}
+
+@layer components {
+  .btn {
+    @apply bg-[#587a3b] px-8 py-3 text-sm text-white hover:bg-[#486530] active:bg-[#3b5327] transition-colors rounded-none font-medium tracking-wide shadow-sm;
   }
-  @layer components {
-    .btn {
-      @apply bg-black px-8 py-3 text-sm text-white hover:bg-gray-900 active:bg-gray-700;
-    }
-  }
-  
-  .perspective-200 {
+}
+
+.perspective-200 {
   perspective: 200px;
 }
 
@@ -49,19 +63,35 @@ a.active hr{
   -webkit-text-stroke: 1px rgb(255, 255, 255);
   color: transparent;
 }
+
 /* globals.css */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(45, 212, 191, 0.5); /* Teal (Tailwind: teal-400) */
+  background: #587a3b;
+  /* Teal (Tailwind: teal-400) */
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .text-oswald {
   font-family: 'Oswald', Arial, sans-serif;
+}
+
+/* Toastify Theme Styles */
+.Toastify__toast--success {
+  background-color: #587a3b !important;
+  color: #ffffff !important;
+}
+.Toastify__progress-bar--success {
+  background-color: #3b5327 !important;
+}
+.Toastify__toast {
+  border-radius: 0px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }

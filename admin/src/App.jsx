@@ -13,9 +13,10 @@ import Orders from './pages/Orders.jsx'
 import Dashboard from './pages/Dashboard.jsx';
 import Setting from './pages/Setting.jsx';
 import ContentManagement from './components/ContentManagement/ContentManagement.jsx';
+import CouponManagement from './components/CouponManagement.jsx';
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL;
-export const currency = 'Rs.'
+export const currency = 'Rs. ';
 import Favicon from './components/Favicon.jsx';
 
 const App = () => {
@@ -54,6 +55,7 @@ const App = () => {
                             <Route path='/add' element={<Add />} />
                             <Route path='/list' element={<List />} />
                             <Route path='/orders' element={<Orders />} />
+                            <Route path='/coupons' element={<CouponManagement />} />
                             <Route path='/settings' element={<Setting />} />
                             
                             {/* Redirect any unknown route to home */}

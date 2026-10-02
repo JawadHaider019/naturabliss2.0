@@ -39,9 +39,9 @@ const ScrollToTop = () => {
       <button
         onClick={scrollToTop}
         className={`
-          bg-black text-white rounded-full shadow-lg 
-          transition-all duration-300 hover:scale-110 
-          focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50
+          bg-[#587a3b] text-white rounded-full shadow-lg 
+          transition-all duration-300 hover:scale-110 hover:bg-[#486530]
+          focus:outline-none focus:ring-2 focus:ring-[#587a3b] focus:ring-opacity-50
           active:scale-95
           // Mobile-optimized sizing
           w-12 h-12 md:w-14 md:h-14

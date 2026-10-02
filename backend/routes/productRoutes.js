@@ -8,27 +8,16 @@ import {
   updateProductStatus
 
 } from '../controllers/productController.js';
-import multer from 'multer';
+import upload from '../middleware/multer.js';
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
 
-router.post('/add', upload.fields([
-  { name: 'image1', maxCount: 1 },
-  { name: 'image2', maxCount: 1 },
-  { name: 'image3', maxCount: 1 },
-  { name: 'image4', maxCount: 1 }
-]), addProduct);
+router.post('/add', upload.any(), addProduct);
 
 router.get('/list', listProducts);
 router.post('/remove', removeProduct);
 router.post('/single', singleProduct);
-router.post('/update', upload.fields([
-  { name: 'image1', maxCount: 1 },
-  { name: 'image2', maxCount: 1 },
-  { name: 'image3', maxCount: 1 },
-  { name: 'image4', maxCount: 1 }
-]), updateProduct);
+router.post('/update', upload.any(), updateProduct);
 
 router.post('/update-status', updateProductStatus);
 

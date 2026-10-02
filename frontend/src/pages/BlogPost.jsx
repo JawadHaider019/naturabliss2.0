@@ -175,7 +175,7 @@ const BlogPost = () => {
               <p className="text-gray-600 mb-6">{error || 'The requested article could not be found.'}</p>
               <Link
                 to="/blog"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 font-medium"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#587a3b] text-white hover:bg-[#486530] transition-all duration-300 font-medium"
               >
                 <FaArrowLeft className="text-sm" />
                 Back to Blog
@@ -197,7 +197,7 @@ const BlogPost = () => {
               <h3 className="text-xl font-bold text-gray-900">Share this article</h3>
               <button
                 onClick={closeShareModal}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="text-gray-500 hover:text-[#587a3b] transition-colors"
               >
                 <FaTimes className="text-lg" />
               </button>
@@ -272,7 +272,7 @@ const BlogPost = () => {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="px-4 py-2 bg-black text-white text-sm hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 bg-[#587a3b] text-white text-sm hover:bg-[#486530] transition-colors"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -285,7 +285,7 @@ const BlogPost = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <Link
           to="/blog"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors duration-300 mb-8 group"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-[#587a3b] transition-colors duration-300 mb-8 group"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
           Back to Blog
@@ -374,7 +374,7 @@ const BlogPost = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={openShareModal}
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white transition-colors duration-300 border border-gray-300"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#587a3b] text-white hover:bg-[#486530] transition-colors duration-300 border border-[#587a3b]"
                   >
                     <FaShare className="text-sm" />
                     Share
@@ -532,7 +532,7 @@ const RelatedBlogCard = ({ blog }) => {
 
         <div className="p-4 flex-1 flex flex-col">
           <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-gray-700 transition-colors duration-300 line-clamp-2 text-sm leading-tight">
+            <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors duration-300 line-clamp-2 text-sm leading-tight">
               {blog.title}
             </h4>
 
