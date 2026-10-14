@@ -1,12 +1,10 @@
-import React, { useContext, useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShopContext } from "../context/ShopContext";
 import Title from "./Title";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?q=80&w=600&auto=format&fit=crop";
 
 const ShopByCategory = () => {
-  const { products } = useContext(ShopContext);
   const [backendCategories, setBackendCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -37,7 +35,7 @@ const ShopByCategory = () => {
     }
   }, [backendURL]);
 
-  // Map each DB category to its name and representative product image
+  // Map each DB category to its name and category image
   const displayCategories = useMemo(() => {
     if (!backendCategories || backendCategories.length === 0) {
       return [];
@@ -47,18 +45,8 @@ const ShopByCategory = () => {
       const catName = (cat.name || cat.title || "").trim();
       const catId = cat._id || cat.id;
 
-      // Find first product in this category with an image
-      const productWithImage = products?.find(
-        (p) =>
-          (p.category === catId ||
-            p.category === catName ||
-            p.category?._id === catId ||
-            p.category?.name === catName) &&
-          p.image &&
-          p.image.length > 0
-      );
-
-      const finalImage = productWithImage?.image?.[0] || DEFAULT_PLACEHOLDER;
+      // Use uploaded category image; fallback to DEFAULT_PLACEHOLDER if not uploaded
+      const finalImage = cat.image?.trim() || DEFAULT_PLACEHOLDER;
 
       return {
         id: catId || catName,
@@ -67,7 +55,7 @@ const ShopByCategory = () => {
         image: finalImage,
       };
     }).filter(cat => cat.name.length > 0);
-  }, [backendCategories, products]);
+  }, [backendCategories]);
 
   const handleCategoryClick = (categoryName) => {
     navigate(`/collection?category=${encodeURIComponent(categoryName)}`);

@@ -1,5 +1,14 @@
 // controllers/categoryController.js
 import Category from '../models/categoryModel.js';
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET_KEY || process.env.CLOUDINARY_API_SECRET,
+});
 
 // Get all categories with subcategories
 const getAllCategories = async (req, res) => {
@@ -14,14 +23,34 @@ const getAllCategories = async (req, res) => {
 // Create new category
 const createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, image } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ error: 'Category name is required' });
     }
 
+    let imageUrl = image || '';
+
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'categories',
+          resource_type: 'image'
+        });
+        imageUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error('Cloudinary category upload error:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload category image' });
+      } finally {
+        if (req.file.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      }
+    }
+
     const category = new Category({
       name: name.trim(),
+      image: imageUrl,
       subcategories: []
     });
 
@@ -65,23 +94,40 @@ const addSubcategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, image } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ error: 'Category name is required' });
     }
 
-    const category = await Category.findByIdAndUpdate(
-      id,
-      { name: name.trim() },
-      { new: true }
-    );
-
+    const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    res.json(category);
+    category.name = name.trim();
+
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'categories',
+          resource_type: 'image'
+        });
+        category.image = result.secure_url;
+      } catch (uploadError) {
+        console.error('Cloudinary category upload error:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload category image' });
+      } finally {
+        if (req.file.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      }
+    } else if (image !== undefined) {
+      category.image = image;
+    }
+
+    const updatedCategory = await category.save();
+    res.json(updatedCategory);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -178,6 +224,7 @@ const getCategoriesDebug = async (req, res) => {
       categories: categories.map(cat => ({
         _id: cat._id,
         name: cat.name,
+        image: cat.image,
         subcategories: cat.subcategories
       }))
     });

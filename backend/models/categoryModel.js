@@ -23,6 +23,10 @@ const categorySchema = new mongoose.Schema({
     trim: true,
     unique: true // This automatically creates a unique index
   },
+  image: {
+    type: String,
+    default: ''
+  },
   subcategories: [subcategorySchema]
 }, {
   timestamps: true

@@ -196,7 +196,7 @@ const Hero = () => {
             alt={banner?.altText || "Natura Bliss Banner"}
             className={`w-full ${screenSize === 'mobile' ? 'h-auto block' : 'h-full object-cover'}`}
             loading="eager"
-            fetchPriority="high"
+            fetchpriority="high"
             decoding="sync"
             onError={(e) => {
               e.currentTarget.onerror = null;
