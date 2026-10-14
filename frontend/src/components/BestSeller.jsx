@@ -25,26 +25,33 @@ const BestSeller = () => {
         return isPublished;
       });
 
-      // STRICT filtering - only products explicitly marked as bestsellers
-      const bestProducts = publishedProducts.filter((item) => {
-        // Check each possible bestseller field explicitly
-        const isExplicitBestSeller =
-          (item.bestseller === true || item.bestseller === "true") ||
-          (item.bestSeller === true || item.bestSeller === "true") ||
-          (item.best_seller === true || item.best_seller === "true") ||
-          (item.isBestseller === true || item.isBestseller === "true") ||
-          (item.isBestSeller === true || item.isBestSeller === "true");
+      // Remove duplicate products by ID
+      const uniqueProducts = publishedProducts.filter((product, index, self) =>
+        index === self.findIndex(p => (p._id || p.id) === (product._id || product.id))
+      );
 
-        return isExplicitBestSeller;
+      // Filtering for products explicitly marked as bestsellers
+      const explicitBestSellers = uniqueProducts.filter((item) => {
+        return (
+          item.bestseller === true || item.bestseller === "true" ||
+          item.bestSeller === true || item.bestSeller === "true" ||
+          item.best_seller === true || item.best_seller === "true" ||
+          item.isBestseller === true || item.isBestseller === "true" ||
+          item.isBestSeller === true || item.isBestSeller === "true"
+        );
       });
 
-
-      if (bestProducts.length === 0) {
-        return [];
+      // If fewer than 8 bestsellers, fill with other published products (sorted by rating)
+      // so the slider matches Latest Collection with full slides across screens
+      if (explicitBestSellers.length < 8) {
+        const remainingProducts = uniqueProducts.filter(
+          p => !explicitBestSellers.some(b => (b._id || b.id) === (p._id || p.id))
+        );
+        const sortedRemaining = [...remainingProducts].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        return [...explicitBestSellers, ...sortedRemaining].slice(0, 10);
       }
-      const finalBestSellers = bestProducts.slice(0, 20);
 
-      return finalBestSellers;
+      return explicitBestSellers.slice(0, 20);
 
     } catch (err) {
       return [];
@@ -108,15 +115,6 @@ const BestSeller = () => {
     centerMode: false,
     adaptiveHeight: false,
     responsive: [
-      {
-        breakpoint: 1536,
-        settings: {
-          slidesToShow: Math.min(4, bestSeller.length),
-          slidesToScroll: 1,
-          infinite: bestSeller.length > 4,
-          autoplay: bestSeller.length > 4,
-        }
-      },
       {
         breakpoint: 1280,
         settings: {
@@ -230,7 +228,7 @@ const BestSeller = () => {
   }
 
   return (
-    <div className="my-10 md:my-16">
+    <div className="my-16 md:my-24">
       <div className="py-2 text-center text-2xl md:text-3xl">
         <Title text1={"BEST"} text2={"SELLERS"} />
         <p className="text-[14px] md:text-[16px] text-gray-600 font-light px-4 max-w-2xl mx-auto">
@@ -253,9 +251,9 @@ const BestSeller = () => {
                       id={item._id || item.id}
                       slug={item.slug}
                       image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-                      name={item.name || "Unnamed Product"}
-                      price={item.price || 0}
-                      discount={item.discountprice || item.discountPrice || 0}
+                      name={item.name}
+                      price={item.price}
+                      discount={item.discountprice}
                       rating={item.rating || 0}
                       status={item.status}
                       className="h-full w-full"
@@ -281,9 +279,9 @@ const BestSeller = () => {
                 id={item._id || item.id}
                 slug={item.slug}
                 image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-                name={item.name || "Unnamed Product"}
-                price={item.price || 0}
-                discount={item.discountprice || item.discountPrice || 0}
+                name={item.name}
+                price={item.price}
+                discount={item.discountprice}
                 rating={item.rating || 0}
                 status={item.status}
                 className="w-full max-w-xs sm:max-w-sm"

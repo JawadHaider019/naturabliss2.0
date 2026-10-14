@@ -1,4 +1,5 @@
-import banner1 from './banner1.png';
+import desktopBanner from './Desktop Banner.webp';
+import mobileBanner from './Mobile Banner.webp';
 import whyus from './whyus.webp';
 import Newsletter from './Newsletter.webp';
 import logo from './logo.png';
@@ -41,5 +42,7 @@ export const assets = {
   whyus,
   Newsletter,
   fav,
-  banner1
+  desktopBanner,
+  mobileBanner,
+  banner1: desktopBanner
 };

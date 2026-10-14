@@ -12,6 +12,12 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
     return null;
   }
 
+  const numPrice = Number(price) || 0;
+  const numDiscount = Number(discount);
+  const hasDiscount = !isNaN(numDiscount) && numDiscount > 0 && numDiscount < numPrice;
+  const actualPrice = hasDiscount ? numDiscount : numPrice;
+  const discountPercentage = hasDiscount ? Math.round(((numPrice - numDiscount) / numPrice) * 100) : 0;
+
   const handleClick = (e) => {
     if (onClick) {
       onClick(e);
@@ -19,9 +25,6 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
 
     // Facebook Pixel: Track product view
     if (window.fbq) {
-      const actualPrice = discount ? discount : price;
-      const discountPercentage = discount ? Math.round(((price - discount) / price) * 100) : 0;
-
       window.fbq('track', 'ViewContent', {
         content_ids: [id],
         content_name: name,
@@ -29,8 +32,8 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
         value: actualPrice,
         currency: 'PKR',
         content_category: 'Product',
-        has_discount: discount > 0,
-        discount_percentage: discountPercentage || undefined
+        has_discount: hasDiscount,
+        discount_percentage: discountPercentage > 0 ? discountPercentage : undefined
       });
 
       console.log('📊 Facebook Pixel: Product view tracked', {
@@ -76,15 +79,13 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
     return stars;
   };
 
-  const actualPrice = discount ? discount : price;
-
   return (
     <div onClick={handleClick} className={`group cursor-pointer text-gray-700 flex flex-col h-full w-full bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 pb-2 ${className}`}>
       {/* Fixed aspect ratio container for consistent image size */}
       <div className="relative overflow-hidden w-full aspect-square bg-white flex items-center justify-center">
-        {discount && (
+        {hasDiscount && discountPercentage > 0 && (
           <div className="absolute right-2 top-2 z-10 bg-[#587a3b] px-2 py-1 text-xs font-semibold text-white shadow-sm">
-            {Math.round(((price - discount) / price) * 100)}% OFF
+            {discountPercentage}% OFF
           </div>
         )}
         <img
@@ -120,9 +121,9 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
             <span className="text-base sm:text-lg md:text-xl font-semibold text-black">
               {currency} {actualPrice}
             </span>
-            {discount && (
+            {hasDiscount && (
               <span className="text-xs sm:text-sm text-gray-400 line-through hidden sm:inline font-normal">
-                {currency} {price}
+                {currency} {numPrice}
               </span>
             )}
           </div>

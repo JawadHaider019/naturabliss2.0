@@ -9,8 +9,8 @@ import axios from 'axios';
 // Pre-loaded default banner from local assets - ALWAYS AVAILABLE INSTANTLY
 const defaultBanner = {
   _id: 'default-banner',
-  desktopImageUrl: assets.banner1,
-  mobileImageUrl: assets.banner1,
+  desktopImageUrl: assets.desktopBanner,
+  mobileImageUrl: assets.mobileBanner,
   altText: 'Natura Bliss Natural & Organic Skincare'
 };
 
@@ -115,17 +115,18 @@ const Hero = () => {
 
   // Get image URL based on screen size
   const getImageUrl = (banner) => {
-    if (!banner) return assets.banner1;
+    const fallbackImage = screenSize === 'mobile' ? assets.mobileBanner : assets.desktopBanner;
+    if (!banner) return fallbackImage;
     
     if (screenSize === 'mobile' && banner.mobileImageUrl) {
       return banner.mobileImageUrl;
     }
     
-    if (banner.desktopImageUrl) {
+    if (screenSize !== 'mobile' && banner.desktopImageUrl) {
       return banner.desktopImageUrl;
     }
     
-    return assets.banner1;
+    return banner.desktopImageUrl || banner.mobileImageUrl || fallbackImage;
   };
 
   // Custom dots components
@@ -172,6 +173,7 @@ const Hero = () => {
   // Banner Item Component
   const BannerItem = ({ banner, index }) => {
     const imageUrl = getImageUrl(banner);
+    const fallbackImage = screenSize === 'mobile' ? assets.mobileBanner : assets.desktopBanner;
     const isClickable = banner?.linkUrl && banner.linkUrl !== '';
 
     return (
@@ -192,7 +194,7 @@ const Hero = () => {
           }}
         >
           <img
-            src={imageUrl || assets.banner1}
+            src={imageUrl || fallbackImage}
             alt={banner?.altText || "Natura Bliss Banner"}
             className={`w-full ${screenSize === 'mobile' ? 'h-auto block' : 'h-full object-cover'}`}
             loading="eager"
@@ -200,7 +202,7 @@ const Hero = () => {
             decoding="sync"
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = assets.banner1;
+              e.currentTarget.src = fallbackImage;
             }}
           />
         </div>
