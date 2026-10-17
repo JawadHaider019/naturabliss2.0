@@ -22,7 +22,7 @@ const orderSchema = new mongoose.Schema({
     // ORDER-SPECIFIC CUSTOMER DETAILS
     customerDetails: {
         name: {type: String, required: true},
-        email: {type: String, required: true},
+        email: {type: String, required: false, default: ''},
         phone: {type: String, default: ''}
     },
 

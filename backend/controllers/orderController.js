@@ -447,16 +447,18 @@ const placeOrder = async (req, res) => {
     }
 
     // Customer details validation
-    if (!customerDetails || !customerDetails.name || !customerDetails.email || !customerDetails.phone) {
+    if (!customerDetails || !customerDetails.name || !customerDetails.phone) {
       return res.status(400).json({ 
         success: false, 
-        message: "Customer details (name, email, phone) are required" 
+        message: "Customer details (name, phone) are required" 
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customerDetails.email.trim())) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+    if (customerDetails.email && customerDetails.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerDetails.email.trim())) {
+        return res.status(400).json({ success: false, message: "Invalid email format" });
+      }
     }
 
     const phoneDigits = customerDetails.phone.replace(/\D/g, '');
@@ -514,7 +516,7 @@ const placeOrder = async (req, res) => {
       date: Date.now(),
       customerDetails: {
         name: customerDetails.name.trim(),
-        email: customerDetails.email.trim(),
+        email: customerDetails.email ? customerDetails.email.trim() : "",
         phone: customerDetails.phone
       },
       isGuest: isGuest
@@ -776,7 +778,7 @@ const getGuestOrderDetails = async (req, res) => {
     }
     
     // Verify with email
-    if (email && order.customerDetails.email.toLowerCase() !== email.trim().toLowerCase()) {
+    if (email && order.customerDetails?.email && order.customerDetails.email.toLowerCase() !== email.trim().toLowerCase()) {
       return res.json({ 
         success: false, 
         message: "Email does not match this order" 
@@ -1012,7 +1014,7 @@ const cancelGuestOrder = async (req, res) => {
     // Verify guest identity
     let isVerified = false;
     
-    if (email && order.customerDetails.email.toLowerCase() === email.trim().toLowerCase()) {
+    if (email && order.customerDetails?.email && order.customerDetails.email.toLowerCase() === email.trim().toLowerCase()) {
       isVerified = true;
     }
     

@@ -142,7 +142,7 @@ const PlaceOrder = () => {
     }
     
     // If user is logged in, pre-fill with their data
-    if (user?.name && user?.email) {
+    if (user?.name || user?.email) {
       defaultData.fullName = user.name || '';
       defaultData.email = user.email || '';
       defaultData.phone = user.phone || '';
@@ -154,7 +154,6 @@ const PlaceOrder = () => {
   // Check if all required address fields are filled
   const hasRequiredAddressFields = Boolean(
     formData.fullName?.trim() &&
-    formData.email?.trim() &&
     formData.street?.trim() &&
     formData.state?.trim() &&
     formData.city?.trim() &&
@@ -363,8 +362,9 @@ const PlaceOrder = () => {
         break;
         
       case 'email':
-        if (!value?.trim()) errors.email = 'Customer email is required';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errors.email = 'Please enter a valid email address';
+        if (value?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          errors.email = 'Please enter a valid email address';
+        }
         break;
         
       case 'street':
@@ -469,7 +469,7 @@ const PlaceOrder = () => {
   const onBlurHandler = async (e) => {
     const { name, value } = e.target;
     const errors = await validateField(name, value);
-    setValidationErrors(prev => ({ ...prev, ...errors }));
+    setValidationErrors(prev => ({ ...prev, [name]: errors[name] || '' }));
   };
 
   const selectAddressSuggestion = (suggestion) => {
@@ -826,7 +826,7 @@ const PlaceOrder = () => {
       }));
       formDataToSend.append('customerDetails', JSON.stringify({
         name: formData.fullName.trim(),
-        email: formData.email.trim(),
+        email: formData.email ? formData.email.trim() : '',
         phone: digitsOnly
       }));
       if (screenshotFile) {
@@ -932,7 +932,7 @@ const PlaceOrder = () => {
             date: Date.now(),
             customerDetails: {
               name: formData.fullName.trim(),
-              email: formData.email.trim(),
+              email: formData.email ? formData.email.trim() : '',
               phone: digitsOnly
             },
             isGuest: true,
@@ -949,7 +949,7 @@ const PlaceOrder = () => {
           
           // Save guest info for backend sync
           localStorage.setItem('guestOrderInfo', JSON.stringify({
-            email: formData.email.trim(),
+            email: formData.email ? formData.email.trim() : '',
             phone: digitsOnly,
             timestamp: Date.now(),
             customerName: formData.fullName.trim()
@@ -1198,7 +1198,7 @@ const PlaceOrder = () => {
         </div> 
         
         {renderInputField('fullName', 'text', 'Enter customer name for this order', 'Customer Name', true)}
-        {renderInputField('email', 'email', 'customer@example.com', 'Customer Email', true)}
+        {renderInputField('email', 'email', 'customer@example.com (optional)', 'Customer Email (Optional)', false)}
         
         {renderAddressInput()}
         
