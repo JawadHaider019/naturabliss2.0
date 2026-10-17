@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useContext, useEffect, useCallback } from 'react';
+import { useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import Title from '../components/Title';
 import CartTotal from '../components/CartTotal';
 import { ShopContext } from '../context/ShopContext';
@@ -73,7 +73,9 @@ const PlaceOrder = () => {
     deals,
     getCart,
     appliedCoupon,
-    getCouponDiscount
+    getCouponDiscount,
+    currency,
+    deliverySettings
   } = useContext(ShopContext);
   
   const navigate = useNavigate();
@@ -149,16 +151,15 @@ const PlaceOrder = () => {
     return defaultData;
   });
 
-  // Check if all required fields are filled and screenshot is uploaded
-  const isFormComplete = Boolean(
+  // Check if all required address fields are filled
+  const hasRequiredAddressFields = Boolean(
     formData.fullName?.trim() &&
     formData.email?.trim() &&
     formData.street?.trim() &&
     formData.state?.trim() &&
     formData.city?.trim() &&
     formData.zipcode?.toString().trim() &&
-    formData.phone?.trim() &&
-    screenshotFile
+    formData.phone?.trim()
   );
 
   // Load Pakistan states
@@ -602,9 +603,31 @@ const PlaceOrder = () => {
     if (cartItems && products) {
       Object.entries(cartItems).forEach(([itemId, quantity]) => {
         if (quantity > 0) {
-          const productInfo = products.find(product => product._id === itemId);
+          const [productId, variantName] = itemId.split('__');
+          const productInfo = products.find(product => product._id === productId);
           if (productInfo?.name) {
-            const unitPrice = productInfo.discountprice > 0 ? productInfo.discountprice : productInfo.price;
+            const variant = variantName && productInfo.variants
+              ? productInfo.variants.find(v => v.name === variantName)
+              : null;
+
+            let unitPrice, originalPrice, hasDiscount, itemName, itemImage;
+            if (variant) {
+              hasDiscount = variant.discountprice !== undefined &&
+                variant.discountprice !== null &&
+                Number(variant.discountprice) > 0 &&
+                Number(variant.discountprice) < Number(variant.price);
+              unitPrice = hasDiscount ? Number(variant.discountprice) : Number(variant.price);
+              originalPrice = Number(variant.price);
+              itemName = `${productInfo.name} (${variant.name})`;
+              itemImage = variant.image || productInfo.image?.[0] || assets.placeholder_image;
+            } else {
+              hasDiscount = productInfo.discountprice > 0 && productInfo.discountprice < productInfo.price;
+              unitPrice = hasDiscount ? productInfo.discountprice : productInfo.price;
+              originalPrice = productInfo.price;
+              itemName = productInfo.name;
+              itemImage = productInfo.image?.[0] || assets.placeholder_image;
+            }
+
             const itemTotal = unitPrice * quantity;
             
             // Get proper category and subcategory names
@@ -613,16 +636,17 @@ const PlaceOrder = () => {
             
             orderItems.push({
               id: productInfo._id,
-              name: productInfo.name,
+              name: itemName,
               price: unitPrice,
               quantity: quantity,
-              image: productInfo.image?.[0] || assets.placeholder_image,
+              image: itemImage,
               category: categoryName,
               subcategory: subcategoryName,
+              variant: variantName || null,
               isFromDeal: false,
               description: productInfo.description,
-              originalPrice: productInfo.price,
-              hasDiscount: productInfo.discountprice > 0
+              originalPrice: originalPrice,
+              hasDiscount: hasDiscount
             });
             
             calculatedAmount += itemTotal;
@@ -672,6 +696,30 @@ const PlaceOrder = () => {
 
     return { orderItems, calculatedAmount };
   };
+
+  // Live cart totals & delivery calculations based on delivery settings
+  const currentCartData = useMemo(() => {
+    const { calculatedAmount } = processCartItems();
+    const couponDiscount = getCouponDiscount ? getCouponDiscount(calculatedAmount) : 0;
+    const discountedSubtotal = Math.max(0, calculatedAmount - couponDiscount);
+    const deliveryCharge = getDeliveryCharge ? getDeliveryCharge(discountedSubtotal) : 0;
+    const isFreeDelivery = deliveryCharge === 0;
+    const finalAmount = discountedSubtotal + deliveryCharge;
+    return {
+      subtotal: calculatedAmount,
+      couponDiscount,
+      discountedSubtotal,
+      deliveryCharge,
+      isFreeDelivery,
+      finalAmount
+    };
+  }, [cartItems, cartDeals, products, deals, appliedCoupon, getCouponDiscount, getDeliveryCharge, subcategoryIdMap]);
+
+  // Form is complete when all address fields are filled AND (delivery is free OR screenshot is provided)
+  const isFormComplete = Boolean(
+    hasRequiredAddressFields &&
+    (currentCartData.isFreeDelivery || screenshotFile)
+  );
 
   // Clear cart after order
   const clearCartAfterOrder = async () => {
@@ -744,8 +792,9 @@ const PlaceOrder = () => {
       const { orderItems, calculatedAmount } = processCartItems();
       const couponDiscount = getCouponDiscount ? getCouponDiscount(calculatedAmount) : 0;
       const discountedSubtotal = Math.max(0, calculatedAmount - couponDiscount);
-      const deliveryCharge = getDeliveryCharge(discountedSubtotal);
+      const deliveryCharge = getDeliveryCharge ? getDeliveryCharge(discountedSubtotal) : 0;
       const finalAmount = discountedSubtotal + deliveryCharge;
+      const isFreeDeliveryOrder = deliveryCharge === 0;
 
       if (orderItems.length === 0) {
         toast.error('Your cart is empty');
@@ -753,8 +802,8 @@ const PlaceOrder = () => {
         return;
       }
 
-      if (!screenshotFile) {
-        toast.error('Please upload the payment screenshot of Rs. 250 advance delivery fee');
+      if (!isFreeDeliveryOrder && !screenshotFile) {
+        toast.error(`Please upload the payment screenshot of Rs. ${deliveryCharge} advance delivery fee`);
         setLoading(false);
         setIsValidatingAddress(false);
         return;
@@ -765,7 +814,7 @@ const PlaceOrder = () => {
       formDataToSend.append('items', JSON.stringify(orderItems));
       formDataToSend.append('amount', finalAmount.toString());
       formDataToSend.append('deliveryCharges', deliveryCharge.toString());
-      formDataToSend.append('advanceAmount', '250');
+      formDataToSend.append('advanceAmount', deliveryCharge.toString());
       formDataToSend.append('transactionId', transactionId.trim());
       formDataToSend.append('couponCode', appliedCoupon?.code || '');
       formDataToSend.append('couponDiscount', couponDiscount.toString());
@@ -780,7 +829,9 @@ const PlaceOrder = () => {
         email: formData.email.trim(),
         phone: digitsOnly
       }));
-      formDataToSend.append('paymentScreenshot', screenshotFile);
+      if (screenshotFile) {
+        formDataToSend.append('paymentScreenshot', screenshotFile);
+      }
 
       // Config for both guest and logged-in users
       const config = {
@@ -856,6 +907,7 @@ const PlaceOrder = () => {
               image: item.image || assets.placeholder_image,
               category: item.category,
               subcategory: item.subcategory,
+              variant: item.variant || null,
               isFromDeal: item.isFromDeal || false,
               dealImage: item.dealImage,
               originalTotalPrice: item.originalTotalPrice,
@@ -870,11 +922,11 @@ const PlaceOrder = () => {
               state: formData.state,
               zipcode: formData.zipcode.trim()
             },
-            paymentMethod: 'COD (Rs. 250 Advance)',
+            paymentMethod: isFreeDeliveryOrder ? 'COD (Free Delivery)' : `COD (Rs. ${deliveryCharge} Advance)`,
             payment: false,
             paymentScreenshot: screenshotPreview || "",
-            advanceAmount: 250,
-            advancePaymentStatus: 'pending',
+            advanceAmount: deliveryCharge,
+            advancePaymentStatus: isFreeDeliveryOrder ? 'not_required' : 'pending',
             transactionId: transactionId.trim(),
             status: 'Pending',
             date: Date.now(),
@@ -1169,159 +1221,182 @@ const PlaceOrder = () => {
     
         <div className='mt-12'>
           <Title text1={'PAYMENT'} text2={'METHOD'}/>
-          {/* ADVANCE DELIVERY FEE BANNER */}
-          <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
-            <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-              <span>⚠️</span>
-              <span>Rs. 250 Advance Delivery Fee Required</span>
-            </div>
-            <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
-              To confirm your order, please transfer <strong className="font-bold underline">Rs. 250 (Delivery Charges)</strong> in advance. The remaining cart amount will be paid via <strong>Cash on Delivery (COD)</strong> upon receiving your parcel.
-            </p>
-          </div>
-
-          {/* PAYMENT ACCOUNTS SELECTOR */}
-          <div className="mt-5 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-            <div className="flex border-b border-gray-200 bg-gray-50 text-center">
-              <button
-                type="button"
-                onClick={() => setActivePaymentTab('easypaisa')}
-                className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
-                  activePaymentTab === 'easypaisa'
-                    ? 'bg-white text-green-700 border-b-2 border-green-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Easypaisa
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePaymentTab('bank')}
-                className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
-                  activePaymentTab === 'bank'
-                    ? 'bg-white text-blue-700 border-b-2 border-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                UBL Bank Transfer
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-5">
-              {activePaymentTab === 'easypaisa' && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
-                      <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">EASYPAISA NUMBER</p>
-                      <p className="text-sm font-mono font-bold text-gray-900">0324 1572294</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard('03241572294', 'Easypaisa Number')}
-                      className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {activePaymentTab === 'bank' && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">BANK NAME</p>
-                      <p className="text-sm font-bold text-gray-900">UBL (United Bank Limited)</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
-                      <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">IBAN</p>
-                      <p className="text-sm font-mono font-bold text-gray-900 break-all">PK78UNIL0109000339235351</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard('PK78UNIL0109000339235351', 'IBAN')}
-                      className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* SCREENSHOT UPLOAD & TRANSACTION ID */}
-          <div className="mt-5 border border-gray-200 rounded-xl p-4 sm:p-5 bg-white shadow-sm">
-            <label className="block text-sm font-bold text-gray-900 mb-1">
-              Upload Payment Screenshot (Required) *
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
-              Attach a screenshot of your Rs. 250 advance delivery fee payment receipt.
-            </p>
-
-            {screenshotPreview ? (
-              <div className="relative w-full max-w-xs border rounded-xl p-2 bg-gray-50 flex flex-col items-center">
-                <img
-                  src={screenshotPreview}
-                  alt="Payment Screenshot Preview"
-                  className="max-h-52 w-auto object-contain rounded-lg shadow-sm"
-                />
-                <button
-                  type="button"
-                  onClick={removeScreenshot}
-                  className="mt-2 text-xs font-semibold text-red-600 hover:text-red-800 underline"
-                >
-                  Remove & Upload Another
-                </button>
+          {currentCartData.isFreeDelivery ? (
+            /* FREE DELIVERY BANNER & COD BADGE */
+            <div className="mt-4 p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-950 shadow-sm space-y-3">
+              <div className="flex items-center gap-2.5 font-extrabold text-base sm:text-lg text-emerald-800">
+                <span className="text-xl">🎉</span>
+                <span>Congratulations! FREE Delivery Unlocked</span>
               </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg className="w-8 h-8 mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-xs sm:text-sm font-medium text-gray-700">
-                    <span className="font-bold underline">Click to upload</span> payment screenshot
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG up to 10MB</p>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleScreenshotChange}
-                  className="hidden"
-                />
-              </label>
-            )}
-
-            {/* Optional Transaction ID Input */}
-            <div className="mt-4">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Transaction ID / Reference Number (Optional)
-              </label>
-              <input
-                type="text"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                placeholder="e.g. TID-1234567890"
-                className="w-full border border-gray-300 px-3.5 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#587a3b] focus:outline-none"
-              />
+              <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed">
+                Your order qualifies for <strong>100% Free Shipping</strong>. No advance delivery charges or payment screenshot are required!
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-semibold border border-emerald-300">
+                  ✓ Payment Method: Cash on Delivery (COD)
+                </span>
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/80 text-gray-700 font-medium border border-emerald-200">
+                  Pay total of <strong>Rs. {currentCartData.finalAmount.toFixed(0)}</strong> at doorstep
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* ADVANCE DELIVERY FEE BANNER */}
+              <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                  <span>⚠️</span>
+                  <span>Rs. {currentCartData.deliveryCharge} Advance Delivery Fee Required</span>
+                </div>
+                <p className="text-xs sm:text-sm text-amber-800 mt-1 leading-relaxed">
+                  To confirm your order, please transfer <strong className="font-bold underline">Rs. {currentCartData.deliveryCharge} (Delivery Charges)</strong> in advance. The remaining cart amount of <strong className="font-bold">Rs. {currentCartData.discountedSubtotal.toFixed(0)}</strong> will be paid via <strong>Cash on Delivery (COD)</strong> upon receiving your parcel.
+                </p>
+              </div>
+
+              {/* PAYMENT ACCOUNTS SELECTOR */}
+              <div className="mt-5 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="flex border-b border-gray-200 bg-gray-50 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setActivePaymentTab('easypaisa')}
+                    className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
+                      activePaymentTab === 'easypaisa'
+                        ? 'bg-white text-green-700 border-b-2 border-green-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    Easypaisa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePaymentTab('bank')}
+                    className={`flex-1 py-3 text-xs sm:text-sm font-semibold transition-colors ${
+                      activePaymentTab === 'bank'
+                        ? 'bg-white text-blue-700 border-b-2 border-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    UBL Bank Transfer
+                  </button>
+                </div>
+
+                <div className="p-4 sm:p-5">
+                  {activePaymentTab === 'easypaisa' && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
+                          <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">EASYPAISA NUMBER</p>
+                          <p className="text-sm font-mono font-bold text-gray-900">0324 1572294</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard('03241572294', 'Easypaisa Number')}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {activePaymentTab === 'bank' && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">BANK NAME</p>
+                          <p className="text-sm font-bold text-gray-900">UBL (United Bank Limited)</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">ACCOUNT TITLE</p>
+                          <p className="text-sm font-bold text-gray-900">Muhammad Noman</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">IBAN</p>
+                          <p className="text-sm font-mono font-bold text-gray-900 break-all">PK78UNIL0109000339235351</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard('PK78UNIL0109000339235351', 'IBAN')}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#587a3b] text-white rounded-md hover:bg-[#486530] transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SCREENSHOT UPLOAD & TRANSACTION ID */}
+              <div className="mt-5 border border-gray-200 rounded-xl p-4 sm:p-5 bg-white shadow-sm">
+                <label className="block text-sm font-bold text-gray-900 mb-1">
+                  Upload Payment Screenshot (Required) *
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Attach a screenshot of your Rs. {currentCartData.deliveryCharge} advance delivery fee payment receipt.
+                </p>
+
+                {screenshotPreview ? (
+                  <div className="relative w-full max-w-xs border rounded-xl p-2 bg-gray-50 flex flex-col items-center">
+                    <img
+                      src={screenshotPreview}
+                      alt="Payment Screenshot Preview"
+                      className="max-h-52 w-auto object-contain rounded-lg shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeScreenshot}
+                      className="mt-2 text-xs font-semibold text-red-600 hover:text-red-800 underline"
+                    >
+                      Remove & Upload Another
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-gray-700">
+                        <span className="font-bold underline">Click to upload</span> payment screenshot
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {/* Optional Transaction ID Input */}
+                <div className="mt-4">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Transaction ID / Reference Number (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="e.g. TID-1234567890"
+                    className="w-full border border-gray-300 px-3.5 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-[#587a3b] focus:outline-none"
+                  />
+                </div>
+              </div>
+            </>
+          )}
           
           {/* Additional info for guests */}
           {!token && (
@@ -1362,8 +1437,8 @@ const PlaceOrder = () => {
               ) : !isDataReady ? (
                 'LOADING CART...'
               ) : !isFormComplete ? (
-                !screenshotFile && (formData.fullName && formData.email && formData.street && formData.state && formData.city && formData.zipcode && formData.phone)
-                  ? 'UPLOAD SCREENSHOT TO PROCEED'
+                !currentCartData.isFreeDelivery && !screenshotFile && hasRequiredAddressFields
+                  ? `UPLOAD SCREENSHOT (RS. ${currentCartData.deliveryCharge})`
                   : 'FILL ALL FIELDS TO PLACE ORDER'
               ) : (
                 'PLACE ORDER'
@@ -1372,9 +1447,9 @@ const PlaceOrder = () => {
             
             {!isFormComplete && isDataReady && !loading && (
               <p className="text-xs text-amber-700 mt-2 text-center md:text-end font-medium">
-                {!screenshotFile && (formData.fullName && formData.email && formData.street && formData.state && formData.city && formData.zipcode && formData.phone)
-                  ? '⚠️ Please upload advance payment screenshot'
-                  : '⚠️ Please fill all delivery fields and upload payment screenshot'}
+                {!currentCartData.isFreeDelivery && !screenshotFile && hasRequiredAddressFields
+                  ? `⚠️ Please upload advance payment screenshot (Rs. ${currentCartData.deliveryCharge})`
+                  : '⚠️ Please fill all required delivery address fields'}
               </p>
             )}
 

@@ -741,7 +741,11 @@ const Product = () => {
     addToCartCalledRef.current = true;
 
     try {
-      addToCart(productData._id, finalQuantity);
+      const cartKey = (selectedVariant && productData.variants && productData.variants.length > 0)
+        ? `${productData._id}__${selectedVariant.name}`
+        : productData._id;
+
+      addToCart(cartKey, finalQuantity);
       setQuantity(1);
     } catch (error) {
       toast.error('Failed to add product to cart');
@@ -1096,12 +1100,16 @@ const Product = () => {
             <button
               onClick={async () => {
                 if (stock === 0) return;
-                await addToCart(productData._id, quantity);
+                const cartKey = (selectedVariant && productData.variants && productData.variants.length > 0)
+                  ? `${productData._id}__${selectedVariant.name}`
+                  : productData._id;
+
+                await addToCart(cartKey, quantity);
                 if (window.fbq) {
-                  const unitPrice = Number(productData.discountprice || productData.price || 0);
+                  const unitPrice = Number(actualPrice || productData.discountprice || productData.price || 0);
                   window.fbq('track', 'InitiateCheckout', {
                     content_ids: [productData._id],
-                    content_name: productData.name,
+                    content_name: selectedVariant ? `${productData.name} (${selectedVariant.name})` : productData.name,
                     content_type: 'product',
                     value: unitPrice * quantity,
                     currency: 'PKR',

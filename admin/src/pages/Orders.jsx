@@ -162,10 +162,11 @@ const useOrdersFilter = (orders, activeFilter, searchTerm, sortBy) => {
     if (activeFilter !== 'all') {
       filtered = filtered.filter(order => {
         const isAdvance = Boolean(
-          order.advanceAmount || 
-          order.paymentScreenshot || 
-          (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
-          order.advancePaymentStatus
+          order.advancePaymentStatus !== 'not_required' &&
+          order.deliveryCharges !== 0 &&
+          ((order.advanceAmount && order.advanceAmount > 0) || 
+           order.paymentScreenshot || 
+           (order.paymentMethod && order.paymentMethod.includes('Advance')))
         );
 
         switch (activeFilter) {
@@ -382,11 +383,14 @@ const OrderDetailsModal = ({ order, customerInfo, isOpen, onClose, onVerifyPayme
   if (!isOpen || !order) return null;
 
   const isAdvance = Boolean(
-    order.advanceAmount || 
-    order.paymentScreenshot || 
-    (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
-    order.advancePaymentStatus
+    order.advancePaymentStatus !== 'not_required' &&
+    order.deliveryCharges !== 0 &&
+    ((order.advanceAmount && order.advanceAmount > 0) || 
+     order.paymentScreenshot || 
+     (order.paymentMethod && order.paymentMethod.includes('Advance')))
   );
+
+  const advanceAmountVal = order.advanceAmount !== undefined ? order.advanceAmount : (order.deliveryCharges || 0);
 
   const subtotal = (order.items || []).reduce(
     (sum, item) => sum + ((item.price || 0) * (item.quantity || 1)),
@@ -480,7 +484,7 @@ const OrderDetailsModal = ({ order, customerInfo, isOpen, onClose, onVerifyPayme
             <div className="flex items-center justify-between mb-3">
               <span className="font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
                 <FontAwesomeIcon icon={faCreditCard} />
-                Advance Delivery Payment (Rs. {order.advanceAmount || 250})
+                Advance Delivery Payment (Rs. {advanceAmountVal})
               </span>
               <span className={`px-2 py-0.5 font-bold uppercase text-[10px] ${
                 order.advancePaymentStatus === 'verified'
@@ -544,7 +548,7 @@ const OrderDetailsModal = ({ order, customerInfo, isOpen, onClose, onVerifyPayme
           <div>
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">Delivery Fee</p>
             <p className="text-white font-bold text-sm">
-              {isAdvance ? `Rs. ${order.advanceAmount || 250} (Adv)` : order.deliveryCharges === 0 ? 'FREE' : `${currency}${order.deliveryCharges}`}
+              {isAdvance ? `Rs. ${advanceAmountVal} (Adv)` : order.deliveryCharges === 0 ? 'FREE' : `${currency}${order.deliveryCharges}`}
             </p>
           </div>
           {order.couponCode && (
@@ -616,10 +620,11 @@ const OrderCard = ({
 }) => {
   const customerInfo = useMemo(() => getCustomerInfo(order), [order]);
   const isAdvance = Boolean(
-    order.advanceAmount || 
-    order.paymentScreenshot || 
-    (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
-    order.advancePaymentStatus
+    order.advancePaymentStatus !== 'not_required' &&
+    order.deliveryCharges !== 0 &&
+    ((order.advanceAmount && order.advanceAmount > 0) || 
+     order.paymentScreenshot || 
+     (order.paymentMethod && order.paymentMethod.includes('Advance')))
   );
 
   const needsVerification = isAdvance && order.advancePaymentStatus !== 'verified' && order.advancePaymentStatus !== 'rejected';
@@ -809,15 +814,24 @@ const calculateFilterCounts = (orders) => {
         break;
       case 'pending_verification':
         count = orders.filter(order => {
-          const isAdv = Boolean(order.advanceAmount || order.paymentScreenshot || order.advancePaymentStatus);
+          const isAdv = Boolean(
+            order.advancePaymentStatus !== 'not_required' &&
+            order.deliveryCharges !== 0 &&
+            ((order.advanceAmount && order.advanceAmount > 0) || order.paymentScreenshot)
+          );
           return isAdv && order.advancePaymentStatus !== 'verified' && order.advancePaymentStatus !== 'rejected';
         }).length;
         break;
       case 'pending':
-        count = orders.filter(order =>
-          (order.status === 'Order Placed' || order.status === 'Pending' || order.status === 'Processing') &&
-          (!order.advanceAmount || order.advancePaymentStatus === 'verified')
-        ).length;
+        count = orders.filter(order => {
+          const isAdv = Boolean(
+            order.advancePaymentStatus !== 'not_required' &&
+            order.deliveryCharges !== 0 &&
+            ((order.advanceAmount && order.advanceAmount > 0) || order.paymentScreenshot)
+          );
+          return (order.status === 'Order Placed' || order.status === 'Pending' || order.status === 'Processing') &&
+            (!isAdv || order.advancePaymentStatus === 'verified');
+        }).length;
         break;
       case 'packing':
         count = orders.filter(order => order.status === 'Packing').length;
@@ -837,10 +851,21 @@ const calculateFilterCounts = (orders) => {
         ).length;
         break;
       case 'COD':
-        count = orders.filter(order => !order.advanceAmount && !order.paymentScreenshot).length;
+        count = orders.filter(order => {
+          const isAdv = Boolean(
+            order.advancePaymentStatus !== 'not_required' &&
+            order.deliveryCharges !== 0 &&
+            ((order.advanceAmount && order.advanceAmount > 0) || order.paymentScreenshot)
+          );
+          return !isAdv;
+        }).length;
         break;
       case 'advance':
-        count = orders.filter(order => Boolean(order.advanceAmount || order.paymentScreenshot)).length;
+        count = orders.filter(order => Boolean(
+          order.advancePaymentStatus !== 'not_required' &&
+          order.deliveryCharges !== 0 &&
+          ((order.advanceAmount && order.advanceAmount > 0) || order.paymentScreenshot)
+        )).length;
         break;
       default:
         count = 0;

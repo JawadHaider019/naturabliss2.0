@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from 'mongoose';
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
@@ -253,22 +254,17 @@ const validateAndProcessItems = async (items) => {
   
   for (const item of items) {
     let product;
+    const rawId = item.id || item._id || item.productId || '';
+    const cleanId = rawId.includes('__') ? rawId.split('__')[0] : rawId;
     
-    if (item.id) {
-      product = await productModel.findById(item.id);
-    }
-    
-    if (!product && item._id) {
-      product = await productModel.findById(item._id);
-    }
-    
-    if (!product && item.productId) {
-      product = await productModel.findById(item.productId);
+    if (cleanId && mongoose.Types.ObjectId.isValid(cleanId)) {
+      product = await productModel.findById(cleanId);
     }
     
     if (!product && item.name) {
+      const baseName = item.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
       product = await productModel.findOne({ 
-        name: item.name, 
+        name: { $in: [item.name, baseName] }, 
         status: 'published' 
       });
     }
@@ -291,14 +287,32 @@ const validateAndProcessItems = async (items) => {
       throw new Error(`Product "${product.name}" is not available`);
     }
 
-    if (product.quantity < item.quantity) {
-      throw new Error(`Insufficient stock for "${product.name}". Available: ${product.quantity}, Requested: ${item.quantity}`);
+    const variantName = item.variant || (rawId.includes('__') ? rawId.split('__')[1] : null);
+    const variant = variantName && product.variants ? product.variants.find(v => v.name === variantName) : null;
+    const availableStock = variant && variant.quantity !== undefined && variant.quantity !== null && variant.quantity !== ''
+      ? Number(variant.quantity)
+      : product.quantity;
+
+    if (availableStock < item.quantity) {
+      throw new Error(`Insufficient stock for "${item.name || product.name}". Available: ${availableStock}, Requested: ${item.quantity}`);
+    }
+
+    let itemPrice = item.price;
+    if (itemPrice === undefined || itemPrice === null) {
+      if (variant) {
+        const hasVariantDiscount = variant.discountprice > 0 && variant.discountprice < variant.price;
+        itemPrice = hasVariantDiscount ? variant.discountprice : variant.price;
+      } else {
+        itemPrice = product.discountprice > 0 ? product.discountprice : product.price;
+      }
     }
 
     validatedItems.push({
       ...item,
       id: product._id.toString(),
-      name: product.name,
+      name: item.name || (variant ? `${product.name} (${variant.name})` : product.name),
+      price: Number(itemPrice),
+      variant: variantName || null,
       actualProduct: product
     });
   }
@@ -321,6 +335,14 @@ const reduceInventory = async (validatedItems) => {
       },
       { new: true }
     );
+
+    // If item has a variant, also reduce variant quantity
+    if (validatedItem.variant && validatedItem.actualProduct.variants?.length > 0) {
+      await productModel.updateOne(
+        { _id: validatedItem.id, "variants.name": validatedItem.variant },
+        { $inc: { "variants.$.quantity": -validatedItem.quantity } }
+      );
+    }
     
     if (updateResult) {
       console.log(`✅ Reduced stock for ${updateResult.name} by ${validatedItem.quantity}. New stock: ${updateResult.quantity}`);
@@ -454,8 +476,11 @@ const placeOrder = async (req, res) => {
     console.log("📦 Reducing inventory quantity...");
     await reduceInventory(validatedItems);
 
-    const deliveryFee = Number(deliveryCharges !== undefined && deliveryCharges !== null ? deliveryCharges : 250);
-    const advanceFee = Number(advanceAmount || deliveryFee || 250);
+    const deliveryFee = Number(deliveryCharges !== undefined && deliveryCharges !== null && !isNaN(Number(deliveryCharges)) ? deliveryCharges : 0);
+    const advanceFee = advanceAmount !== undefined && advanceAmount !== null && !isNaN(Number(advanceAmount))
+      ? Number(advanceAmount)
+      : deliveryFee;
+    const isFreeDelivery = deliveryFee === 0 || advanceFee === 0;
 
     // Create order data
     const orderData = {
@@ -467,6 +492,7 @@ const placeOrder = async (req, res) => {
         price: item.price,
         image: item.image || item.actualProduct?.image?.[0],
         category: item.category || item.actualProduct?.category,
+        variant: item.variant || null,
         isFromDeal: item.isFromDeal || false,
         dealName: item.dealName || null,
         dealImage: item.dealImage || null,
@@ -475,11 +501,11 @@ const placeOrder = async (req, res) => {
       amount: Number(amount),
       address,
       deliveryCharges: deliveryFee,
-      paymentMethod: "COD (Advance Delivery Paid)",
+      paymentMethod: isFreeDelivery ? "COD (Free Delivery)" : "COD (Advance Delivery Paid)",
       payment: false,
       paymentScreenshot: screenshotUrl,
       advanceAmount: advanceFee,
-      advancePaymentStatus: screenshotUrl ? "pending" : "pending",
+      advancePaymentStatus: isFreeDelivery ? "not_required" : (screenshotUrl ? "pending" : "pending"),
       transactionId: transactionId || "",
       advancePaymentNote: advancePaymentNote || "",
       couponCode: couponCode ? String(couponCode).toUpperCase().trim() : "",
@@ -657,8 +683,8 @@ const getGuestOrders = async (req, res) => {
       paymentMethod: order.paymentMethod,
       payment: order.payment,
       paymentScreenshot: order.paymentScreenshot || '',
-      advanceAmount: order.advanceAmount || 250,
-      advancePaymentStatus: order.advancePaymentStatus || 'pending',
+      advanceAmount: order.advanceAmount !== undefined ? order.advanceAmount : (order.deliveryCharges || 0),
+      advancePaymentStatus: order.advancePaymentStatus || (order.deliveryCharges === 0 ? 'not_required' : 'pending'),
       transactionId: order.transactionId || '',
       advancePaymentNote: order.advancePaymentNote || '',
       isGuest: true

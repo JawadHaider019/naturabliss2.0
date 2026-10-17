@@ -288,9 +288,18 @@ const ShopContextProvider = ({ children }) => {
     } else {
       if (!itemId || quantity < 0) return;
 
-      const product = products.find(p => p._id === itemId);
-      if (quantity > 0 && product?.stock && quantity > product.stock) {
-        toast.error(`Only ${product.stock} items available`);
+      const [productId, variantName] = itemId.split('__');
+      const product = products.find(p => p._id === productId);
+      let availableStock = product?.quantity || product?.stock || 0;
+      if (variantName && product?.variants) {
+        const variant = product.variants.find(v => v.name === variantName);
+        if (variant && variant.quantity !== undefined && variant.quantity !== null && variant.quantity !== '') {
+          availableStock = Number(variant.quantity);
+        }
+      }
+
+      if (quantity > 0 && availableStock > 0 && quantity > availableStock) {
+        toast.error(`Only ${availableStock} items available`);
         return;
       }
 
@@ -375,11 +384,20 @@ const ShopContextProvider = ({ children }) => {
     } else {
       if (!itemId || quantity < 1) return;
 
-      const product = products.find(p => p._id === itemId);
+      const [productId, variantName] = itemId.split('__');
+      const product = products.find(p => p._id === productId);
       const currentQuantity = cartItems[itemId] || 0;
 
-      if (product?.stock && product.stock < currentQuantity + quantity) {
-        toast.error(`Only ${product.stock} items available`);
+      let availableStock = product?.quantity || product?.stock;
+      if (variantName && product?.variants) {
+        const variant = product.variants.find(v => v.name === variantName);
+        if (variant && variant.quantity !== undefined && variant.quantity !== null && variant.quantity !== '') {
+          availableStock = Number(variant.quantity);
+        }
+      }
+
+      if (availableStock !== undefined && availableStock < currentQuantity + quantity) {
+        toast.error(`Only ${availableStock} items available`);
         return;
       }
 
@@ -472,11 +490,18 @@ const ShopContextProvider = ({ children }) => {
 
   // ==================== OPTIMIZED STOCK & DATA FUNCTIONS ====================
 
-  const checkProductStock = useCallback((productId, requestedQuantity = 1) => {
+  const checkProductStock = useCallback((itemId, requestedQuantity = 1) => {
+    const [productId, variantName] = (itemId || '').split('__');
     const product = products.find(p => p._id === productId);
     if (!product) return { inStock: false, available: 0 };
 
-    const availableStock = product.stock || 0;
+    let availableStock = product.quantity || product.stock || 0;
+    if (variantName && product.variants) {
+      const variant = product.variants.find(v => v.name === variantName);
+      if (variant && variant.quantity !== undefined && variant.quantity !== null && variant.quantity !== '') {
+        availableStock = Number(variant.quantity);
+      }
+    }
     const inStock = availableStock >= requestedQuantity;
 
     return { inStock, available: availableStock, requested: requestedQuantity };
@@ -930,10 +955,26 @@ const ShopContextProvider = ({ children }) => {
     if (!items || !itemsArray) return 0;
     
     return Object.entries(items).reduce((total, [id, quantity]) => {
-      const item = itemsArray.find(p => p._id === id);
-      if (!item || quantity <= 0) return total;
+      if (quantity <= 0) return total;
+      const [productId, variantName] = id.split('__');
+      const item = itemsArray.find(p => p._id === productId);
+      if (!item) return total;
       
-      const price = item[discountKey] || item[priceKey];
+      const variant = variantName && item.variants ? item.variants.find(v => v.name === variantName) : null;
+      let price;
+      if (variant) {
+        const hasVariantDiscount = variant.discountprice !== undefined &&
+          variant.discountprice !== null &&
+          Number(variant.discountprice) > 0 &&
+          Number(variant.discountprice) < Number(variant.price);
+        price = hasVariantDiscount ? Number(variant.discountprice) : Number(variant.price);
+      } else {
+        const hasDiscount = item[discountKey] !== undefined &&
+          item[discountKey] !== null &&
+          Number(item[discountKey]) > 0 &&
+          Number(item[discountKey]) < Number(item[priceKey]);
+        price = hasDiscount ? Number(item[discountKey]) : Number(item[priceKey]);
+      }
       return total + (price * quantity);
     }, 0);
   }, []);
@@ -948,9 +989,27 @@ const ShopContextProvider = ({ children }) => {
     if (!cartItems || !cartDeals) return 0;
     
     const productDiscount = Object.entries(cartItems).reduce((total, [id, quantity]) => {
-      const product = products.find(p => p._id === id);
-      if (!product?.discountprice || quantity <= 0) return total;
-      return total + (product.price * (product.discountprice / 100) * quantity);
+      if (quantity <= 0) return total;
+      const [productId, variantName] = id.split('__');
+      const product = products.find(p => p._id === productId);
+      if (!product) return total;
+      
+      const variant = variantName && product.variants ? product.variants.find(v => v.name === variantName) : null;
+      if (variant) {
+        const hasDisc = variant.discountprice !== undefined &&
+          variant.discountprice !== null &&
+          Number(variant.discountprice) > 0 &&
+          Number(variant.discountprice) < Number(variant.price);
+        if (!hasDisc) return total;
+        return total + ((Number(variant.price) - Number(variant.discountprice)) * quantity);
+      }
+
+      const hasDisc = product.discountprice !== undefined &&
+        product.discountprice !== null &&
+        Number(product.discountprice) > 0 &&
+        Number(product.discountprice) < Number(product.price);
+      if (!hasDisc) return total;
+      return total + ((Number(product.price) - Number(product.discountprice)) * quantity);
     }, 0);
 
     const dealDiscount = Object.entries(cartDeals).reduce((total, [id, quantity]) => {

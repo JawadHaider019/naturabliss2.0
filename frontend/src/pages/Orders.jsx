@@ -139,9 +139,16 @@ const OrderItem = memo(({ item, currency, backendUrl }) => {
               <p className="font-semibold text-black text-base md:text-lg truncate">
                 {item.name}
               </p>
-              <p className="text-gray-600 text-sm truncate">
-                {item.category || 'Product'} {item.subcategory ? `| ${item.subcategory}` : ''}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                {item.variant && (
+                  <span className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-0.5 font-semibold border border-gray-300">
+                    Variant: {item.variant}
+                  </span>
+                )}
+                <p className="text-gray-600 text-sm truncate">
+                  {item.category || 'Product'} {item.subcategory ? `| ${item.subcategory}` : ''}
+                </p>
+              </div>
             </div>
             <p className="text-black font-bold text-lg md:text-xl shrink-0">
               {currency}{item.price?.toFixed(2) || '0.00'}
@@ -179,13 +186,17 @@ const OrderItem = memo(({ item, currency, backendUrl }) => {
 
 const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
   const isAdvance = useMemo(() => {
+    if (order.advancePaymentStatus === 'not_required' || order.advanceAmount === 0 || order.deliveryCharges === 0) {
+      return false;
+    }
     return Boolean(
-      order.advanceAmount || 
+      (order.advanceAmount && order.advanceAmount > 0) || 
       order.paymentScreenshot || 
-      (order.paymentMethod && order.paymentMethod.includes('Advance')) ||
-      order.advancePaymentStatus
+      (order.paymentMethod && order.paymentMethod.includes('Advance'))
     );
   }, [order]);
+
+  const advanceAmountVal = order.advanceAmount !== undefined ? order.advanceAmount : (order.deliveryCharges || 0);
 
   const { subtotal, total, formattedDate, displayStatus, statusIcon, statusColor } = useMemo(() => {
     const subtotal = order.items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
@@ -226,15 +237,15 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
   const paymentDisplay = useMemo(() => {
     if (isAdvance) {
       if (order.advancePaymentStatus === 'verified') {
-        return `Rs. ${order.advanceAmount || 250} Advance (Verified) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
+        return `Rs. ${advanceAmountVal} Advance (Verified) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
       } else if (order.advancePaymentStatus === 'rejected') {
-        return `Rs. ${order.advanceAmount || 250} Advance (Rejected) • Action Required`;
+        return `Rs. ${advanceAmountVal} Advance (Rejected) • Action Required`;
       } else {
-        return `Rs. ${order.advanceAmount || 250} Advance (Pending Verification) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
+        return `Rs. ${advanceAmountVal} Advance (Pending Verification) • Remaining ${currency}${subtotal.toFixed(0)} COD`;
       }
     }
     return `${order.paymentMethod || 'COD'} • ${order.payment ? 'Paid' : 'COD'}`;
-  }, [order, currency, subtotal, isAdvance]);
+  }, [order, currency, subtotal, isAdvance, advanceAmountVal]);
 
   useEffect(() => {
     const imagePromises = order.items.map(async (item) => {
@@ -316,10 +327,10 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
             )}
 
             {/* Advance Delivery Payment Status */}
-            {(order.advancePaymentStatus || order.paymentScreenshot) && (
+            {isAdvance && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-600">Advance Delivery (Rs. {order.advanceAmount || 250}):</span>
+                  <span className="text-xs font-semibold text-gray-600">Advance Delivery (Rs. {advanceAmountVal}):</span>
                   {order.advancePaymentStatus === 'verified' && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-green-100 text-green-800 rounded border border-green-300">
                       ✓ Advance Approved
@@ -361,19 +372,23 @@ const OrderCard = memo(({ order, currency, backendUrl, isGuest = false }) => {
                   <span className="text-gray-600 font-medium">Delivery:</span>
                   <span className="font-semibold text-xs">
                     {order.advancePaymentStatus === 'verified' ? (
-                      <span className="text-green-700 font-bold">Rs. {order.advanceAmount || 250} (Paid)</span>
+                      <span className="text-green-700 font-bold">Rs. {advanceAmountVal} (Paid)</span>
                     ) : (
-                      <span className="text-amber-700 font-medium">Rs. {order.advanceAmount || 250} (Pending)</span>
+                      <span className="text-amber-700 font-medium">Rs. {advanceAmountVal} (Pending)</span>
                     )}
                   </span>
                 </div>
               ) : (
-                order.deliveryCharges > 0 && (
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-600 font-medium">Delivery:</span>
-                    <span className="font-semibold">{currency}{order.deliveryCharges.toFixed(2)}</span>
-                  </div>
-                )
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-600 font-medium">Delivery:</span>
+                  <span className="font-semibold text-xs">
+                    {order.deliveryCharges === 0 ? (
+                      <span className="text-green-700 font-bold">FREE</span>
+                    ) : (
+                      `${currency}${(order.deliveryCharges || 0).toFixed(2)}`
+                    )}
+                  </span>
+                </div>
               )}
               <div className="flex justify-between pt-1 border-t border-gray-300">
                 <span className="text-gray-700 font-bold">{isAdvance ? 'Total (COD):' : 'Total:'}</span>

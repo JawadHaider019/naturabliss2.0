@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
 
     // 🆕 ADVANCE DELIVERY PAYMENT PROOF
     paymentScreenshot: { type: String, default: "" },
-    advanceAmount: { type: Number, default: 250 },
+    advanceAmount: { type: Number, default: 0 },
     advancePaymentStatus: { 
         type: String, 
         enum: ['pending', 'verified', 'rejected', 'not_required'], 

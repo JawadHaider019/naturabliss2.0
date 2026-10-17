@@ -131,7 +131,8 @@ const trackTikTokInitiateCheckout = (totalItems) => {
   }, [products]);
 
   // ✅ Now define useCallback hooks that use the helper function
-  const getProductStockInfo = useCallback((productId, quantity) => {
+  const getProductStockInfo = useCallback((cartItemId, quantity) => {
+    const [productId, variantName] = (cartItemId || '').split('__');
     const product = products.find(p => p._id === productId);
     if (!product) {
       return {
@@ -142,7 +143,13 @@ const trackTikTokInitiateCheckout = (totalItems) => {
       };
     }
 
-    const availableStock = product.quantity || 0;
+    let availableStock = product.quantity || 0;
+    if (variantName && product.variants) {
+      const variant = product.variants.find(v => v.name === variantName);
+      if (variant && variant.quantity !== undefined && variant.quantity !== null && variant.quantity !== '') {
+        availableStock = Number(variant.quantity);
+      }
+    }
     const isOutOfStock = availableStock === 0;
     
     return {
@@ -201,8 +208,10 @@ const trackTikTokInitiateCheckout = (totalItems) => {
 
     for (const itemId in cartItems) {
       if (cartItems[itemId] > 0) {
-        const product = products.find(p => p._id === itemId);
+        const [productId, variantName] = itemId.split('__');
+        const product = products.find(p => p._id === productId);
         if (product) {
+          const variant = variantName && product.variants ? product.variants.find(v => v.name === variantName) : null;
           const stockInfo = getProductStockInfo(itemId, cartItems[itemId]);
           
           if (stockInfo.isOutOfStock) {
@@ -214,6 +223,8 @@ const trackTikTokInitiateCheckout = (totalItems) => {
             quantity: cartItems[itemId],
             type: 'product',
             data: product,
+            variant: variant || null,
+            variantName: variantName || null,
             stockInfo
           });
         }
@@ -271,9 +282,27 @@ const trackTikTokInitiateCheckout = (totalItems) => {
   const getItemDisplayData = (item) => {
     if (item.type === 'product') {
       const product = item.data;
-      const unitPrice = product.discountprice > 0 ? product.discountprice : product.price;
-      const itemTotalPrice = unitPrice * item.quantity;
+      const variant = item.variant;
       
+      let unitPrice, originalPrice, hasDiscount, name, image;
+      if (variant) {
+        hasDiscount = variant.discountprice !== undefined &&
+          variant.discountprice !== null &&
+          Number(variant.discountprice) > 0 &&
+          Number(variant.discountprice) < Number(variant.price);
+        unitPrice = hasDiscount ? Number(variant.discountprice) : Number(variant.price);
+        originalPrice = Number(variant.price);
+        name = `${product.name} (${variant.name})`;
+        image = variant.image || product.image?.[0] || assets.placeholder_image;
+      } else {
+        hasDiscount = product.discountprice > 0 && product.discountprice < product.price;
+        unitPrice = hasDiscount ? product.discountprice : product.price;
+        originalPrice = product.price;
+        name = product.name;
+        image = product.image?.[0] || assets.placeholder_image;
+      }
+
+      const itemTotalPrice = unitPrice * item.quantity;
       const stockInfo = item.stockInfo || getProductStockInfo(item.id, item.quantity);
       const availableStock = stockInfo.available || 0;
       
@@ -281,15 +310,16 @@ const trackTikTokInitiateCheckout = (totalItems) => {
       const canAddMore = availableStock > 0 && item.quantity < availableStock;
 
       return {
-        name: product.name,
-        image: product.image?.[0] || assets.placeholder_image,
+        name,
+        image,
         unitPrice,
         itemTotalPrice,
         type: 'product',
+        variant: variant || null,
         description: product.description,
         fullData: product,
-        originalPrice: product.price,
-        hasDiscount: product.discountprice > 0,
+        originalPrice,
+        hasDiscount,
         availableStock,
         isOutOfStock,
         canAddMore,
@@ -394,7 +424,8 @@ const trackTikTokInitiateCheckout = (totalItems) => {
       itemData = deals.find(d => d._id === itemId);
       currentQuantity = cartDeals[itemId] || 0;
     } else {
-      itemData = products.find(p => p._id === itemId);
+      const [productId] = itemId.split('__');
+      itemData = products.find(p => p._id === productId);
       currentQuantity = cartItems[itemId] || 0;
     }
     
