@@ -1,3 +1,8 @@
 User-agent: *
 Allow: /
-Sitemap: https://naturabliss.pk/sitemap.xml
+Disallow: /cart
+Disallow: /orders
+Disallow: /place-order
+Disallow: /login
+
+Sitemap: https://naturabliss.pk/sitemap.xml

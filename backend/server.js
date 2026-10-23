@@ -26,6 +26,7 @@ import contactRoutes from './routes/contactRoutes.js';
 import newsletterRoutes from './routes/NewsletterRoutes.js'
 import locationRoutes from './routes/locationsRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
+import sitemapRoute from './routes/sitemapRoute.js';
 // App Config    
 const app = express();
 const port = process.env.PORT || 4000;
@@ -68,6 +69,8 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/coupon', couponRoutes);
+app.use('/', sitemapRoute);
+app.use('/api', sitemapRoute);
 
 app.get('/', (req, res) => {
     res.send("API Working ✅");
