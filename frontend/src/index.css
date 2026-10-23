@@ -99,3 +99,14 @@ a.active hr {
   border-radius: 0px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
+
+/* Agentic Accessibility & WCAG Compliance: Carousel Cloned and Hidden Slide Safeguards */
+.slick-slide[aria-hidden="true"],
+.slick-slide.slick-cloned {
+  pointer-events: none !important;
+}
+
+.slick-slide[aria-hidden="true"] *,
+.slick-slide.slick-cloned * {
+  pointer-events: none !important;
+}

@@ -29,4 +29,7 @@ Allow: /
 User-agent: Applebot
 Allow: /
 
+# Agentic Resource Discovery (ARD)
+Agentmap: https://naturabliss.pk/.well-known/ai-catalog.json
+
 Sitemap: https://naturabliss.pk/sitemap.xml

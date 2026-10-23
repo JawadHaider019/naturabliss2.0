@@ -6,6 +6,7 @@ import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { sanitizeSlickAria } from "../utils/slickAriaFix";
 
 const BestSeller = () => {
   const { products } = useContext(ShopContext);
@@ -115,6 +116,9 @@ const BestSeller = () => {
     centerMode: false,
     adaptiveHeight: false,
     accessibility: false,
+    onInit: sanitizeSlickAria,
+    onReInit: sanitizeSlickAria,
+    afterChange: sanitizeSlickAria,
     responsive: [
       {
         breakpoint: 1280,

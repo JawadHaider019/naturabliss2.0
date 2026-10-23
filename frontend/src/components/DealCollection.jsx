@@ -10,6 +10,7 @@ import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 // Import Slick Carousel CSS
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { sanitizeSlickAria } from "../utils/slickAriaFix";
 
 // Memoized arrow components
 const NextArrow = memo(({ onClick }) => (
@@ -168,6 +169,9 @@ const DealCollection = () => {
         }
       ],
       accessibility: false,
+      onInit: sanitizeSlickAria,
+      onReInit: sanitizeSlickAria,
+      afterChange: sanitizeSlickAria,
       appendDots: dots => (
         <div className="mt-4">
           <ul className="flex justify-center space-x-1">{dots}</ul>

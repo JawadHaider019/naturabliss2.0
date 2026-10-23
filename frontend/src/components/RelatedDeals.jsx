@@ -5,6 +5,7 @@ import DealItem from "./DealItem";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { sanitizeSlickAria } from "../utils/slickAriaFix";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
@@ -56,6 +57,9 @@ const RelatedDeals = ({ category, currentDealId }) => {
   const sliderSettings = {
     dots: true,
     accessibility: false,
+    onInit: sanitizeSlickAria,
+    onReInit: sanitizeSlickAria,
+    afterChange: sanitizeSlickAria,
     infinite: relatedDeals.length > 1,
     speed: 500,
     slidesToShow: Math.min(4, relatedDeals.length),

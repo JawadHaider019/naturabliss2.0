@@ -1,0 +1,62 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ards-project/ard-spec/main/spec/schemas/ai-catalog.schema.json",
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Natura Bliss",
+    "identifier": "did:web:naturabliss.pk",
+    "documentationUrl": "https://naturabliss.pk/llms.txt",
+    "logoUrl": "https://naturabliss.pk/logo.png"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:naturabliss.pk:catalog:products",
+      "displayName": "Natura Bliss Product Catalog",
+      "type": "application/json",
+      "url": "https://naturabliss.pk/collection",
+      "description": "Comprehensive catalog of 100% pure extra-virgin cold-pressed oils, botanical herbal haircare, artisan handmade soaps, and natural brightening skincare in Pakistan.",
+      "tags": [
+        "cold-pressed-oils",
+        "herbal-haircare",
+        "organic-soaps",
+        "skincare",
+        "wellness",
+        "pakistan",
+        "cash-on-delivery"
+      ],
+      "capabilities": [
+        "ProductDiscovery",
+        "ECommerceCatalog",
+        "OrganicStore"
+      ],
+      "representativeQueries": [
+        "Find 100% pure cold pressed coconut oil and almond oil in Pakistan",
+        "Buy herbal anti-hairfall shampoos and organic handmade soaps",
+        "Shop organic skincare with cash on delivery across Pakistan"
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "identifier": "urn:air:naturabliss.pk:content:llmstxt",
+      "displayName": "Natura Bliss LLMs Documentation",
+      "type": "text/markdown",
+      "url": "https://naturabliss.pk/llms.txt",
+      "description": "Structured LLM documentation outlining product ranges, cold extraction standards, store policies, and nationwide COD shipping across Pakistan.",
+      "tags": [
+        "documentation",
+        "llmstxt",
+        "brand-information",
+        "pakistan"
+      ],
+      "capabilities": [
+        "BrandInformation",
+        "PolicyLookup",
+        "ProductContext"
+      ],
+      "representativeQueries": [
+        "What are Natura Bliss delivery times and return policies in Pakistan?",
+        "Are Natura Bliss oils unrefined and cold-pressed without heat or chemicals?"
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}

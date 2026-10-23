@@ -2,53 +2,38 @@
 
 > 100% Pure Extra-Virgin Cold-Pressed Oils, Herbal Haircare & Organic Skincare in Pakistan.
 
-Natura Bliss is a Pakistani organic wellness and beauty brand headquartered in Chakwal, Punjab. The brand specializes in traditional cold-pressing extraction of seed and nut oils, artisan herbal soaps, sulphate-free shampoos, and natural brightening skincare.
+Natura Bliss is a Pakistani organic wellness and beauty brand headquartered in Chakwal, Punjab. The brand specializes in traditional cold-pressing extraction of seed and nut oils, artisan herbal soaps, sulphate-free shampoos, and natural brightening skincare. All products are 100% natural, cruelty-free, and chemical-free with nationwide Cash on Delivery (COD) service across Pakistan.
 
-## Core Product Categories & Offerings
+## Primary Pages & Resources
 
-### 1. Pure Cold-Pressed Oils
-- **Extraction Method:** Cold-pressed extra-virgin, unrefined, zero mineral oils, zero hexane, zero heat damage.
-- **Key Products:**
-  - Coconut Oil (Hair & Body)
-  - Sweet Almond Oil (Skin & Hair)
-  - Castor Oil (Lashes, Brows & Hair Growth)
-  - Sesame Oil (Deep Nourishment)
-  - Blackseed (Kalonji) Oil (Therapeutic & Hair Vitality)
-  - Pumpkin Seed Oil (Dht-Blocker & Scalp Health)
-  - Onion Seed Oil (Anti-Hairfall)
-  - Rosemary Essential Infused Oil (Scalp Circulation)
-  - Pure Extra Virgin Olive Oil
+- [Home](https://naturabliss.pk/): Natura Bliss official website, featured organic collections, customer reviews, and brand story.
+- [Product Collection](https://naturabliss.pk/collection): Complete catalog of cold-pressed oils, herbal haircare, artisan soaps, and gluta skincare.
+- [About Natura Bliss](https://naturabliss.pk/about): Brand heritage, cold-press extraction technology, chemical-free pledge, and Chakwal facility overview.
+- [Contact & Support](https://naturabliss.pk/contact): Customer service desk, WhatsApp hotline, order inquiries, and headquarters address.
+- [Blog & Wellness Guides](https://naturabliss.pk/blog): Educational articles on cold-pressed oil benefits, hair regrowth routines, acne care, and organic skincare tips.
 
-### 2. Herbal Haircare
-- **Herbal Shampoo:** Sulfate-free botanical cleanser enriched with Shikakai, Amla, and Reetha.
-- **Kre-Bio Shampoo + Conditioner:** Complete anti-breakage hair therapy.
-- **Onion Hair Oil & 804 Serum:** Concentrated natural hair growth boosters.
+## Product Categories & Offerings
 
-### 3. Organic Handmade Soaps
-- **Neem Soap:** Clarifying antibacterial bath bar for acne-prone skin.
-- **Rice Soap:** Gentle exfoliating and complexion brightening bar.
-- **Charcoal Soap:** Activated bamboo charcoal for deep pore cleansing.
+- [Cold-Pressed Oils](https://naturabliss.pk/collection?category=oils): 100% pure extra-virgin cold-pressed oils extracted without heat or chemical solvents. Products include Coconut Oil, Sweet Almond Oil, Castor Oil, Sesame Oil, Blackseed (Kalonji) Oil, Pumpkin Seed Oil, Onion Seed Oil, Rosemary Infused Oil, and Pure Olive Oil.
+- [Herbal Haircare](https://naturabliss.pk/collection?category=haircare): Sulfate-free and paraben-free hair restoration products including Herbal Shampoo (with Shikakai, Amla & Reetha), Kre-Bio Shampoo & Conditioner, Onion Hair Growth Oil, and 804 Serum.
+- [Organic Handmade Soaps](https://naturabliss.pk/collection?category=soaps): Cold-process artisan bath bars including Neem Clarifying Soap for acne, Rice Complexion Brightening Soap, and Activated Bamboo Charcoal Deep Pore Soap.
+- [Gluta Radiance Skincare](https://naturabliss.pk/collection?category=skincare): Botanical brightening and restorative formulations: Gluta Fair Night Cream, Gluta Care Daily Body Lotion, Gluta Facial Cleanser, and No Frac Night Cream.
+- [Farm-Fresh Organic Nutrition](https://naturabliss.pk/collection?category=nutrition): Pure traditional grass-fed Pakistani Desi Ghee and 100% raw, unheated, unfiltered Wild Forest Honey.
 
-### 4. Gluta Radiance Skincare
-- **Gluta Fair Night Cream:** Gentle botanical glow formula.
-- **Gluta Care Body Lotion:** Lightweight hydrating daily lotion.
-- **Gluta Facial Wash:** Refreshing daily face wash.
-- **No Frac Night Cream:** Targeted evening restoration treatment.
+## AI & Machine-Readable Catalogs
 
-### 5. Farm-Fresh Organic Nutrition
-- **Pure Desi Ghee:** Grass-fed traditional Pakistani clarified butter.
-- **Wild Forest Honey:** 100% raw, unheated, unfiltered bee honey.
+- [AI Capability Catalog](https://naturabliss.pk/.well-known/ai-catalog.json): Machine-readable Agentic Resource Discovery (ARD) capability manifest for autonomous AI agents.
+- [XML Sitemap](https://naturabliss.pk/sitemap.xml): Comprehensive URL directory indexing all active store pages and catalog collections.
+- [Robots Directives](https://naturabliss.pk/robots.txt): Crawler rules and Agentmap declaration for automated search bots and AI agents.
+- [Full Context Documentation](https://naturabliss.pk/llms-full.txt): Comprehensive extended documentation and product knowledge base for LLM agents.
 
-## Delivery & Orders in Pakistan
-- **Cash on Delivery (COD):** Available nationwide on all orders.
-- **Shipping Coverage:** All cities in Pakistan including Karachi, Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Quetta, and rural districts.
-- **Delivery Timeline:** 2 to 4 business days via courier.
+## Ordering, Delivery & Customer Policies
+
+- **Nationwide Cash on Delivery (COD):** Available across all cities and districts of Pakistan including Karachi, Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Quetta, and rural regions.
+- **Delivery Timeline:** 2 to 4 business days via express courier services.
+- **Return & Exchange Policy:** 7-day hassle-free return or exchange for damaged or defective items.
+- **Payment Methods:** Cash on Delivery (COD), Direct Bank Transfer, EasyPaisa, and JazzCash.
 - **Currency:** Pakistani Rupee (PKR / ₨).
-- **Return Policy:** 7-day exchange or refund for defective or damaged items.
-
-## Contact & Location
-- **Address:** Chakwal, Talagang, Punjab, Pakistan (Postal Code: 48090)
-- **Customer Support Phone:** +92 324 1572294
-- **Email:** support@naturabliss.pk / naturabliss@gmail.com
-- **Website:** https://naturabliss.pk
-- **Product Collection:** https://naturabliss.pk/collection
+- **Customer Hotline / WhatsApp:** +92 324 1572294
+- **Support Email:** support@naturabliss.pk / naturabliss@gmail.com
+- **Headquarters Address:** Chakwal, Talagang, Punjab, Pakistan (Postal Code: 48090)

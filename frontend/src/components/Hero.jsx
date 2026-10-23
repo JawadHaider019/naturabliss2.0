@@ -1,6 +1,7 @@
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { sanitizeSlickAria } from '../utils/slickAriaFix';
 import { assets } from '../assets/assets';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
@@ -161,6 +162,9 @@ const Hero = () => {
     arrows: false,
     fade: true,
     accessibility: false,
+    onInit: sanitizeSlickAria,
+    onReInit: sanitizeSlickAria,
+    afterChange: sanitizeSlickAria,
     appendDots: dots => screenSize === 'mobile' ? <MobileCustomDots dots={dots} /> : <CustomDots dots={dots} />,
     customPaging: i => (
       <button 

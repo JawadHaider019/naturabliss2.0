@@ -1,49 +1,62 @@
 {
-  "$schema": "https://schema.org",
-  "name": "Natura Bliss Product Catalog",
-  "version": "1.0.0",
-  "provider": {
-    "name": "Natura Bliss",
-    "url": "https://naturabliss.pk",
-    "country": "PK",
-    "currency": "PKR"
+  "$schema": "https://raw.githubusercontent.com/ards-project/ard-spec/main/spec/schemas/ai-catalog.schema.json",
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Natura Bliss",
+    "identifier": "did:web:naturabliss.pk",
+    "documentationUrl": "https://naturabliss.pk/llms.txt",
+    "logoUrl": "https://naturabliss.pk/logo.png"
   },
-  "categories": [
+  "entries": [
     {
-      "id": "cold-pressed-oils",
-      "name": "Cold-Pressed Oils",
+      "identifier": "urn:air:naturabliss.pk:catalog:products",
+      "displayName": "Natura Bliss Product Catalog",
+      "type": "application/json",
       "url": "https://naturabliss.pk/collection",
-      "description": "100% pure extra virgin cold-pressed oils including Coconut, Almond, Castor, Blackseed, Sesame, Pumpkin Seed, and Rosemary."
+      "description": "Comprehensive catalog of 100% pure extra-virgin cold-pressed oils, botanical herbal haircare, artisan handmade soaps, and natural brightening skincare in Pakistan.",
+      "tags": [
+        "cold-pressed-oils",
+        "herbal-haircare",
+        "organic-soaps",
+        "skincare",
+        "wellness",
+        "pakistan",
+        "cash-on-delivery"
+      ],
+      "capabilities": [
+        "ProductDiscovery",
+        "ECommerceCatalog",
+        "OrganicStore"
+      ],
+      "representativeQueries": [
+        "Find 100% pure cold pressed coconut oil and almond oil in Pakistan",
+        "Buy herbal anti-hairfall shampoos and organic handmade soaps",
+        "Shop organic skincare with cash on delivery across Pakistan"
+      ],
+      "version": "1.0.0"
     },
     {
-      "id": "haircare",
-      "name": "Herbal Hair Care",
-      "url": "https://naturabliss.pk/collection",
-      "description": "Sulfate-free botanical shampoos, conditioner, onion hair growth oil, and revitalizing serums."
-    },
-    {
-      "id": "soaps",
-      "name": "Organic Soap Bars",
-      "url": "https://naturabliss.pk/collection",
-      "description": "Handmade artisan cold-process bath bars: Neem, Rice, and Activated Charcoal."
-    },
-    {
-      "id": "gluta-line",
-      "name": "Gluta Radiance Skincare",
-      "url": "https://naturabliss.pk/collection",
-      "description": "Gentle radiance night creams, daily moisturizing body lotions, and refreshing face washes."
-    },
-    {
-      "id": "nutrition",
-      "name": "Farm Fresh Nutrition",
-      "url": "https://naturabliss.pk/collection",
-      "description": "100% pure grass-fed Pakistani Desi Ghee and unfiltered raw Wild Forest Honey."
+      "identifier": "urn:air:naturabliss.pk:content:llmstxt",
+      "displayName": "Natura Bliss LLMs Documentation",
+      "type": "text/markdown",
+      "url": "https://naturabliss.pk/llms.txt",
+      "description": "Structured LLM documentation outlining product ranges, cold extraction standards, store policies, and nationwide COD shipping across Pakistan.",
+      "tags": [
+        "documentation",
+        "llmstxt",
+        "brand-information",
+        "pakistan"
+      ],
+      "capabilities": [
+        "BrandInformation",
+        "PolicyLookup",
+        "ProductContext"
+      ],
+      "representativeQueries": [
+        "What are Natura Bliss delivery times and return policies in Pakistan?",
+        "Are Natura Bliss oils unrefined and cold-pressed without heat or chemicals?"
+      ],
+      "version": "1.0.0"
     }
-  ],
-  "shipping": {
-    "method": "Express Courier",
-    "payment": "Cash on Delivery (COD) & Online Bank Transfer",
-    "coverage": "All cities and districts across Pakistan",
-    "deliveryTime": "2-4 business days"
-  }
+  ]
 }

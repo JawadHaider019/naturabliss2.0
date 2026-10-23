@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { sanitizeSlickAria } from '../utils/slickAriaFix';
 import { FaStar, FaQuoteLeft, FaTiktok, FaInstagram, FaFacebook, FaWhatsapp, FaGlobe } from 'react-icons/fa';
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import Title from '../components/Title';
@@ -48,7 +49,12 @@ const Testimonial = () => {
         autoplaySpeed: 6000,
         arrows: false,
         accessibility: false,
-        beforeChange: (current, next) => setActiveSlide(next),
+        onInit: sanitizeSlickAria,
+        onReInit: sanitizeSlickAria,
+        afterChange: (current, next) => {
+            setActiveSlide(next);
+            sanitizeSlickAria();
+        },
     };
 
     const getPlatformInfo = (platform) => {

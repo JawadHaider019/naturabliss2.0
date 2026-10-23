@@ -13,6 +13,7 @@ import Home from './pages/Home'
 
 import FacebookPixel from './components/FacebookPixel'
 import TikTokPixel from './components/TiktokPixel'
+import { initSlickAriaObserver, sanitizeSlickAria } from './utils/slickAriaFix'
 
 // Lazy load secondary pages
 const Collection = lazy(() => import('./pages/Collection'))
@@ -84,8 +85,15 @@ const App = () => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Track SPA page navigation
+  // Initialize Slick Carousel ARIA Sanitizer for Agentic Accessibility
   useEffect(() => {
+    const cleanup = initSlickAriaObserver();
+    return () => cleanup();
+  }, [])
+
+  // Track SPA page navigation & re-sanitize accessibility tree
+  useEffect(() => {
+    sanitizeSlickAria();
     try {
       Clarity.event("page_view", {
         path: location.pathname
