@@ -1,66 +1,317 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="facebook-domain-verification" content="nlxpmvqotr5el913t1wkv9dn4avadk" />
 
-    <!-- Favicon for all devices -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="facebook-domain-verification" content="nlxpmvqotr5el913t1wkv9dn4avadk" />
 
-<!-- SEO Meta Tags -->
-<title>Natura Bliss | Organic Skincare & Natural Beauty Products</title>
-<meta name="description" content="Natura Bliss offers premium organic skincare and natural beauty products. Safe, pure, and cruelty-free solutions for healthy, radiant skin. Shop our organic beauty collection today." />
-<meta name="keywords" content="organic skincare, natural beauty, pure cosmetics, cruelty-free skincare, organic products, Natura Bliss, organic beauty, skincare routine" />
-<meta name="author" content="Natura Bliss" />
-<meta name="robots" content="index, follow" />
-<meta name="theme-color" content="#000000" />
-<meta name="msapplication-TileColor" content="#000000" />
-<link rel="canonical" href="https://naturabliss.pk/" />
+  <!-- Title & Primary Meta Tags -->
+  <title>Natura Bliss | 100% Pure Skincare & Cold-Pressed Oils in Pakistan</title>
+  <meta name="description"
+    content="Shop 100% pure cold-pressed oils, herbal haircare & organic skincare in Pakistan. Chemical-free, cruelty-free. Cash on delivery available nationwide." />
+  <meta name="author" content="Natura Bliss" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="theme-color" content="#587a3b" />
+  <meta name="msapplication-TileColor" content="#587a3b" />
+  <link rel="canonical" href="https://naturabliss.pk/" />
 
-    <!-- Structured Data for SEO -->
-    <script type="application/ld+json">
+  <!-- Geo-Targeting Signals for Pakistan -->
+  <link rel="alternate" hreflang="en-PK" href="https://naturabliss.pk/" />
+  <link rel="alternate" hreflang="x-default" href="https://naturabliss.pk/" />
+  <meta name="geo.region" content="PK-PB" />
+  <meta name="geo.placename" content="Chakwal, Punjab, Pakistan" />
+  <meta name="geo.position" content="32.9328;72.8550" />
+  <meta name="ICBM" content="32.9328, 72.8550" />
+
+  <!-- Open Graph Meta Tags (Facebook, WhatsApp, Instagram, LinkedIn) -->
+  <meta property="og:site_name" content="Natura Bliss Pakistan" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://naturabliss.pk/" />
+  <meta property="og:title" content="Natura Bliss | 100% Pure Skincare & Cold-Pressed Oils in Pakistan" />
+  <meta property="og:description"
+    content="Shop 100% pure cold-pressed oils, herbal haircare & organic skincare in Pakistan. Chemical-free, cruelty-free. Cash on delivery available nationwide." />
+  <meta property="og:image" content="https://naturabliss.pk/logo.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:locale" content="en_PK" />
+
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Natura Bliss | Pure Skincare & Oils in Pakistan" />
+  <meta name="twitter:description"
+    content="Shop 100% pure cold-pressed oils & herbal skincare in Pakistan with nationwide Cash on Delivery." />
+  <meta name="twitter:image" content="https://naturabliss.pk/logo.png" />
+
+  <!-- Favicon for all devices -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+  <!-- Preconnect to critical third-party domains -->
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+  <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Google Fonts: Outfit & Prata with swap display -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" media="print"
+    onload="this.media='all'" />
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" />
+  </noscript>
+
+  <!-- Comprehensive Structured Data (Schema.org JSON-LD) -->
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Natura Bliss",
-      "url": "https://naturabliss.pk",
-      "description": "Premium organic skincare and beauty products made with pure natural ingredients for radiant, healthy skin.",
-      "logo": "https://naturabliss.pk/logo.png",
-      "image": "https://naturabliss.pk/og-image.jpg",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Chakwal , Talagang",
-        "addressLocality": "Chakwal",
-        "addressRegion": "Punjab",
-        "postalCode": "48090",
-        "addressCountry": "PK"
-      },
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+923241572294",
-        "contactType": "customer service"
-      }
+      "@graph": [
+        {
+          "@type": ["Organization", "OnlineStore"],
+          "@id": "https://naturabliss.pk/#organization",
+          "name": "Natura Bliss",
+          "alternateName": "Natura Bliss Pakistan",
+          "url": "https://naturabliss.pk",
+          "logo": "https://naturabliss.pk/logo.png",
+          "image": "https://naturabliss.pk/logo.png",
+          "description": "Natura Bliss produces 100% pure extra-virgin cold-pressed oils, organic handmade soaps, herbal shampoos, gluta whitening skincare, pure desi ghee and wild honey in Pakistan.",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Chakwal, Talagang",
+            "addressLocality": "Chakwal",
+            "addressRegion": "Punjab",
+            "postalCode": "48090",
+            "addressCountry": "PK"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+923241572294",
+            "contactType": "customer service",
+            "areaServed": "PK",
+            "availableLanguage": ["English", "Urdu"]
+          },
+          "priceRange": "PKR",
+          "currenciesAccepted": "PKR",
+          "paymentAccepted": "Cash on Delivery, Bank Transfer, EasyPaisa, JazzCash",
+          "areaServed": {
+            "@type": "Country",
+            "name": "Pakistan"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://naturabliss.pk/#website",
+          "url": "https://naturabliss.pk",
+          "name": "Natura Bliss",
+          "description": "100% Pure Skincare & Cold-Pressed Oils in Pakistan",
+          "publisher": {
+            "@id": "https://naturabliss.pk/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://naturabliss.pk/collection?search={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://naturabliss.pk/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does Natura Bliss deliver all across Pakistan with Cash on Delivery (COD)?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes! Natura Bliss provides nationwide Cash on Delivery (COD) service to all cities and towns in Pakistan, including Karachi, Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, and Quetta. Delivery takes 2 to 4 business days."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are Natura Bliss oils 100% pure and cold-pressed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. All Natura Bliss oils (Coconut Oil, Almond Oil, Castor Oil, Sesame Oil, Blackseed Oil, Pumpkin Seed Oil, and Rosemary Oil) are 100% pure, extra virgin, and extracted using traditional cold-pressing methods without heat, mineral oils, silicones, or chemical additives."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What organic products does Natura Bliss produce?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Natura Bliss produces 100% pure cold-pressed oils, herbal hair care products (Herbal Shampoo, Kre-Bio, Onion Hair Oil), organic artisan soaps (Neem, Rice, Charcoal), Gluta brightening skincare, organic Desi Ghee, and pure Wild Honey."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the return and exchange policy?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Natura Bliss offers a 7-day hassle-free return and exchange policy for defective or damaged items, ensuring complete peace of mind for our customers across Pakistan."
+              }
+            }
+          ]
+        },
+        {
+          "@type": "ItemList",
+          "@id": "https://naturabliss.pk/#catalog",
+          "name": "Natura Bliss Product Collections",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Cold Pressed Oils (Coconut, Almond, Blackseed, Castor, Sesame, Pumpkin Seed)",
+              "url": "https://naturabliss.pk/collection"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Herbal Hair Care (Herbal Shampoo, Kre-Bio Shampoo & Conditioner, Onion Hair Oil)",
+              "url": "https://naturabliss.pk/collection"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "Organic Soaps (Neem Soap, Rice Soap, Charcoal Soap)",
+              "url": "https://naturabliss.pk/collection"
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "name": "Gluta Brightening Line (Gluta Fair Night Cream, Gluta Care Lotion, Gluta Wash)",
+              "url": "https://naturabliss.pk/collection"
+            },
+            {
+              "@type": "ListItem",
+              "position": 5,
+              "name": "Organic Nutrition (Pure Desi Ghee & 100% Wild Forest Honey)",
+              "url": "https://naturabliss.pk/collection"
+            }
+          ]
+        }
+      ]
     }
     </script>
-  </head>
-  <body>
-    <!-- Facebook Pixel fallback for non-JS -->
-    <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://www.facebook.com/tr?id=913853534399435&ev=PageView&noscript=1"/>
-    </noscript>
+</head>
 
-    <!-- TikTok Pixel fallback for non-JS -->
-    <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://analytics.tiktok.com/i18n/pixel/events.gif?sdkid=D6507NJC77U8DQFBR5VG&event=PageView" />
-    </noscript>
+<body>
+  <!-- Facebook Pixel fallback for non-JS -->
+  <noscript>
+    <img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=913853534399435&ev=PageView&noscript=1" />
+  </noscript>
 
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <!-- TikTok Pixel fallback for non-JS -->
+  <noscript>
+    <img height="1" width="1" style="display:none"
+      src="https://analytics.tiktok.com/i18n/pixel/events.gif?sdkid=D6507NJC77U8DQFBR5VG&event=PageView" />
+  </noscript>
+
+  <!-- Clean React Root (Prevents any text flashing before React loads) -->
+  <div id="root"></div>
+
+  <!-- Fallback Content for Crawlers & Non-JS Clients Only (Never shown to real users with JS enabled) -->
+  <noscript>
+    <div
+      style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px;">
+      <header
+        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #587a3b; padding-bottom: 16px; margin-bottom: 24px;">
+        <a href="/" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+          <img src="/logo.png" alt="Natura Bliss Logo" width="60" height="60" style="object-fit: contain;" />
+          <span style="font-size: 24px; font-weight: 700; color: #587a3b; letter-spacing: 0.5px;">NATURA BLISS </span>
+        </a>
+        <nav aria-label="Main Navigation">
+          <ul style="display: flex; gap: 20px; list-style: none; margin: 0; padding: 0;">
+            <li><a href="/" style="color: #587a3b; font-weight: 600; text-decoration: none;">Home</a></li>
+            <li><a href="/collection" style="color: #374151; text-decoration: none;">Collection</a></li>
+            <li><a href="/about" style="color: #374151; text-decoration: none;">About</a></li>
+            <li><a href="/contact" style="color: #374151; text-decoration: none;">Contact</a></li>
+            <li><a href="/blog" style="color: #374151; text-decoration: none;">Blog</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <main>
+        <section style="background: #f4f7f1; border-radius: 8px; padding: 32px 24px; margin-bottom: 32px;">
+          <h1 style="font-size: 32px; color: #2d451b; margin-top: 0; line-height: 1.25;">
+            Natura Bliss | 100% Pure Skincare & Cold-Pressed Oils in Pakistan
+          </h1>
+          <p style="font-size: 18px; color: #4b5563; max-width: 900px;">
+            Welcome to <strong>Natura Bliss</strong> — Pakistan's premier producer of extra-virgin cold-pressed
+            oils, handmade herbal skincare, natural soaps, and organic wellness essentials. 100% chemical-free,
+            cruelty-free, and crafted with pure botanical ingredients.
+          </p>
+          <p style="font-weight: 600; color: #587a3b; margin-bottom: 20px;">
+            🚚 Nationwide Cash on Delivery (COD) across Karachi, Lahore, Islamabad, Rawalpindi, Peshawar, Faisalabad,
+            Multan & all cities of Pakistan.
+          </p>
+          <a href="/collection"
+            style="display: inline-block; background: #587a3b; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: 600; border-radius: 4px;">
+            Explore All Products
+          </a>
+        </section>
+
+        <section style="margin-bottom: 40px;">
+          <h2 style="font-size: 26px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+            Shop by Category — Pure & Organic Solutions
+          </h2>
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: #ffffff;">
+              <h3 style="color: #587a3b; margin-top: 0;"><a href="/collection"
+                  style="color: #587a3b; text-decoration: none;">Cold-Pressed Oils</a></h3>
+              <p style="color: #6b7280; font-size: 14px;">100% pure extra-virgin extraction: Coconut Oil, Almond Oil,
+                Sesame Oil, Castor Oil, Onion Seed Oil, Pumpkin Seed Oil, Blackseed Oil, Rosemary Oil, and Pure Olive
+                Oil.</p>
+            </div>
+            <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: #ffffff;">
+              <h3 style="color: #587a3b; margin-top: 0;"><a href="/collection"
+                  style="color: #587a3b; text-decoration: none;">Herbal Hair Care</a></h3>
+              <p style="color: #6b7280; font-size: 14px;">Anti-hairfall and growth boosting formulas: Herbal Shampoo,
+                Kre-Bio Shampoo & Conditioner, Onion Hair Oil, and 804 Hair Oil & Serum.</p>
+            </div>
+            <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: #ffffff;">
+              <h3 style="color: #587a3b; margin-top: 0;"><a href="/collection"
+                  style="color: #587a3b; text-decoration: none;">Organic Soap Bars</a></h3>
+              <p style="color: #6b7280; font-size: 14px;">Gentle handmade bath bars: Neem Clarifying Soap, Rice
+                Brightening Soap, and Charcoal Deep Cleansing Soap.</p>
+            </div>
+            <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: #ffffff;">
+              <h3 style="color: #587a3b; margin-top: 0;"><a href="/collection"
+                  style="color: #587a3b; text-decoration: none;">Gluta Brightening Line</a></h3>
+              <p style="color: #6b7280; font-size: 14px;">Radiance and anti-blemish care: Gluta Fair Night Cream, Gluta
+                Shine Cream, Gluta Care Body Lotion, and Gluta Facial Wash.</p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          style="background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 8px; padding: 24px; margin-bottom: 40px;">
+          <h2 style="font-size: 24px; color: #2d451b; margin-top: 0;">Why Choose Natura Bliss in Pakistan?</h2>
+          <ul style="padding-left: 20px; color: #4b5563;">
+            <li><strong>100% Cold-Pressed:</strong> Zero heat, zero hexane, and zero chemicals used during extraction.
+            </li>
+            <li><strong>Chemical-Free Formulation:</strong> 0% Parabens, 0% Sulfates, 0% Mineral Oils.</li>
+            <li><strong>Cash on Delivery (COD):</strong> Order securely with doorstep Cash on Delivery across Pakistan.
+            </li>
+            <li><strong>7-Day Easy Return Policy:</strong> Customer satisfaction guaranteed.</li>
+          </ul>
+        </section>
+      </main>
+
+      <footer
+        style="border-top: 2px solid #e5e7eb; padding-top: 24px; margin-top: 40px; color: #6b7280; font-size: 14px;">
+        <p><strong>Natura Bliss</strong> — Chakwal, Talagang, Punjab, Pakistan | Support: +92 324 1572294</p>
+        <p>&copy; 2026 Natura Bliss. All rights reserved.</p>
+      </footer>
+    </div>
+  </noscript>
+
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

@@ -3,6 +3,7 @@ import Title from "../components/Title";
 import { FaCalendarAlt, FaArrowRight, FaUser, FaClock, FaTag, FaFire } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import Loader from "../components/Loader";
+import SEO from "../components/SEO";
 
 const Blog = () => {
   const [blogs, setBlogs] = useState([]);
@@ -84,6 +85,11 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Skincare Journal & Haircare Guides | Natura Bliss Pakistan"
+        description="Read expert guides on cold-pressed oils, natural hair growth tips, organic soap benefits, and holistic skincare wisdom in Pakistan."
+        canonical="https://naturabliss.pk/blog"
+      />
       {/* Header Section */}
       <div className="border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

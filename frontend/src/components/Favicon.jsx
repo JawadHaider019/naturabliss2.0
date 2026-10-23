@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from "axios";
+import { getBusinessDetails } from "../services/businessService";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -9,18 +9,14 @@ const Favicon = () => {
   useEffect(() => {
     const fetchFavicon = async () => {
       try {
-     
-        const response = await axios.get(`${backendUrl}/api/business-details`);
-        
-        if (response.data.success && response.data.data?.logos?.favicon?.url) {
-          const faviconUrl = response.data.data.logos.favicon.url;
+        const data = await getBusinessDetails(backendUrl);
+        if (data?.logos?.favicon?.url) {
+          const faviconUrl = data.logos.favicon.url;
           setFavicon(faviconUrl);
           updateDocumentFavicon(faviconUrl);
-        
-        
         }
       } catch (error) {
-        console.error('❌ Error fetching favicon for customer website:', error);
+        // Silent error
       }
     };
 

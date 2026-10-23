@@ -5,17 +5,16 @@ import 'react-toastify/dist/ReactToastify.css'
 import Clarity from "@microsoft/clarity"
 import Loader from './components/Loader' // Import your custom loader
 
-// Lazy load components
-const Navbar = lazy(() => import('./components/Navbar'))
-const SearchBar = lazy(() => import('./components/SearchBar'))
-const Footer = lazy(() => import('./components/Footer'))
-const Favicon = lazy(() => import('./components/Favicon'))
+import Navbar from './components/Navbar'
+import SearchBar from './components/SearchBar'
+import Footer from './components/Footer'
+import Favicon from './components/Favicon'
+import Home from './pages/Home'
 
 import FacebookPixel from './components/FacebookPixel'
 import TikTokPixel from './components/TiktokPixel'
 
-// Pages
-const Home = lazy(() => import('./pages/Home'))
+// Lazy load secondary pages
 const Collection = lazy(() => import('./pages/Collection'))
 const About = lazy(() => import('./pages/About'))
 const Contact = lazy(() => import('./pages/Contact'))
@@ -58,7 +57,6 @@ const ScrollToTop = () => {
 // Preload Routes
 const preloadRoutes = () => {
   const routes = [
-    () => import('./pages/Home'),
     () => import('./pages/Collection'),
     () => import('./pages/Cart')
   ]
@@ -69,61 +67,69 @@ const preloadRoutes = () => {
 }
 
 const App = () => {
-
   const location = useLocation()
 
-  // Initialize Clarity + Preload
+  // Initialize Clarity + Preload non-blocking after idle
   useEffect(() => {
     preloadRoutes()
 
-    // Initialize Microsoft Clarity
-    Clarity.init("vmajox80q2")
+    const timer = setTimeout(() => {
+      try {
+        Clarity.init("vmajox80q2")
+      } catch (err) {
+        // Silent error
+      }
+    }, 3500)
 
+    return () => clearTimeout(timer)
   }, [])
 
   // Track SPA page navigation
   useEffect(() => {
-    Clarity.event("page_view", {
-      path: location.pathname
-    })
+    try {
+      Clarity.event("page_view", {
+        path: location.pathname
+      })
+    } catch {
+      // Silent error
+    }
   }, [location])
 
   return (
-    <div className="px-4 sm:px-[1vw] md:px-[3vw] lg:px-[5vw]">
+    <div className="px-4 sm:px-[1vw] md:px-[3vw] lg:px-[5vw] flex flex-col min-h-screen">
+      <Favicon />
 
-      <Suspense fallback={<LoadingSpinner />}>
-        <Favicon />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        theme="colored"
+        style={{
+          '--toastify-color-success': '#587a3b',
+          '--toastify-text-color-success': '#ffffff',
+          '--toastify-color-error': '#dc2626',
+          '--toastify-text-color-error': '#ffffff',
+          '--toastify-color-info': '#587a3b',
+          '--toastify-text-color-info': '#ffffff',
+          '--toastify-color-warning': '#d97706',
+          '--toastify-text-color-warning': '#ffffff',
+        }}
+        toastStyle={{
+          fontSize: '14px',
+          fontWeight: '500',
+          borderRadius: '0px',
+        }}
+      />
 
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          theme="colored"
-          style={{
-            '--toastify-color-success': '#587a3b',
-            '--toastify-text-color-success': '#ffffff',
-            '--toastify-color-error': '#dc2626',
-            '--toastify-text-color-error': '#ffffff',
-            '--toastify-color-info': '#587a3b',
-            '--toastify-text-color-info': '#ffffff',
-            '--toastify-color-warning': '#d97706',
-            '--toastify-text-color-warning': '#ffffff',
-          }}
-          toastStyle={{
-            fontSize: '14px',
-            fontWeight: '500',
-            borderRadius: '0px',
-          }}
-        />
+      <ScrollToTop />
 
-        <ScrollToTop />
+      <FacebookPixel />
+      <TikTokPixel />
 
-        <FacebookPixel />
-        <TikTokPixel />
+      <Navbar />
+      <SearchBar />
 
-        <Navbar />
-        <SearchBar />
-
+      <main id="main-content" role="main" className="flex-grow">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path='/' element={<Home />} />
@@ -141,11 +147,9 @@ const App = () => {
             <Route path='/place-order' element={<PlaceOrder />} />
           </Routes>
         </Suspense>
+      </main>
 
-        <Footer />
-
-      </Suspense>
-
+      <Footer />
     </div>
   )
 }

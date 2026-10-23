@@ -713,33 +713,46 @@ const ShopContextProvider = ({ children }) => {
         dataCache.timestamp = now;
         setProducts(productsWithBasicData);
 
-        // Load reviews in background
-        setTimeout(async () => {
-          try {
-            const productsWithRatings = await Promise.all(
-              productsData.map(async (product) => {
-                try {
-                  const reviews = await fetchProductReviews(product._id);
-                  const averageRating = calculateAverageRating(reviews);
-                  
-                  return {
-                    ...product,
-                    rating: averageRating,
-                    reviewCount: reviews.length,
-                    stock: product.stock || 0
-                  };
-                } catch {
-                  return product;
-                }
-              })
-            );
-            dataCache.products = productsWithRatings;
-            dataCache.timestamp = Date.now();
-            setProducts(productsWithRatings);
-          } catch {
-            // Silent fail for background review loading
-          }
-        }, 100);
+        // Load reviews in background only after page is idle and painted
+        const loadReviewsDelayed = () => {
+          setTimeout(async () => {
+            try {
+              // Process in small chunks to avoid saturating network
+              const results = [];
+              for (let i = 0; i < productsData.length; i += 4) {
+                const chunk = productsData.slice(i, i + 4);
+                const chunkRatings = await Promise.all(
+                  chunk.map(async (product) => {
+                    try {
+                      const reviews = await fetchProductReviews(product._id);
+                      const averageRating = calculateAverageRating(reviews);
+                      return {
+                        ...product,
+                        rating: averageRating,
+                        reviewCount: reviews.length,
+                        stock: product.stock || 0
+                      };
+                    } catch {
+                      return product;
+                    }
+                  })
+                );
+                results.push(...chunkRatings);
+              }
+              dataCache.products = results;
+              dataCache.timestamp = Date.now();
+              setProducts(results);
+            } catch {
+              // Silent fail
+            }
+          }, 4500);
+        };
+
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          window.requestIdleCallback(loadReviewsDelayed, { timeout: 6000 });
+        } else {
+          loadReviewsDelayed();
+        }
       }
     } catch (error) {
       toast.error("Failed to fetch products");
@@ -786,33 +799,40 @@ const ShopContextProvider = ({ children }) => {
       dataCache.timestamp = now;
       setDeals(dealsWithBasicData);
 
-      // Load reviews in background
-      setTimeout(async () => {
-        try {
-          const dealsWithRatings = await Promise.all(
-            activeDeals.map(async (deal) => {
-              try {
-                const reviews = await fetchDealReviews(deal._id);
-                const averageRating = calculateAverageRating(reviews);
-                
-                return {
-                  ...deal,
-                  rating: averageRating,
-                  reviewCount: reviews.length,
-                  quantity: deal.quantity || 0
-                };
-              } catch {
-                return deal;
-              }
-            })
-          );
-          dataCache.deals = dealsWithRatings;
-          dataCache.timestamp = Date.now();
-          setDeals(dealsWithRatings);
-        } catch {
-          // Silent fail for background review loading
-        }
-      }, 100);
+      // Load deal reviews after page is idle and painted
+      const loadDealReviewsDelayed = () => {
+        setTimeout(async () => {
+          try {
+            const dealsWithRatings = await Promise.all(
+              activeDeals.map(async (deal) => {
+                try {
+                  const reviews = await fetchDealReviews(deal._id);
+                  const averageRating = calculateAverageRating(reviews);
+                  return {
+                    ...deal,
+                    rating: averageRating,
+                    reviewCount: reviews.length,
+                    quantity: deal.quantity || 0
+                  };
+                } catch {
+                  return deal;
+                }
+              })
+            );
+            dataCache.deals = dealsWithRatings;
+            dataCache.timestamp = Date.now();
+            setDeals(dealsWithRatings);
+          } catch {
+            // Silent fail
+          }
+        }, 5000);
+      };
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(loadDealReviewsDelayed, { timeout: 7000 });
+      } else {
+        loadDealReviewsDelayed();
+      }
 
       return dealsWithBasicData;
     } catch (error) {

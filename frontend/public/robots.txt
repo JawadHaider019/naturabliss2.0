@@ -1,3 +1,5 @@
+# Robots.txt for Natura Bliss Pakistan (https://naturabliss.pk)
+
 User-agent: *
 Allow: /
 Disallow: /cart
@@ -5,4 +7,26 @@ Disallow: /orders
 Disallow: /place-order
 Disallow: /login
 
-Sitemap: https://naturabliss.pk/sitemap.xml
+# AI Search & Answer Engines (AEO / GEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+Sitemap: https://naturabliss.pk/sitemap.xml

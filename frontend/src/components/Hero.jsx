@@ -5,6 +5,7 @@ import { assets } from '../assets/assets';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 // Pre-loaded default banner from local assets - ALWAYS AVAILABLE INSTANTLY
 const defaultBanner = {
@@ -113,20 +114,21 @@ const Hero = () => {
     }
   };
 
-  // Get image URL based on screen size
+  // Get image URL based on screen size with Cloudinary optimization
   const getImageUrl = (banner) => {
     const fallbackImage = screenSize === 'mobile' ? assets.mobileBanner : assets.desktopBanner;
     if (!banner) return fallbackImage;
     
     if (screenSize === 'mobile' && banner.mobileImageUrl) {
-      return banner.mobileImageUrl;
+      return getOptimizedImageUrl(banner.mobileImageUrl, { width: 750, quality: 'auto' });
     }
     
     if (screenSize !== 'mobile' && banner.desktopImageUrl) {
-      return banner.desktopImageUrl;
+      return getOptimizedImageUrl(banner.desktopImageUrl, { width: 1400, quality: 'auto' });
     }
     
-    return banner.desktopImageUrl || banner.mobileImageUrl || fallbackImage;
+    const fallback = banner.desktopImageUrl || banner.mobileImageUrl || fallbackImage;
+    return getOptimizedImageUrl(fallback, { width: screenSize === 'mobile' ? 750 : 1400, quality: 'auto' });
   };
 
   // Custom dots components
@@ -158,12 +160,15 @@ const Hero = () => {
     pauseOnHover: false,
     arrows: false,
     fade: true,
+    accessibility: false,
     appendDots: dots => screenSize === 'mobile' ? <MobileCustomDots dots={dots} /> : <CustomDots dots={dots} />,
     customPaging: i => (
       <button 
-        className="w-2.5 h-2.5 rounded-full bg-white/60 transition-all duration-300 hover:bg-[#587a3b] hover:scale-110 focus:outline-none shadow-sm"
+        className="p-2 inline-flex items-center justify-center focus:outline-none"
         aria-label={`Go to slide ${i + 1}`}
-      />
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-white/60 transition-all duration-300 hover:bg-[#587a3b] hover:scale-110 shadow-sm block" />
+      </button>
     ),
     dotsClass: screenSize === 'mobile' 
       ? "slick-dots !flex !flex-row !static !w-auto !m-0 justify-center"
@@ -190,13 +195,16 @@ const Hero = () => {
         <div 
           className="relative w-full overflow-hidden" 
           style={{
-            height: screenSize === 'mobile' ? 'auto' : '90vh'
+            height: screenSize === 'mobile' ? 'auto' : '90vh',
+            aspectRatio: screenSize === 'mobile' ? '3 / 4' : 'auto'
           }}
         >
           <img
             src={imageUrl || fallbackImage}
             alt={banner?.altText || "Natura Bliss Banner"}
-            className={`w-full ${screenSize === 'mobile' ? 'h-auto block' : 'h-full object-cover'}`}
+            width={screenSize === 'mobile' ? 750 : 1400}
+            height={screenSize === 'mobile' ? 1000 : 700}
+            className={`w-full ${screenSize === 'mobile' ? 'h-auto aspect-[3/4] object-cover block' : 'h-full object-cover'}`}
             loading="eager"
             fetchpriority="high"
             decoding="sync"

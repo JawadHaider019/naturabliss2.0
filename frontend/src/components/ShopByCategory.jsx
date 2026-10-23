@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Title from "./Title";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?q=80&w=600&auto=format&fit=crop";
 
@@ -61,9 +62,23 @@ const ShopByCategory = () => {
     navigate(`/collection?category=${encodeURIComponent(categoryName)}`);
   };
 
-  // If no categories in DB or loading with 0 categories, don't show dummy data
+  // Prevent layout shift while loading categories
   if (loading && displayCategories.length === 0) {
-    return null;
+    return (
+      <section className="my-10 md:my-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto min-h-[260px]">
+        <div className="py-2 text-center text-2xl md:text-3xl mb-6 sm:mb-10">
+          <Title text1={"SHOP BY"} text2={"CATEGORY"} />
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center w-[140px] sm:w-[170px] md:w-[190px] lg:w-[200px]">
+              <div className="w-full aspect-[4/5] bg-gray-200 animate-pulse rounded-sm" />
+              <div className="mt-3.5 h-3 w-16 bg-gray-200 animate-pulse rounded" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
   }
 
   if (displayCategories.length === 0) {
@@ -88,9 +103,12 @@ const ShopByCategory = () => {
             {/* Edge-to-edge product category photo on warm beige background */}
             <div className="w-full aspect-[4/5] bg-[#F4F2EC] overflow-hidden relative rounded-sm shadow-sm transition-all duration-300 group-hover:shadow-md">
               <img
-                src={item.image}
+                src={getOptimizedImageUrl(item.image, { width: 280, quality: 'auto' })}
                 alt={item.name}
+                width="180"
+                height="225"
                 loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
                 onError={(e) => {
                   e.target.src = DEFAULT_PLACEHOLDER;

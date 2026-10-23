@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ShopContext } from '../context/ShopContext';
 import RelatedProduct from '../components/RelatedProduct';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import {
   FaStar,
   FaStarHalf,
@@ -227,6 +230,40 @@ const Product = () => {
       }
     }
   }, [selectedSubcategory, variantProducts, products, productData, navigate]);
+
+  // Resolve human-readable category name from backendCategories, productData, or products list
+  const resolvedCategoryName = useMemo(() => {
+    if (!productData?.category) return '';
+
+    // If category is an object with a name property
+    if (typeof productData.category === 'object' && productData.category !== null) {
+      if (productData.category.name) return productData.category.name;
+    }
+
+    const catId = typeof productData.category === 'string' ? productData.category : productData.category?.toString();
+
+    // 1. Look up by id or name in backendCategories
+    if (backendCategories && backendCategories.length > 0) {
+      const matched = backendCategories.find(
+        (c) => c.id === catId || c.name === catId || c._id === catId
+      );
+      if (matched?.name) return matched.name;
+    }
+
+    // 2. Check if the value is already a human-readable name (not a 24-character hex MongoDB ID)
+    if (catId && !/^[0-9a-fA-F]{24}$/.test(catId.trim())) {
+      return catId;
+    }
+
+    // 3. Fallback: search in products list from ShopContext
+    if (products && products.length > 0) {
+      const prod = products.find(p => p._id === productData._id || p.slug === slug);
+      if (prod?.categoryName) return prod.categoryName;
+      if (typeof prod?.category === 'object' && prod?.category?.name) return prod.category.name;
+    }
+
+    return '';
+  }, [productData?.category, productData?._id, backendCategories, products, slug]);
 
   // Safe parsing helper functions for Ingredients, Benefits, and How To Use
   const ingredientsList = useMemo(() => {
@@ -807,35 +844,63 @@ const Product = () => {
 
   return (
     <div className="container mx-auto px-4 border-t-2 pt-10">
-      {/* Dynamic Structured Data (SEO) */}
+      {/* Dynamic SEO & Structured Data */}
       {productData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org/",
-              "@type": "Product",
-              "name": productData.name,
-              "image": productData.image,
-              "description": productData.description,
-              "brand": {
-                "@type": "Brand",
+        <SEO
+          title={`${productData.name} - 100% Pure Organic`}
+          description={`Buy authentic ${productData.name} online in Pakistan at PKR ${(productData.discountprice && productData.discountprice < productData.price) ? productData.discountprice : productData.price}. Extra-virgin, chemical-free. Cash on delivery available.`}
+          canonical={`https://naturabliss.pk/product/${productData.slug || slug}`}
+          ogType="product"
+          ogImage={productData.image?.[0]}
+          schema={{
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": productData.name,
+            "image": productData.image,
+            "description": productData.description,
+            "brand": {
+              "@type": "Brand",
+              "name": "Natura Bliss"
+            },
+            "sku": productData._id,
+            "offers": {
+              "@type": "Offer",
+              "url": `https://naturabliss.pk/product/${productData.slug || slug}`,
+              "priceCurrency": "PKR",
+              "price": (productData.discountprice && productData.discountprice < productData.price)
+                ? productData.discountprice.toString()
+                : productData.price.toString(),
+              "availability": (stock !== undefined && stock <= 0) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+              "itemCondition": "https://schema.org/NewCondition",
+              "seller": {
+                "@type": "Organization",
                 "name": "Natura Bliss"
-              },
-              "sku": productData._id,
-              "offers": {
-                "@type": "AggregateOffer",
-                "url": `${window.location.origin}/product/${productData.slug || productData._id}`,
-                "priceCurrency": "PKR",
-                "lowPrice": (productData.discountprice && productData.discountprice < productData.price)
-                  ? productData.discountprice.toString()
-                  : productData.price.toString(),
-                "highPrice": productData.price.toString()
+              }
+            },
+            ...(reviews.length > 0 && {
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1),
+                "reviewCount": reviews.length
               }
             })
           }}
         />
       )}
+
+      {/* Breadcrumbs Navigation */}
+      {productData && (
+        <Breadcrumbs
+          items={[
+            { label: 'Collection', path: '/collection' },
+            resolvedCategoryName
+              ? { label: resolvedCategoryName, path: `/collection?category=${encodeURIComponent(resolvedCategoryName)}` }
+              : null,
+            { label: productData.name }
+          ].filter(Boolean)}
+        />
+      )}
+
       <div className="flex flex-col gap-12 sm:flex-row sm:gap-12">
         <div className="flex flex-1 flex-col-reverse gap-3 sm:flex-row">
           {/* Thumbnail Images */}
@@ -843,8 +908,12 @@ const Product = () => {
             {productData.image?.map((item, index) => (
               <img
                 key={index}
-                src={item}
+                src={getOptimizedImageUrl(item, { width: 160, quality: 'auto' })}
                 alt={`Product Thumbnail ${index + 1}`}
+                width="80"
+                height="80"
+                loading="lazy"
+                decoding="async"
                 className={`w-[24%] shrink-0 cursor-pointer sm:mb-3 sm:w-full object-cover h-20 sm:h-24 rounded border transition-all ${
                   (image === item || (!image && index === 0)) ? 'border-black' : 'border-gray-200 hover:border-gray-400'
                 }`}
@@ -864,8 +933,10 @@ const Product = () => {
               </div>
             )}
             <img
-              src={image || productData.image?.[0]}
+              src={getOptimizedImageUrl(image || productData.image?.[0], { width: 700, quality: 'auto' })}
               alt={productData.name}
+              width="600"
+              height="600"
               className="h-auto w-full object-cover max-h-[480px] rounded-lg shadow-sm"
               onError={(e) => {
                 e.target.src = 'https://via.placeholder.com/500?text=Product+Image';

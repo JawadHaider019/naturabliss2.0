@@ -114,6 +114,7 @@ const BestSeller = () => {
     variableWidth: false,
     centerMode: false,
     adaptiveHeight: false,
+    accessibility: false,
     responsive: [
       {
         breakpoint: 1280,
@@ -160,14 +161,16 @@ const BestSeller = () => {
     ],
     appendDots: dots => (
       <div className="mt-4">
-        <ul className="flex justify-center items-center gap-1.5 m-0 p-0"> {dots} </ul>
+        <ul className="flex justify-center items-center gap-1.5 m-0 p-0">{dots}</ul>
       </div>
     ),
     customPaging: i => (
       <button
-        className="w-2 h-2 rounded-full bg-gray-300 transition-colors duration-200 hover:bg-gray-400 focus:outline-none"
+        className="p-2 inline-flex items-center justify-center focus:outline-none"
         aria-label={`Go to slide ${i + 1}`}
-      />
+      >
+        <span className="w-2 h-2 rounded-full bg-gray-300 transition-colors duration-200 hover:bg-gray-400 block" />
+      </button>
     )
   };
 

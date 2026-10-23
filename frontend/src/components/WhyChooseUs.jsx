@@ -5,10 +5,11 @@ import { Link } from 'react-router-dom';
 
 const WhyChooseUs = () => {
   const keyPoints = [
-    '100% natural and organic ingredients — safe, gentle, and effective',
-    'Free from parabens, sulfates, and artificial fragrances.',
-    'Perfect for all skin types, even sensitive skin.',
-    'Handcrafted with love and care for visible, lasting results',
+    '100% Cold-Pressed & Extra-Virgin — mechanically pressed below 35°C without heat or hexane solvents',
+    'Certified 0% Chemical Formulation — strictly free from parabens, sulfates (SLS), mineral oils, and phthalates',
+    'Complete Ingredient Transparency — honest labeling with zero hidden fragrances or diluted fillers',
+    'Proudly Handcrafted in Pakistan — ethically sourced botanical oils crafted in Chakwal, Punjab',
+    'Hypoallergenic & Dermatologically Safe — formulated for all skin types, including sensitive and acne-prone skin'
   ];
 
   return (

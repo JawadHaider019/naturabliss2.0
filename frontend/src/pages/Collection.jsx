@@ -4,6 +4,8 @@ import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
 import Title from '../components/Title';
 import ProductItem from "../components/ProductItem";
+import SEO from "../components/SEO";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 const Collection = () => {
   const [searchParams] = useSearchParams();
@@ -208,16 +210,18 @@ const Collection = () => {
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      setSelectedCategories([categoryParam]);
+      const resolved = categoryIdMap[categoryParam] || categoryParam;
+      setSelectedCategories([resolved]);
     }
     const subcategoryParam = searchParams.get('subcategory');
     if (subcategoryParam) {
-      setSelectedSubCategories([subcategoryParam]);
+      const resolvedSub = subcategoryIdMap[subcategoryParam] || subcategoryParam;
+      setSelectedSubCategories([resolvedSub]);
     }
     if (searchParams.get('bestseller') === 'true') {
       setSortType('bestseller');
     }
-  }, [searchParams]);
+  }, [searchParams, categoryIdMap, subcategoryIdMap]);
 
   // Get available subcategories based on selected categories
   const getAvailableSubcategories = useCallback(() => {
@@ -396,6 +400,18 @@ const Collection = () => {
 
   return (
     <div className="flex flex-col gap-1 border-t pt-10 sm:flex-row sm:gap-10">
+      <SEO
+        title="100% Pure Organic Skincare & Cold-Pressed Oils in Pakistan | Collection"
+        description="Shop pure extra-virgin cold-pressed oils, botanical shampoos, artisan handmade soaps, and Gluta beauty products in Pakistan. Nationwide Cash on Delivery."
+        canonical="https://naturabliss.pk/collection"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "Natura Bliss Product Collection",
+          "url": "https://naturabliss.pk/collection",
+          "description": "Authentic organic skincare, cold-pressed oils, and herbal haircare with nationwide delivery in Pakistan."
+        }}
+      />
       {/* Filters Sidebar */}
       <div className="min-w-60">
         <p
@@ -487,6 +503,12 @@ const Collection = () => {
 
       {/* Products Grid */}
       <div className="flex-1">
+        <Breadcrumbs
+          items={[
+            { label: 'Collection', path: '/collection' },
+            selectedCategories.length === 1 ? { label: selectedCategories[0] } : null
+          ].filter(Boolean)}
+        />
         <div className="mb-4 text-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <Title text1={'ALL'} text2={'COLLECTIONS'} />
 
@@ -578,6 +600,32 @@ const Collection = () => {
             )}
           </div>
         )}
+
+        {/* Pakistan Regional Shopping Guide & Trust */}
+        <div className="mt-16 pt-10 border-t border-gray-200">
+          <div className="bg-gray-50/70 p-6 md:p-8 border border-gray-200 text-left">
+            <h2 className="text-xl font-bold text-gray-900 mb-3">
+              Buy 100% Pure Organic Skincare &amp; Cold-Pressed Oils Online in Pakistan
+            </h2>
+            <p className="text-gray-600 text-sm leading-relaxed mb-4">
+              Natura Bliss is proud to bring you pure, unadulterated cold-pressed seed oils, botanical hair therapies, and handmade skincare across all provinces of Pakistan. From our extraction facility in Chakwal, Punjab to your doorstep in Karachi, Lahore, Islamabad, Rawalpindi, Peshawar, Multan, Quetta, or any rural district — we deliver authentic nature straight to your home.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200 text-sm">
+              <div>
+                <strong className="text-gray-900 block mb-1">🚚 Cash on Delivery (COD)</strong>
+                <span className="text-gray-600 text-xs">Pay cash at doorstep on delivery anywhere in Pakistan.</span>
+              </div>
+              <div>
+                <strong className="text-gray-900 block mb-1">🌿 100% Extra-Virgin &amp; Unrefined</strong>
+                <span className="text-gray-600 text-xs">Zero heat damage, zero mineral oil, zero synthetic perfumes.</span>
+              </div>
+              <div>
+                <strong className="text-gray-900 block mb-1">📦 Fast 2-4 Days Shipping</strong>
+                <span className="text-gray-600 text-xs">Dispatched within 24 hours with SMS and WhatsApp tracking.</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

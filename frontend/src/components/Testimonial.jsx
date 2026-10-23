@@ -47,6 +47,7 @@ const Testimonial = () => {
         autoplay: testimonials.length > 1,
         autoplaySpeed: 6000,
         arrows: false,
+        accessibility: false,
         beforeChange: (current, next) => setActiveSlide(next),
     };
 
@@ -161,17 +162,21 @@ const Testimonial = () => {
 
                 {/* Custom Pagination Indicator Dots */}
                 {testimonials.length > 1 && (
-                    <div className="flex justify-center items-center gap-2 mt-6">
+                    <div className="flex justify-center items-center gap-1 mt-6">
                         {testimonials.map((_, idx) => (
                             <button
                                 key={idx}
                                 aria-label={`Go to slide ${idx + 1}`}
                                 onClick={() => sliderRef.current?.slickGoTo(idx)}
-                                className={`transition-all duration-300 rounded-full ${activeSlide === idx
-                                    ? 'w-7 h-2 bg-[#587a3b]'
-                                    : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+                                className="p-2 inline-flex items-center justify-center focus:outline-none"
+                            >
+                                <span
+                                    className={`h-2 rounded-full transition-colors duration-200 block ${activeSlide === idx
+                                        ? 'w-6 bg-[#587a3b]'
+                                        : 'w-2 bg-gray-300 hover:bg-gray-400'
                                     }`}
-                            />
+                                />
+                            </button>
                         ))}
                     </div>
                 )}

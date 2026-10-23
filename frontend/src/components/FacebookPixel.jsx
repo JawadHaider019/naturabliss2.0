@@ -6,18 +6,21 @@ const FacebookPixel = () => {
   const location = useLocation();
   
   useEffect(() => {
-    import('react-facebook-pixel')
-      .then((x) => x.default)
-      .then((ReactPixel) => {
-        ReactPixel.init('913853534399435'); // Your pixel ID
-        ReactPixel.pageView(); // Track initial pageview
-        
-        // Advanced Matching (optional but recommended)
-        ReactPixel.init('913853534399435', {}, {
-          autoConfig: true,
-          debug: false,
-        });
-      });
+    const initPixel = () => {
+      import('react-facebook-pixel')
+        .then((x) => x.default)
+        .then((ReactPixel) => {
+          ReactPixel.init('913853534399435', {}, {
+            autoConfig: true,
+            debug: false,
+          });
+          ReactPixel.pageView(); // Track initial pageview
+        })
+        .catch(() => {});
+    };
+
+    const timer = setTimeout(initPixel, 3500);
+    return () => clearTimeout(timer);
   }, []);
 
   // Track page views on route change

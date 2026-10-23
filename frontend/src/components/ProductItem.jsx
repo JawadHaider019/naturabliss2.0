@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaStarHalf, FaRegStar, FaPlus } from 'react-icons/fa';
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
 const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 'published', className = '', onClick }) => {
   const { currency, addToCart } = useContext(ShopContext);
@@ -90,8 +91,12 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
         )}
         <img
           className="w-full h-full object-contain transition-transform duration-300 ease-in-out group-hover:scale-105"
-          src={image}
+          src={getOptimizedImageUrl(image, { width: 350, quality: 'auto' })}
           alt={name}
+          width="300"
+          height="300"
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = "/images/fallback-image.jpg";
@@ -122,7 +127,7 @@ const ProductItem = ({ id, slug, image, name, price, discount, rating, status = 
               {currency} {actualPrice}
             </span>
             {hasDiscount && (
-              <span className="text-xs sm:text-sm text-gray-400 line-through hidden sm:inline font-normal">
+              <span className="text-xs sm:text-sm text-gray-500 line-through hidden sm:inline font-normal">
                 {currency} {numPrice}
               </span>
             )}

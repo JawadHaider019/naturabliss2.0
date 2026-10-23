@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import RelatedProduct from '../components/RelatedProduct';
 import RelatedDeals from '../components/RelatedDeals';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { FaStar, FaStarHalf, FaRegStar, FaThumbsUp, FaThumbsDown, FaTimes, FaUserShield, FaClock, FaFire } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { motion, AnimatePresence } from "framer-motion";
 
 const Deal = () => {
   const { dealId } = useParams();
@@ -788,6 +789,42 @@ const Deal = () => {
 
   return (
     <div className="border-t-2 pt-10">
+      <SEO
+        title={`${dealData.dealName || 'Special Bundle Offer'} | Natura Bliss Deals`}
+        description={`Save big on ${dealData.dealName || 'this bundle deal'} in Pakistan. 100% pure organic beauty bundle with nationwide Cash on Delivery.`}
+        canonical={`https://naturabliss.pk/deal/${dealId}`}
+        ogType="product"
+        ogImage={dealData.dealImages?.[0]}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": dealData.dealName,
+          "image": dealData.dealImages || [],
+          "description": dealData.description,
+          "brand": {
+            "@type": "Brand",
+            "name": "Natura Bliss"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": `https://naturabliss.pk/deal/${dealId}`,
+            "priceCurrency": "PKR",
+            "price": (dealData.discountPrice && dealData.discountPrice > 0) ? dealData.discountPrice : dealData.dealPrice,
+            "availability": "https://schema.org/InStock",
+            "itemCondition": "https://schema.org/NewCondition"
+          }
+        }}
+      />
+
+      {dealData && (
+        <Breadcrumbs
+          items={[
+            { label: 'Collection', path: '/collection' },
+            { label: dealData.dealName || 'Bundle Deal' }
+          ]}
+        />
+      )}
+
       <div className="flex flex-col gap-12 sm:flex-row sm:gap-12">
         <div className="flex flex-1 flex-col-reverse gap-3 sm:flex-row">
           {/* Thumbnail Images */}

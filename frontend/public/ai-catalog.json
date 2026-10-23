@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.org",
+  "name": "Natura Bliss Product Catalog",
+  "version": "1.0.0",
+  "provider": {
+    "name": "Natura Bliss",
+    "url": "https://naturabliss.pk",
+    "country": "PK",
+    "currency": "PKR"
+  },
+  "categories": [
+    {
+      "id": "cold-pressed-oils",
+      "name": "Cold-Pressed Oils",
+      "url": "https://naturabliss.pk/collection",
+      "description": "100% pure extra virgin cold-pressed oils including Coconut, Almond, Castor, Blackseed, Sesame, Pumpkin Seed, and Rosemary."
+    },
+    {
+      "id": "haircare",
+      "name": "Herbal Hair Care",
+      "url": "https://naturabliss.pk/collection",
+      "description": "Sulfate-free botanical shampoos, conditioner, onion hair growth oil, and revitalizing serums."
+    },
+    {
+      "id": "soaps",
+      "name": "Organic Soap Bars",
+      "url": "https://naturabliss.pk/collection",
+      "description": "Handmade artisan cold-process bath bars: Neem, Rice, and Activated Charcoal."
+    },
+    {
+      "id": "gluta-line",
+      "name": "Gluta Radiance Skincare",
+      "url": "https://naturabliss.pk/collection",
+      "description": "Gentle radiance night creams, daily moisturizing body lotions, and refreshing face washes."
+    },
+    {
+      "id": "nutrition",
+      "name": "Farm Fresh Nutrition",
+      "url": "https://naturabliss.pk/collection",
+      "description": "100% pure grass-fed Pakistani Desi Ghee and unfiltered raw Wild Forest Honey."
+    }
+  ],
+  "shipping": {
+    "method": "Express Courier",
+    "payment": "Cash on Delivery (COD) & Online Bank Transfer",
+    "coverage": "All cities and districts across Pakistan",
+    "deliveryTime": "2-4 business days"
+  }
+}

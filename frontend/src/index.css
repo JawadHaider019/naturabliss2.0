@@ -1,10 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Prata&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes flipUnit {
+  0% { transform: rotateX(90deg); opacity: 0; }
+  100% { transform: rotateX(0deg); opacity: 1; }
+}
+.animate-flip {
+  animation: flipUnit 0.35s ease-out;
+}
 
 html {
   scroll-behavior: smooth;

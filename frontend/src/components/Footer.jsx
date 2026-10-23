@@ -14,6 +14,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons"
 import { useState, useEffect } from "react"
 import axios from "axios"
+import { getBusinessDetails } from "../services/businessService"
+import { getOptimizedImageUrl } from "../utils/imageOptimizer"
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -45,28 +47,18 @@ const Footer = () => {
             website: { url: "" }
         }
     })
-    const [loading, setLoading] = useState(true)
 
-    // Fetch business details from backend
+    // Fetch business details from shared cached service
     useEffect(() => {
-        const fetchBusinessDetails = async () => {
-            try {
-                const response = await axios.get(`${backendUrl}/api/business-details`)
-
-                if (response.data.success && response.data.data) {
-                    setBusinessInfo(response.data.data)
-                }
-            } catch (error) {
-                // Error handling without console output
-            } finally {
-                setLoading(false)
+        const fetchDetails = async () => {
+            const data = await getBusinessDetails(backendUrl);
+            if (data) {
+                setBusinessInfo(data);
             }
-        }
+        };
 
         if (backendUrl) {
-            fetchBusinessDetails()
-        } else {
-            setLoading(false)
+            fetchDetails();
         }
     }, [])
 
@@ -106,45 +98,25 @@ const Footer = () => {
     const currentYear = new Date().getFullYear()
     const copyrightText = `© ${currentYear} ${businessInfo.company?.name || 'Natura Bliss'}. All rights reserved.`
 
-    // Logo display component
+    // Logo display component with fixed dimensions to eliminate CLS
     const LogoDisplay = () => {
-        if (businessInfo.logos?.website?.url) {
-            return (
-                <img
-                    src={businessInfo.logos.website.url}
-                    alt={`${businessInfo.company?.name || 'Natura Bliss'} Logo`}
-                    className="w-20 mb-4 object-contain"
-                    onError={(e) => {
-                        e.target.src = assets.logo
-                    }}
-                />
-            )
-        }
+        const logoUrl = businessInfo.logos?.website?.url;
+        const displaySrc = logoUrl
+            ? getOptimizedImageUrl(logoUrl, { width: 160, quality: 'auto' })
+            : assets.logo;
 
         return (
-            <img src={assets.logo} className="w-20 mb-4" alt="Natura Bliss Logo" />
-        )
-    }
-
-    if (loading) {
-        return (
-            <footer className="border-t border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 py-16">
-                    <div className="animate-pulse">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-                            {[...Array(4)].map((_, i) => (
-                                <div key={i}>
-                                    <div className="h-6 bg-gray-300 rounded mb-4 w-32"></div>
-                                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </footer>
-        )
+            <img
+                src={displaySrc}
+                alt={`${businessInfo.company?.name || 'Natura Bliss'} Logo`}
+                width="80"
+                height="80"
+                className="w-20 h-20 mb-4 object-contain"
+                onError={(e) => {
+                    e.target.src = assets.logo
+                }}
+            />
+        );
     }
 
     return (

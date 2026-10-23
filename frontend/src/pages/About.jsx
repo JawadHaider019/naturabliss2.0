@@ -1,8 +1,10 @@
 import Title from '../components/Title';
 import { assets } from '../assets/assets';
-import { FaLeaf, FaHands, FaShieldAlt, FaRecycle, FaQuoteLeft, FaSeedling, FaHeart, FaEye } from 'react-icons/fa'; 
+import { FaLeaf, FaHands, FaShieldAlt, FaRecycle, FaQuoteLeft, FaSeedling, FaHeart, FaEye } from 'react-icons/fa';
 import Testimonial from '../components/Testimonial';
 import NewsletterBox from '../components/NewsletterBox';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { useState, useEffect } from 'react';
 
 const About = () => {
@@ -10,26 +12,26 @@ const About = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   // Fetch team members from backend API
   const fetchTeamMembers = async () => {
     try {
       setLoading(true);
       setError(null);
-     
+
       const response = await fetch(`${backendUrl}/api/teams`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch team members: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         const activeMembers = data.data
           .filter(member => member.isActive !== false)
           .sort((a, b) => (a.order || 0) - (b.order || 0));
-        
+
         setTeamMembers(activeMembers);
       } else {
         throw new Error(data.message || 'Failed to fetch team members');
@@ -48,7 +50,15 @@ const About = () => {
   }, []);
 
   return (
-    <div className="border-t pt-14">
+    <div className="border-t pt-4">
+      <SEO
+        title="About Us - Pakistan's Trusted Organic Skincare Brand"
+        description="Learn about Natura Bliss, our heritage in Chakwal, Pakistan, and our commitment to pure, extra-virgin cold-pressed oils and chemical-free skincare."
+        canonical="https://naturabliss.pk/about"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={[{ label: 'About Us' }]} />
+      </div>
       {/* Magazine Cover Section */}
       <div className="relative">
         <div className="absolute inset-0 bg-black bg-opacity-40 z-10"></div>
@@ -134,10 +144,10 @@ const About = () => {
       <div className="bg-gray-50 py-20 border-y border-gray-200">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-             <div className="text-center text-3xl">
-                <Title text1={'OUR'} text2={'PHILOSOPHY'} />
+            <div className="text-center text-3xl">
+              <Title text1={'OUR'} text2={'PHILOSOPHY'} />
             </div>
-          
+
             <p className="text-gray-600 max-w-2xl mx-auto">Real beauty comes from purity — not perfection</p>
           </div>
 
@@ -175,10 +185,10 @@ const About = () => {
       {/* Our Mission Section */}
       <div className="py-20">
         <div className="max-w-4xl mx-auto px-6">
-         <div className="text-center text-3xl">
-                <Title text1={'OUR'} text2={'MISSION'} />
-            </div>
-          
+          <div className="text-center text-3xl">
+            <Title text1={'OUR'} text2={'MISSION'} />
+          </div>
+
           <div className="bg-white p-8  text-center">
             <p className="text-gray-700 text-xl leading-relaxed font-light italic">
               To create pure, handmade, and sustainable personal care products that protect your skin, respect the planet, and bring you closer to the essence of nature.
@@ -192,7 +202,7 @@ const About = () => {
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="text-center text-3xl">
-                <Title text1={'OUR'} text2={'PROMISE'} />
+              <Title text1={'OUR'} text2={'PROMISE'} />
             </div>
             <p className="text-gray-600 max-w-2xl mx-auto">Our commitment to purity, transparency, and your wellbeing</p>
           </div>
@@ -255,69 +265,69 @@ const About = () => {
         </div>
       </div>
 
-    {/* Why Choose Us - Magazine Feature */}
-<div className=" py-20 border-y border-gray-200">
-  <div className="max-w-6xl mx-auto px-6">
-    <div className="text-center mb-16">
-      <div className="text-center text-3xl">
-        <Title text1={'WHY CHOOSE'} text2={'NATURA BLISS'} />
-      </div>
-      <p className="text-gray-600 max-w-2xl mx-auto">Experience the difference of truly natural personal care</p>
-    </div>
+      {/* Why Choose Us - Magazine Feature */}
+      <div className=" py-20 border-y border-gray-200">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="text-center text-3xl">
+              <Title text1={'WHY CHOOSE'} text2={'NATURA BLISS'} />
+            </div>
+            <p className="text-gray-600 max-w-2xl mx-auto">Experience the difference of truly natural personal care</p>
+          </div>
 
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
-        <div className="w-16 h-16 bg-[#587a3b]/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-[#587a3b]/20 transition-colors">
-          <FaLeaf className="text-[#587a3b] text-2xl" />
-        </div>
-        <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">100% Natural Ingredients</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Pure, organic ingredients free from harsh chemicals and artificial additives.
-        </p>
-      </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
+              <div className="w-16 h-16 bg-[#587a3b]/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-[#587a3b]/20 transition-colors">
+                <FaLeaf className="text-[#587a3b] text-2xl" />
+              </div>
+              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">100% Natural Ingredients</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Pure, organic ingredients free from harsh chemicals and artificial additives.
+              </p>
+            </div>
 
-      <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
-        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-orange-200 transition-colors">
-          <FaHands className="text-orange-500 text-2xl" />
-        </div>
-        <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Handmade with Care</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Each product carefully crafted by hand with love and attention to detail.
-        </p>
-      </div>
+            <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-orange-200 transition-colors">
+                <FaHands className="text-orange-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Handmade with Care</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Each product carefully crafted by hand with love and attention to detail.
+              </p>
+            </div>
 
-      <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-200 transition-colors">
-          <FaShieldAlt className="text-blue-500 text-2xl" />
-        </div>
-        <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Safe for All Skin</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Gentle formulas suitable for all skin types, including sensitive skin.
-        </p>
-      </div>
+            <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-200 transition-colors">
+                <FaShieldAlt className="text-blue-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Safe for All Skin</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Gentle formulas suitable for all skin types, including sensitive skin.
+              </p>
+            </div>
 
-      <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
-        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-purple-200 transition-colors">
-          <FaHeart className="text-purple-500 text-2xl" />
+            <div className="bg-white p-8 border border-gray-200 text-center group hover:border-[#587a3b]/50 transition-colors">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-purple-200 transition-colors">
+                <FaHeart className="text-purple-500 text-2xl" />
+              </div>
+              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Visible Results</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Experience the transformative power of nature with noticeable benefits.
+              </p>
+            </div>
+          </div>
         </div>
-        <h3 className="text-xl font-serif font-bold text-gray-900 mb-4 group-hover:text-[#587a3b] transition-colors">Visible Results</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Experience the transformative power of nature with noticeable benefits.
-        </p>
       </div>
-    </div>
-  </div>
-</div>
 
       {/* Meet the Team - Magazine Style */}
-     { teamMembers.length>0 && <div className="py-20 bg-white">
+      {teamMembers.length > 0 && <div className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-block border-b-2 border-gray-300 pb-2 mb-4">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">The People Behind</span>
             </div>
-              <div className="text-center text-3xl">
-                <Title text1={'MEET'} text2={'OUR TEAM'} />
+            <div className="text-center text-3xl">
+              <Title text1={'MEET'} text2={'OUR TEAM'} />
             </div>
             <p className="text-gray-600 max-w-2xl mx-auto">The passionate individuals dedicated to bringing you nature's purest offerings</p>
           </div>

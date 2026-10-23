@@ -1,5 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import SEO from "../components/SEO";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 import {
   FaCalendarAlt,
@@ -189,6 +191,36 @@ const BlogPost = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {blog && (
+        <SEO
+          title={`${blog.title} | Natura Bliss Blog`}
+          description={blog.summary || blog.metaDescription || (blog.content ? blog.content.replace(/<[^>]*>?/gm, '').slice(0, 150) : blog.title)}
+          canonical={`https://naturabliss.pk/blog/${slug}`}
+          ogType="article"
+          ogImage={blog.image || 'https://naturabliss.pk/logo.png'}
+          schema={{
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": blog.title,
+            "image": blog.image ? [blog.image] : [],
+            "datePublished": blog.createdAt,
+            "dateModified": blog.updatedAt || blog.createdAt,
+            "author": {
+              "@type": "Person",
+              "name": blog.author || "Natura Bliss Team"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "Natura Bliss",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://naturabliss.pk/logo.png"
+              }
+            },
+            "description": blog.summary || blog.title
+          }}
+        />
+      )}
       {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -281,8 +313,17 @@ const BlogPost = () => {
         </div>
       )}
 
-      {/* Back Button */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      {/* Back Button & Breadcrumbs */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {blog && (
+          <Breadcrumbs
+            items={[
+              { label: 'Blog', path: '/blog' },
+              blog.category ? { label: blog.category, path: '/blog' } : null,
+              { label: blog.title }
+            ].filter(Boolean)}
+          />
+        )}
         <Link
           to="/blog"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-[#587a3b] transition-colors duration-300 mb-8 group"

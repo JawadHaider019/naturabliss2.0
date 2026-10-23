@@ -162,8 +162,8 @@ const NewsletterBox = () => {
         </form>
         
         {/* Mode Toggle */}
-        <div className="mt-6 text-sm text-gray-300">
-          <p className="text-xs text-gray-400">
+        <div className="mt-6 text-sm text-gray-200">
+          <p className="text-xs text-gray-200">
             {isUnsubscribing 
               ? "Changed your mind? " 
               : "Need to unsubscribe? "

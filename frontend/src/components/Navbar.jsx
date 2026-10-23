@@ -5,6 +5,8 @@ import {ShopContext} from '../context/ShopContext'
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { getBusinessDetails } from "../services/businessService";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
 // Import directly from environment variables
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -12,37 +14,20 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const Navbar = () => {
   const [visible, setVisible] = useState(false)
   const [websiteLogo, setWebsiteLogo] = useState("")
-  const [loading, setLoading] = useState(false) // Start with false to avoid blocking render
   const {getCartCount,token,setToken,setCartItems} = useContext(ShopContext)
   const navigate = useNavigate(); 
 
-  // Fetch website logo from backend - with better error handling
+  // Fetch website logo from shared cached business service
   useEffect(() => {
     const fetchWebsiteLogo = async () => {
-      try {
-        setLoading(true);
-        
-        const response = await axios.get(`${backendUrl}/api/business-details`, {
-          timeout: 5000 // 5 second timeout
-        });
-        
-        if (response.data.success && response.data.data?.logos?.website?.url) {
-          setWebsiteLogo(response.data.data.logos.website.url);
-        } else {
-          setWebsiteLogo("");
-        }
-      } catch (error) {
-        setWebsiteLogo("");
-      } finally {
-        setLoading(false);
+      const data = await getBusinessDetails(backendUrl);
+      if (data?.logos?.website?.url) {
+        setWebsiteLogo(data.logos.website.url);
       }
     };
 
-    // Only fetch if backendUrl is available
     if (backendUrl) {
       fetchWebsiteLogo();
-    } else {
-      setLoading(false);
     }
   }, []);
 
@@ -59,34 +44,38 @@ const Navbar = () => {
     setVisible(false);
   };
 
-  // Simple logo display - always show something
+  // Simple logo display with fixed dimensions to prevent layout shift
   const LogoDisplay = () => {
-    // If we have a website logo and not loading, use it
-    if (!loading && websiteLogo) {
-      return (
-        <img 
-          src={websiteLogo} 
-          alt="Website Logo" 
-          className='w-14 sm:w-20 object-contain'
-          onError={(e) => {
-            // Show asset logo if website logo fails
-            e.target.src = assets.logo;
-          }}
-        />
-      );
-    }
+    const displayLogo = websiteLogo
+      ? getOptimizedImageUrl(websiteLogo, { width: 160, quality: 'auto' })
+      : assets.logo;
 
     return (
-      <img src={assets.logo} className='w-20 object-contain' alt="Logo" />
+      <img 
+        src={displayLogo} 
+        alt="Natura Bliss Logo" 
+        width="80"
+        height="80"
+        className='w-14 sm:w-20 h-14 sm:h-20 object-contain'
+        onError={(e) => {
+          e.target.src = assets.logo;
+        }}
+      />
     );
   };
 
   return (
     <div className="sticky top-0 z-50 bg-white">
+      {/* Pakistan Geo & Trust Announcement Bar */}
+      <div className="bg-[#4a6732] text-white text-[11px] sm:text-xs py-1.5 px-3 text-center font-medium tracking-wide flex items-center justify-center gap-1.5 shadow-sm">
+        <span>🇵🇰</span>
+        <span><strong>Cash on Delivery Across Pakistan</strong> &bull; 100% Pure &amp; Organic &bull; Fast Doorstep Delivery</span>
+      </div>
+
       <div className="flex items-center justify-between py-1 font-medium">
         <Link to='/'><LogoDisplay /></Link>
 
-        <ul className='hidden gap-6 text-sm text-gray-700 sm:flex'>
+        <nav aria-label="Main Navigation" className='hidden gap-6 text-sm text-gray-700 sm:flex'>
           <NavLink 
             to='/' 
             className={({ isActive }) => 
@@ -132,7 +121,7 @@ const Navbar = () => {
             <p>CONTACT</p>
             <hr className='hidden h-[2px] w-2/4 border-none bg-[#587a3b]' />
           </NavLink>
-        </ul>
+        </nav>
         
         <div className='flex items-center gap-6'>
           {/* Orders Icon - Always visible */}

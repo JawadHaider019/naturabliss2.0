@@ -55,6 +55,7 @@ const RelatedDeals = ({ category, currentDealId }) => {
 
   const sliderSettings = {
     dots: true,
+    accessibility: false,
     infinite: relatedDeals.length > 1,
     speed: 500,
     slidesToShow: Math.min(4, relatedDeals.length),

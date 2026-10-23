@@ -167,13 +167,16 @@ const DealCollection = () => {
           }
         }
       ],
+      accessibility: false,
       appendDots: dots => (
         <div className="mt-4">
-          <ul className="flex justify-center space-x-1"> {dots} </ul>
+          <ul className="flex justify-center space-x-1">{dots}</ul>
         </div>
       ),
       customPaging: () => (
-        <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+        <button className="p-2 inline-flex items-center justify-center focus:outline-none" aria-label="Go to deal slide">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 block"></span>
+        </button>
       )
     };
 
@@ -210,19 +213,20 @@ const DealCollection = () => {
 
   if (!hasContent && loading) {
     return (
-      <div className="my-12">
+      <div className="my-12 max-w-7xl mx-auto px-4 min-h-[380px]">
         <div className="py-2 text-center">
           <div className="text-3xl">
             <Title text1={'HOT'} text2={'DEALS'} />
           </div>
-          {/* Added small line of text below heading */}
           <p className="text-[16px] text-gray-600 my-3 font-light">
-    Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
+            Trending Skincare Deals — Discover Organic Products Handcrafted with Care and Loved by All.
           </p>
         </div>
         
-        <div className="flex justify-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 py-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-72 bg-gray-100 animate-pulse border border-gray-200" />
+          ))}
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, memo, useContext } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { FaStar, FaStarHalf, FaRegStar, FaClock, FaFire } from "react-icons/fa";
 import { ShopContext } from "../context/ShopContext";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
 // Pre-calculated deal type configurations
 const DEAL_TYPE_CONFIG = {
@@ -18,18 +18,12 @@ const DEAL_TYPE_CONFIG = {
 // ---------------- Flip Countdown Components ----------------
 const FlipUnit = ({ value }) => (
   <div className="relative w-8 h-10 sm:w-10 sm:h-12 perspective-200">
-    <AnimatePresence mode="popLayout">
-      <motion.div
-        key={value}
-        initial={{ rotateX: 90, opacity: 0 }}
-        animate={{ rotateX: 0, opacity: 1 }}
-        exit={{ rotateX: -90, opacity: 0 }}
-        transition={{ duration: 0.4 }}
-        className="absolute inset-0 bg-[#587a3b] text-white  flex items-center justify-center text-lg sm:text-xl font-bold shadow-md"
-      >
-        {value}
-      </motion.div>
-    </AnimatePresence>
+    <div
+      key={value}
+      className="absolute inset-0 bg-[#587a3b] text-white flex items-center justify-center text-lg sm:text-xl font-bold shadow-md animate-flip"
+    >
+      {value}
+    </div>
   </div>
 );
 
@@ -315,8 +309,10 @@ const DealItem = memo(
         <div className="relative overflow-hidden bg-gray-50">
           <img
             className="w-full h-49 object-cover transition-transform duration-300 group-hover:scale-105"
-            src={image}
+            src={getOptimizedImageUrl(image, { width: 450, quality: 'auto' })}
             alt={name}
+            width="350"
+            height="196"
             onError={handleImageError}
             loading="lazy"
             decoding="async"

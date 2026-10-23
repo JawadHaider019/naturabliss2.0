@@ -63,8 +63,6 @@ const Loader = ({
     <div className={`${sizes[size]?.container || sizes.medium.container} ${className} flex items-center justify-center`}>
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=Courier+Prime&family=Dancing+Script&family=Inter:wght@400;600&family=Montserrat:wght@400;600&family=Pacifico&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Press+Start+2P&display=swap');
-          
           @keyframes loadingF {
             0% { 
               opacity: 0; 

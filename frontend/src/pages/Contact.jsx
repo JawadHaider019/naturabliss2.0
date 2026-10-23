@@ -21,6 +21,8 @@ import {
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -385,8 +387,16 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Contact Natura Bliss Pakistan | Customer Care & WhatsApp Support"
+        description="Contact Natura Bliss customer support in Pakistan. WhatsApp +92 324 1572294 for order tracking, skincare guidance, or wholesale inquiries. 24/7 support."
+        canonical="https://naturabliss.pk/contact"
+      />
       {/* Header Section */}
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+          <Breadcrumbs items={[{ label: 'Contact Us' }]} />
+        </div>
         <div className="text-center">
           <div className="text-3xl">
             <Title text1={'GET IN'} text2={'TOUCH'} />
