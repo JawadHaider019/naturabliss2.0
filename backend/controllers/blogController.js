@@ -78,13 +78,89 @@ export const getBlogById = async (req, res) => {
       blog = await Blog.findOne({ slug: id });
     }
 
+    // 3. Fallback: Check slug alias mapping for alternate SEO URL structures
+    if (!blog) {
+      const SLUG_ALIASES = {
+        'organic-neem-soap-cystic-acne-pakistan-skin-healing': 'neem-soap-benefits-cystic-acne-pakistan-monsoon',
+        'rice-water-soap-glass-skin-korean-glow-pakistan': 'rice-soap-benefits-skin-whitening-pakistan-glass-skin',
+        'hard-water-hair-damage-pakistan-chlorine-remedies': 'hard-water-hair-fall-solution-pakistan-karachi-lahore',
+        'clinical-rosemary-oil-hair-growth-pakistan-guide': 'rosemary-oil-hair-growth-pakistan-guide',
+        'pumpkin-seed-oil-dht-blocker-alopecia-pakistan': 'pcos-hormonal-hair-thinning-pakistan-natural-dht-blocker',
+        'cold-pressed-sweet-almond-oil-dark-circles-under-eye-pakistan': 'almond-oil-dark-circles-pakistan-under-eye-treatment',
+        'castor-oil-eyebrow-eyelash-growth-pakistan-density': 'castor-oil-eyelashes-eyebrows-hairline-pakistan',
+        'pcos-hormonal-hair-thinning-pakistan-natural-regrowth': 'pcos-hormonal-hair-thinning-pakistan-natural-dht-blocker',
+        'cracked-heels-dry-hands-winter-body-care-pakistan': 'dark-knuckles-hands-feet-whitening-pakistan-safe-routine',
+        'keratin-hair-damage-reversal-natural-oils-pakistan': 'fixing-rebonded-bleached-frizzy-hair-pakistan-keratin-biotin'
+      };
+      const aliasTarget = SLUG_ALIASES[id];
+      if (aliasTarget) {
+        blog = await Blog.findOne({ slug: aliasTarget });
+      }
+    }
+
     if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
 
     blog.views += 1;
     await blog.save();
-    res.json({ success: true, data: blog });
+
+    // Fetch up to 3 related published blogs
+    let relatedBlogs = [];
+    try {
+      const relatedQuery = {
+        _id: { $ne: blog._id },
+        status: 'published'
+      };
+      if (blog.category && blog.category.length > 0) {
+        relatedQuery.category = { $in: blog.category };
+      }
+      relatedBlogs = await Blog.find(relatedQuery)
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .select('title slug excerpt imageUrl category readTime createdAt author');
+      
+      // If fewer than 3, fill with other published blogs
+      if (relatedBlogs.length < 3) {
+        const moreBlogs = await Blog.find({
+          _id: { $nin: [blog._id, ...relatedBlogs.map(r => r._id)] },
+          status: 'published'
+        })
+          .sort({ createdAt: -1 })
+          .limit(3 - relatedBlogs.length)
+          .select('title slug excerpt imageUrl category readTime createdAt author');
+        relatedBlogs = [...relatedBlogs, ...moreBlogs];
+      }
+    } catch (e) {
+      console.error('Error fetching related blogs:', e);
+    }
+
+    res.json({ success: true, data: blog, relatedBlogs });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching blog', error: error.message });
+  }
+};
+
+// ✅ Upload inline blog image
+export const uploadBlogImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'blogs',
+      resource_type: 'image'
+    });
+
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+    return res.json({
+      success: true,
+      imageUrl: result.secure_url,
+      message: 'Image uploaded successfully'
+    });
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -95,6 +171,7 @@ export const createBlog = async (req, res) => {
 
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'blogs',
         resource_type: req.file.mimetype.startsWith('video') ? 'video' : 'image'
       });
       if (req.file.mimetype.startsWith('image')) blogData.imageUrl = result.secure_url;
@@ -103,28 +180,50 @@ export const createBlog = async (req, res) => {
       fs.unlinkSync(req.file.path); // Remove local temp file
     }
 
+    if (typeof blogData.category === 'string') {
+      try { blogData.category = JSON.parse(blogData.category); } catch(e) { blogData.category = blogData.category.split(',').map(c => c.trim()).filter(Boolean); }
+    }
+    if (typeof blogData.tags === 'string') {
+      try { blogData.tags = JSON.parse(blogData.tags); } catch(e) { blogData.tags = blogData.tags.split(',').map(t => t.trim()).filter(Boolean); }
+    }
+    if (typeof blogData.images === 'string') {
+      try { blogData.images = JSON.parse(blogData.images); } catch(e) { blogData.images = blogData.images ? [blogData.images] : []; }
+    }
+
     if (blogData.category && !Array.isArray(blogData.category)) blogData.category = [blogData.category];
     if (blogData.tags && !Array.isArray(blogData.tags)) blogData.tags = [blogData.tags];
 
-    if (!blogData.title) {
+    if (!blogData.title || !blogData.title.trim()) {
       const blogCount = await Blog.countDocuments();
       blogData.title = `Blog Post ${blogCount + 1}`;
     }
 
-    // Generate slug from title
-    blogData.slug = generateSlug(blogData.title);
+    // Generate unique slug from custom slug or title
+    const baseSlug = (blogData.slug && blogData.slug.trim())
+      ? generateSlug(blogData.slug)
+      : generateSlug(blogData.title);
+    
+    let finalSlug = baseSlug || `post-${Date.now().toString(36)}`;
+    let counter = 1;
+    while (await Blog.findOne({ slug: finalSlug })) {
+      finalSlug = `${baseSlug}-${counter++}`;
+    }
+    blogData.slug = finalSlug;
+
+    if (blogData.status === 'published' && !blogData.publishDate) {
+      blogData.publishDate = new Date();
+    }
 
     const blog = new Blog(blogData);
     await blog.save();
 
-    // ✅ ADDED: Send newsletter notification if blog is published
+    // ✅ Send newsletter notification if blog is published
     if (blogData.status === 'published') {
       try {
         await notifyNewBlog(blog);
         console.log('📢 New blog notification sent to subscribers');
       } catch (notificationError) {
         console.error('❌ Failed to send blog notification:', notificationError);
-        // Don't fail the whole request if notification fails
       }
     }
 
@@ -141,12 +240,23 @@ export const updateBlog = async (req, res) => {
 
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'blogs',
         resource_type: req.file.mimetype.startsWith('video') ? 'video' : 'image'
       });
       if (req.file.mimetype.startsWith('image')) updateData.imageUrl = result.secure_url;
       else updateData.videoUrl = result.secure_url;
 
       fs.unlinkSync(req.file.path);
+    }
+
+    if (typeof updateData.category === 'string') {
+      try { updateData.category = JSON.parse(updateData.category); } catch(e) { updateData.category = updateData.category.split(',').map(c => c.trim()).filter(Boolean); }
+    }
+    if (typeof updateData.tags === 'string') {
+      try { updateData.tags = JSON.parse(updateData.tags); } catch(e) { updateData.tags = updateData.tags.split(',').map(t => t.trim()).filter(Boolean); }
+    }
+    if (typeof updateData.images === 'string') {
+      try { updateData.images = JSON.parse(updateData.images); } catch(e) { updateData.images = updateData.images ? [updateData.images] : []; }
     }
 
     if (updateData.category && !Array.isArray(updateData.category)) updateData.category = [updateData.category];
@@ -157,21 +267,36 @@ export const updateBlog = async (req, res) => {
 
     const wasPublished = existingBlog.status === 'published';
 
-    // Update slug if title changed
-    if (updateData.title && updateData.title !== existingBlog.title) {
-      updateData.slug = generateSlug(updateData.title);
+    // Update slug if requested or if title changed and slug wasn't provided
+    if (updateData.slug && updateData.slug.trim()) {
+      const baseSlug = generateSlug(updateData.slug);
+      let finalSlug = baseSlug;
+      let counter = 1;
+      while (await Blog.findOne({ slug: finalSlug, _id: { $ne: req.params.id } })) {
+        finalSlug = `${baseSlug}-${counter++}`;
+      }
+      updateData.slug = finalSlug;
+    } else if (updateData.title && updateData.title !== existingBlog.title) {
+      const baseSlug = generateSlug(updateData.title);
+      let finalSlug = baseSlug;
+      let counter = 1;
+      while (await Blog.findOne({ slug: finalSlug, _id: { $ne: req.params.id } })) {
+        finalSlug = `${baseSlug}-${counter++}`;
+      }
+      updateData.slug = finalSlug;
     }
+
+    updateData.reviewedDate = new Date();
 
     const blog = await Blog.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
 
-    // ✅ ADDED: Send newsletter notification if status changed to published
+    // ✅ Send newsletter notification if status changed to published
     if (updateData.status === 'published' && !wasPublished) {
       try {
         await notifyNewBlog(blog);
         console.log('📢 New blog notification sent to subscribers');
       } catch (notificationError) {
         console.error('❌ Failed to send blog notification:', notificationError);
-        // Don't fail the whole request if notification fails
       }
     }
 

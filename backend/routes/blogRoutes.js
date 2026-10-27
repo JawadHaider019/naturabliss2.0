@@ -11,6 +11,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  uploadBlogImage,
 } from "../controllers/blogController.js";
 
 import upload from "../middleware/multer.js"; 
@@ -22,6 +23,9 @@ router.get("/categories", getAllCategories);
 router.post("/categories", createCategory);
 router.put("/categories/:id", updateCategory);
 router.delete("/categories/:id", deleteCategory);
+
+// 🟩 Blog Image Upload
+router.post("/upload-image", upload.single("image"), uploadBlogImage);
 
 // 🟩 Blog Routes (THESE COME AFTER CATEGORY ROUTES)
 router.get("/", getAllBlogs);

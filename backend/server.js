@@ -44,7 +44,12 @@ app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 1000, 
-  message: 'Too many requests from this IP'
+  message: 'Too many requests from this IP',
+  skip: (req) => {
+    // Exempt search engine bots crawling sitemaps & robots files
+    const p = req.path || '';
+    return p === '/sitemap.xml' || p === '/robots.txt' || p === '/api/sitemap.xml';
+  }
 });
 app.use(limiter);
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Title from "./Title";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
@@ -8,7 +8,6 @@ const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1608248543803-ba4
 const ShopByCategory = () => {
   const [backendCategories, setBackendCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const backendURL = import.meta.env.VITE_BACKEND_URL;
 
   // Fetch only actual categories from backend database
@@ -58,10 +57,6 @@ const ShopByCategory = () => {
     }).filter(cat => cat.name.length > 0);
   }, [backendCategories]);
 
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/collection?category=${encodeURIComponent(categoryName)}`);
-  };
-
   // Prevent layout shift while loading categories
   if (loading && displayCategories.length === 0) {
     return (
@@ -86,7 +81,7 @@ const ShopByCategory = () => {
   }
 
   return (
-    <section className="my-10 md:my-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <section className="my-10 md:my-16 px-4 sm:px-6 lg:px-8 max-w-8xl mx-auto">
       {/* Section Header - Standard Title style */}
       <div className="py-2 text-center text-2xl md:text-3xl mb-6 sm:mb-10">
         <Title text1={"SHOP BY"} text2={"CATEGORY"} />
@@ -95,10 +90,10 @@ const ShopByCategory = () => {
       {/* Categories Cards - Always Centered Flex Layout */}
       <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8">
         {displayCategories.map((item, idx) => (
-          <div
+          <Link
             key={item.id || idx}
-            onClick={() => handleCategoryClick(item.name)}
-            className="group flex flex-col items-center cursor-pointer select-none w-[140px] sm:w-[170px] md:w-[190px] lg:w-[200px]"
+            to={`/collection?category=${encodeURIComponent(item.name)}`}
+            className="group flex flex-col items-center select-none w-[140px] sm:w-[170px] md:w-[190px] lg:w-[200px]"
           >
             {/* Edge-to-edge product category photo on warm beige background */}
             <div className="w-full aspect-[4/5] bg-[#F4F2EC] overflow-hidden relative rounded-sm shadow-sm transition-all duration-300 group-hover:shadow-md">
@@ -120,7 +115,7 @@ const ShopByCategory = () => {
             <p className="mt-3.5 text-[11px] sm:text-xs md:text-[13px] font-medium tracking-widest text-neutral-800 uppercase text-center group-hover:text-[#587a3b] transition-colors">
               {item.displayName}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

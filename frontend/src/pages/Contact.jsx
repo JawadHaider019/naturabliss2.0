@@ -36,12 +36,12 @@ const Contact = () => {
     contact: {
       customerSupport: {
         email: "naturabliss@gmail.com",
-        phone: "+92-317 5546007",
+        phone: "+92 324 1572294",
         hours: "24/7"
       }
     },
     location: {
-      displayAddress: "123 Natural Street, Green Valley, PK",
+      displayAddress: "Natura Bliss Workshop, Chakwal, Punjab, Pakistan (Postal Code: 48090)",
       googleMapsLink: ""
     },
     socialMedia: {

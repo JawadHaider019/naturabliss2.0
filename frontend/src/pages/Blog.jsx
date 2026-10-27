@@ -1,457 +1,385 @@
-import { Link } from "react-router-dom";
-import Title from "../components/Title";
-import { FaCalendarAlt, FaArrowRight, FaUser, FaClock, FaTag, FaFire } from "react-icons/fa";
-import { useState, useEffect } from "react";
-import Loader from "../components/Loader";
-import SEO from "../components/SEO";
+import React, { useState, useEffect, useMemo, memo } from 'react';
+import { Link } from 'react-router-dom';
+import Title from '../components/Title';
+import Loader from '../components/Loader';
+import SEO from '../components/SEO';
+import {
+    Calendar,
+    Clock,
+    ArrowRight,
+    BookOpen,
+    Sparkles,
+    Search,
+    X,
+    User,
+    Tag,
+    Star
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const Blog = () => {
-  const [blogs, setBlogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+// Safe JSON-LD Serializer
+function safeJsonLd(obj) {
+    if (!obj) return '{}';
+    return JSON.stringify(obj)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026');
+}
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-  // Fetch blogs from your backend API
-  useEffect(() => {
-    const fetchBlogs = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${backendUrl}/api/blogs?status=published`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch blogs: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          setBlogs(result.data || []);
-        } else {
-          throw new Error(result.message || 'Failed to fetch blogs');
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (backendUrl) {
-      fetchBlogs();
-    } else {
-      setError('Backend URL not configured');
-      setLoading(false);
+// Date Formatter
+function formatPostDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return String(dateStr);
+        return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+        return String(dateStr);
     }
-  }, [backendUrl]);
+}
 
-  // Show loader while page is loading
-  if (loading) {
-    return <Loader />;
-  }
+// Memoized Blog Card Component matching Campuna architecture with Natura Bliss aesthetic
+const BlogCard = memo(function BlogCard({ post, index }) {
+    const postImage = post.imageUrl || 'https://images.unsplash.com/photo-1608248597359-58348259e86c?auto=format&fit=crop&w=800&q=80';
+    const postSlug = post.slug || post._id;
+    const category = Array.isArray(post.category) ? (post.category[0] || 'Holistic Care') : (post.category || 'Holistic Care');
 
-  // Separate featured and regular blogs
-  const featuredBlogs = blogs.filter(blog => blog.featured && blog.status === 'published');
-  const regularBlogs = blogs.filter(blog => !blog.featured && blog.status === 'published');
-
-  // Get latest 3 featured blogs for the hero section
-  const heroFeatured = featuredBlogs.slice(0, 3);
-  // Get remaining featured blogs
-  const remainingFeatured = featuredBlogs.slice(3);
-  // Get regular blogs for different sections
-  const latestBlogs = regularBlogs.slice(0, 6);
-  const trendingBlogs = regularBlogs.slice(6, 12);
-
-  if (error) {
     return (
-      <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="bg-red-50 border border-red-200   p-6 max-w-md mx-auto">
-              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Articles</h3>
-              <p className="text-red-600 mb-4">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-red-600 text-white   hover:bg-red-700 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-30px' }}
+            transition={{ duration: 0.4, delay: (index % 3) * 0.08 }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            className="group bg-white border border-gray-200 hover:border-[#587a3b]/50 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden select-none h-full"
+        >
+            <Link to={`/blog/${postSlug}`} className="flex flex-col flex-1">
+                {/* Cover Image with 16:10 aspect ratio */}
+                <div className="relative aspect-[16/10] w-full bg-gray-100 overflow-hidden shrink-0">
+                    <img
+                        src={postImage}
+                        alt={post.title || 'Journal Guide'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                        loading="lazy"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1608248597359-58348259e86c?auto=format&fit=crop&w=800&q=80';
+                        }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                    {category && (
+                        <div className="absolute top-3 left-3">
+                            <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/95 text-[#3b5327] shadow-xs border border-gray-200">
+                                {category}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Card Body */}
+                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2.5 text-[11px] font-mono text-gray-500">
+                            <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-[#587a3b] shrink-0" />
+                                {formatPostDate(post.createdAt || post.publishDate)}
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                {post.readTime || 3} Min Read
+                            </span>
+                        </div>
+
+                        <h3 className="font-display font-bold text-gray-900 text-lg group-hover:text-[#587a3b] transition-colors duration-200 line-clamp-2 leading-snug">
+                            {post.title}
+                        </h3>
+
+                        {post.excerpt && (
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-3 leading-relaxed font-light">
+                                {post.excerpt}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
+                            <span className="w-2 h-2 bg-[#587a3b] inline-block" />
+                            {post.author || 'Natura Bliss'}
+                        </span>
+
+                        <div className="flex items-center gap-1 text-xs font-bold text-[#587a3b] group-hover:translate-x-1 transition-transform">
+                            <span>Read Guide</span>
+                            <ArrowRight className="w-4 h-4" />
+                        </div>
+                    </div>
+                </div>
+            </Link>
+        </motion.div>
     );
-  }
+});
 
-  return (
-    <div className="min-h-screen bg-white">
-      <SEO
-        title="Skincare Journal & Haircare Guides | Natura Bliss Pakistan"
-        description="Read expert guides on cold-pressed oils, natural hair growth tips, organic soap benefits, and holistic skincare wisdom in Pakistan."
-        canonical="https://naturabliss.pk/blog"
-      />
-      {/* Header Section */}
-      <div className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-3xl">
-            <Title text1={"SKINCARE"} text2={"JOURNAL"} />
-            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-              Expert tips, natural ingredient insights, and holistic beauty wisdom for radiant, healthy skin
-            </p>
-          </div>
-        </div>
-      </div>
+export default function Blog() {
+    const [blogs, setBlogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-      {/* Hero Section - Magazine Style */}
-      {heroFeatured.length > 0 && (
-        <section className="border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <FaFire className="text-black" />
-                Featured Guides
-              </h2>
-              <div className="text-sm text-gray-100 bg-red-600 px-3 py-1 rounded-full">
-                Must Read
-              </div>
-            </div>
+    // Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All');
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {heroFeatured.map((blog, index) => (
-                <HeroStory key={blog._id} blog={blog} isMain={index === 0} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-      {/* Main Content Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content - 3 columns */}
-          <div className="lg:col-span-3">
-            {/* Latest Articles Section */}
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 border-l-4 border-black pl-3">
-                  Latest Articles
-                </h2>
+    useEffect(() => {
+        const fetchBlogs = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`${backendUrl}/api/blogs?status=published&limit=100`);
 
-              </div>
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch articles: ${response.status}`);
+                }
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {latestBlogs.map((blog, index) => (
-                  <NewsCard key={blog._id} blog={blog} featured={index < 2} />
-                ))}
-              </div>
+                const result = await response.json();
+                if (result.success) {
+                    setBlogs(result.data || []);
+                } else {
+                    throw new Error(result.message || 'Failed to fetch blogs');
+                }
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-              {latestBlogs.length === 0 && (
-                <div className="text-center py-12 bg-gray-50   border-2 border-dashed border-gray-300">
-                  <h3 className="text-lg font-medium text-gray-600 mb-2">No articles yet</h3>
-                  <p className="text-gray-500">Check back later for new skincare insights.</p>
-                </div>
-              )}
-            </section>
+        if (backendUrl) {
+            fetchBlogs();
+        } else {
+            setError('Backend URL not configured');
+            setLoading(false);
+        }
+    }, [backendUrl]);
 
-            {/* More Featured Stories */}
-            {remainingFeatured.length > 0 && (
-              <section className="mb-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8 border-l-4 border-black pl-3">
-                  Expert's Choice
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {remainingFeatured.map(blog => (
-                    <FeaturedCard key={blog._id} blog={blog} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
+    // Categories list dynamically derived from blogs
+    const availableCategories = useMemo(() => {
+        const cats = new Set(['All']);
+        blogs.forEach(b => {
+            const arr = Array.isArray(b.category) ? b.category : [b.category].filter(Boolean);
+            arr.forEach(c => cats.add(c));
+        });
+        return Array.from(cats);
+    }, [blogs]);
 
-          {/* Sidebar - 1 column */}
-          <div className="lg:col-span-1">
-            {/* Trending Articles */}
-            {trendingBlogs.length > 0 && (
-              <div className="bg-black/10   p-6 mb-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <FaFire className="text-green-600" />
-                  Trending Now
-                </h3>
-                <div className="space-y-4">
-                  {trendingBlogs.slice(0, 5).map((blog, index) => (
-                    <TrendingStory key={blog._id} blog={blog} rank={index + 1} />
-                  ))}
-                </div>
-              </div>
-            )}
+    // Filtered blogs
+    const filteredBlogs = useMemo(() => {
+        return blogs.filter(blog => {
+            const matchesCategory = activeCategory === 'All' ||
+                (Array.isArray(blog.category) ? blog.category.includes(activeCategory) : blog.category === activeCategory);
 
-            {/* Categories */}
-            <div className="bg-white border border-gray-200   p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Skin Concerns</h3>
-              <div className="space-y-2">
-                {Array.from(new Set(blogs.flatMap(blog => blog.category || []))).slice(0, 8).map(category => (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between py-2 px-3   hover:bg-black/10 transition-colors group"
-                  >
-                    <span className="text-gray-700 group-hover:text-[#587a3b]">{category}</span>
-                    <span className="text-gray-400 text-sm bg-gray-100 px-2 py-1 rounded-full">
-                      {blogs.filter(blog => blog.category?.includes(category)).length}
+            const matchesSearch = !searchQuery.trim() ||
+                (blog.title && blog.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (blog.excerpt && blog.excerpt.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (blog.tags && blog.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+
+            return matchesCategory && matchesSearch;
+        });
+    }, [blogs, activeCategory, searchQuery]);
+
+    // Featured articles for top hero card
+    const featuredArticles = useMemo(() => {
+        return blogs.filter(b => b.featured);
+    }, [blogs]);
+
+    const heroFeatured = featuredArticles.length > 0 ? featuredArticles[0] : (blogs.length > 0 ? blogs[0] : null);
+
+    if (loading) {
+        return <Loader />;
+    }
+
+    return (
+        <div className="min-h-screen bg-white">
+            <SEO
+                title="Skincare Journal, Cold-Pressed Oils & Holistic Guides | Natura Bliss Pakistan"
+                description="Expert guides on cold-pressed rosemary oil, pure castor oil benefits, holistic barrier repair, and organic soap rituals in Pakistan."
+                canonical="https://naturabliss.pk/blog"
+            />
+
+            {/* Structured Data JSON-LD */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: safeJsonLd({
+                        '@context': 'https://schema.org',
+                        '@type': 'Blog',
+                        name: 'Natura Bliss Skincare & Haircare Journal',
+                        description: 'Expert guides on pure cold-pressed botanical oils, holistic hair growth rituals, and natural beauty wisdom.',
+                        url: 'https://naturabliss.pk/blog',
+                        publisher: {
+                            '@type': 'Organization',
+                            name: 'Natura Bliss Pakistan',
+                            url: 'https://naturabliss.pk'
+                        }
+                    })
+                }}
+            />
+
+            {/* Header Section */}
+            <div className="border-b border-gray-200 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
+                    <span className="text-xs uppercase font-bold tracking-[0.25em] text-[#587a3b] block mb-2">
+                        Holistic Beauty & Botanical Wisdom
                     </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Hero Story Component (Large Featured)
-const HeroStory = ({ blog, isMain }) => {
-  if (isMain) {
-    return (
-      <div className="lg:col-span-2 group">
-        <Link to={`/blog/${blog.slug || blog._id}`} className="block">
-          <div className="relative overflow-hidden   bg-gray-900">
-            {blog.imageUrl ? (
-              <img
-                src={blog.imageUrl}
-                alt={blog.title}
-                className="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            ) : (
-              <div className="w-full h-80 bg-gradient-to-br from-gray-800 to-gray-600 flex items-center justify-center">
-                <FaTag className="text-gray-400 text-4xl" />
-              </div>
-            )}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  Featured
-                </span>
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-gray-300 transition-colors">
-                {blog.title}
-              </h3>
-
-              <p className="text-gray-200 mb-4 line-clamp-2">
-                {blog.excerpt || blog.metaDescription}
-              </p>
-
-              <div className="flex items-center justify-between text-sm text-gray-300">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <FaUser className="text-xs" />
-                    {blog.author || 'Skincare Expert'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <FaCalendarAlt className="text-xs" />
-                    {new Date(blog.createdAt).toLocaleDateString()}
-                  </span>
+                    <div className="text-3xl sm:text-4xl">
+                        <Title text1={"SKINCARE"} text2={"JOURNAL"} />
+                    </div>
+                    <p className="mt-3 text-sm sm:text-base text-gray-600 max-w-2xl mx-auto font-light leading-relaxed">
+                        Expert guides, botanical formulation science, and holistic beauty rituals for radiant skin and hair.
+                    </p>
                 </div>
-                <span className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
-                  <FaClock className="text-xs" />
-                  {blog.readTime || 5} min read
-                </span>
-              </div>
             </div>
-          </div>
-        </Link>
-      </div>
+
+            <main className="max-w-8xl mx-auto px-4 sm:px-6  py-10 space-y-10">
+                <div className="space-y-10">
+                    {/* Featured Hero Showcase Card (if available) */}
+                    {heroFeatured && !searchQuery && activeCategory === 'All' && (
+                        <section className="relative overflow-hidden bg-[#17220e] text-white border border-[#587a3b]/30 shadow-xl group">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+                                <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-between space-y-6 z-10">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#587a3b] text-white">
+                                                Featured Guide
+                                            </span>
+                                            <span className="text-xs font-mono text-gray-300">
+                                                {formatPostDate(heroFeatured.createdAt || heroFeatured.publishDate)}
+                                            </span>
+                                        </div>
+
+                                        <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-white leading-tight">
+                                            {heroFeatured.title}
+                                        </h2>
+
+                                        <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-light line-clamp-3">
+                                            {heroFeatured.excerpt || 'Discover the botanical science and traditional wisdom behind pure holistic wellness rituals.'}
+                                        </p>
+                                    </div>
+
+                                    <div className="pt-4 flex items-center justify-between border-t border-white/10">
+                                        <div className="flex items-center gap-2 text-xs text-gray-300">
+                                            <Clock className="w-4 h-4 text-[#c5a880]" />
+                                            <span>{heroFeatured.readTime || 4} Min Read</span>
+                                            <span>•</span>
+                                            <span>By {heroFeatured.author || 'Natura Bliss'}</span>
+                                        </div>
+
+                                        <Link
+                                            to={`/blog/${heroFeatured.slug || heroFeatured._id}`}
+                                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#587a3b] hover:bg-[#486530] text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
+                                        >
+                                            <span>Read Article</span>
+                                            <ArrowRight className="w-4 h-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-5 relative min-h-[260px] lg:min-h-full overflow-hidden">
+                                    <img
+                                        src={heroFeatured.imageUrl || 'https://images.unsplash.com/photo-1608248597359-58348259e86c?auto=format&fit=crop&w=1200&q=80'}
+                                        alt={heroFeatured.title}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#17220e] via-transparent to-transparent" />
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Search & Category Filter Toolbar */}
+                    <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between pb-2 border-b border-gray-100">
+                        {/* Category Filter Pills */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1 scrollbar-none">
+                            {availableCategories.map(cat => (
+                                <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => setActiveCategory(cat)}
+                                    className={`px-3.5 py-1.5 text-xs font-bold whitespace-nowrap transition-colors ${activeCategory === cat
+                                        ? 'bg-[#587a3b] text-white shadow-xs'
+                                        : 'bg-[#f5f8f2] text-gray-700 hover:bg-[#e8efe2]'
+                                        }`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative min-w-[260px]">
+                            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search articles (e.g. rosemary, castor)..."
+                                className="w-full bg-white border border-gray-300 pl-9 pr-8 py-2 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#587a3b]"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Results Count & Reset */}
+                    <div className="flex items-center justify-between text-xs text-gray-500 font-mono">
+                        <span>
+                            {filteredBlogs.length} Article{filteredBlogs.length === 1 ? '' : 's'} Available
+                            {activeCategory !== 'All' ? ` in “${activeCategory}”` : ''}
+                        </span>
+                        {(searchQuery || activeCategory !== 'All') && (
+                            <button
+                                type="button"
+                                onClick={() => { setActiveCategory('All'); setSearchQuery(''); }}
+                                className="text-[#587a3b] font-bold hover:underline"
+                            >
+                                Reset Filters
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Article Grid */}
+                    {filteredBlogs.length === 0 ? (
+                        <div className="text-center py-20 bg-gray-50 border border-gray-200 p-8 space-y-4">
+                            <BookOpen className="w-12 h-12 text-gray-300 mx-auto" />
+                            <h3 className="font-display font-bold text-gray-800 text-lg">No Articles Found</h3>
+                            <p className="text-xs text-gray-500 max-w-md mx-auto">
+                                No guides match your current filter or search criteria.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => { setActiveCategory('All'); setSearchQuery(''); }}
+                                className="px-5 py-2.5 bg-[#587a3b] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#486530] transition-colors"
+                            >
+                                Show All Guides
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                            {filteredBlogs.map((blog, idx) => (
+                                <BlogCard key={blog._id || idx} post={blog} index={idx} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </main>
+        </div>
     );
-  }
-
-  return (
-    <div className="group">
-      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
-        <div className="relative overflow-hidden   bg-white border border-gray-200 hover:shadow-lg transition-all duration-300">
-          {blog.imageUrl ? (
-            <img
-              src={blog.imageUrl}
-              alt={blog.title}
-              className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <FaTag className="text-gray-400 text-xl" />
-            </div>
-          )}
-
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded">
-                FEATURED
-              </span>
-            </div>
-
-            <h4 className="font-bold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
-              {blog.title}
-            </h4>
-
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-              <span>{blog.readTime || 5} min read</span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </div>
-  );
-};
-
-// News Card Component
-const NewsCard = ({ blog, featured = false }) => {
-  if (featured) {
-    return (
-      <div className="group">
-        <Link to={`/blog/${blog.slug || blog._id}`} className="block">
-          <div className="flex flex-col sm:flex-row gap-4 bg-white   border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden">
-            <div className="sm:w-2/5 relative">
-              {blog.imageUrl ? (
-                <img
-                  src={blog.imageUrl}
-                  alt={blog.title}
-                  className="w-full h-48 sm:h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
-                <div className="w-full h-48 sm:h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <FaTag className="text-gray-400 text-xl" />
-                </div>
-              )}
-            </div>
-
-            <div className="sm:w-3/5 p-4">
-              <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
-                {blog.title}
-              </h3>
-
-              <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-                {blog.excerpt || blog.metaDescription}
-              </p>
-
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <FaUser className="text-xs" />
-                    {blog.author || 'Skincare Expert'}
-                  </span>
-                  <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-                </div>
-                <span className="flex items-center gap-1">
-                  <FaClock className="text-xs" />
-                  {blog.readTime || 5} min
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="group">
-      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
-        <div className="bg-white   border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden">
-          {blog.imageUrl && (
-            <div className="relative overflow-hidden">
-              <img
-                src={blog.imageUrl}
-                alt={blog.title}
-                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-          )}
-
-          <div className="p-4">
-            <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
-              {blog.title}
-            </h3>
-
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {blog.excerpt || blog.metaDescription}
-            </p>
-
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-              <span className="flex items-center gap-1">
-                <FaClock className="text-xs" />
-                {blog.readTime || 5} min
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </div>
-  );
-};
-
-// Featured Card Component
-const FeaturedCard = ({ blog }) => {
-  return (
-    <div className="group">
-      <Link to={`/blog/${blog.slug || blog._id}`} className="block">
-        <div className="bg-white   border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
-          {blog.imageUrl ? (
-            <img
-              src={blog.imageUrl}
-              alt={blog.title}
-              className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <FaTag className="text-gray-400 text-xl" />
-            </div>
-          )}
-
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                EXPERT'S PICK
-              </span>
-            </div>
-
-            <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-[#587a3b] transition-colors line-clamp-2">
-              {blog.title}
-            </h4>
-
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-              <span>{blog.readTime || 5} min read</span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </div>
-  );
-};
-
-// Trending Story Component
-const TrendingStory = ({ blog, rank }) => {
-  return (
-    <Link to={`/blog/${blog.slug || blog._id}`} className="flex items-start gap-3 group hover:bg-gray-50 p-2   transition-colors">
-      <div className="flex-shrink-0 w-6 h-6 bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center justify-center">
-        {rank}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h5 className="font-medium text-gray-900 group-hover:text-[#587a3b] transition-colors line-clamp-2 text-sm">
-          {blog.title}
-        </h5>
-        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-          <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
-          <span>•</span>
-          <span>{blog.readTime || 5} min read</span>
-        </div>
-      </div>
-    </Link>
-  );
-};
-
-export default Blog;
+}

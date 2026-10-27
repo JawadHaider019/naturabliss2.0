@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShopContext } from '../context/ShopContext';
 import RelatedProduct from '../components/RelatedProduct';
@@ -16,9 +16,85 @@ import {
   FaTimes,
   FaUserShield,
   FaCheckCircle,
-  FaLeaf
+  FaLeaf,
+  FaTruck,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+
+// Contextual Internal Linking: Product -> Clinical Research & Dermatological Guides
+const CLINICAL_GUIDES_MAP = [
+  {
+    keywords: ['rosemary'],
+    slug: 'rosemary-oil-hair-growth-pakistan-guide',
+    title: 'Clinical Study: 6-Month Rosemary Oil vs Minoxidil Protocol in Pakistan',
+    tag: 'Trichology Research',
+    description: 'Explore the 6-month clinical trial comparison vs 2% Minoxidil and safe carrier oil dilution ratios for Pakistani hair textures.'
+  },
+  {
+    keywords: ['neem', 'charcoal'],
+    slug: 'neem-soap-benefits-cystic-acne-pakistan-monsoon',
+    title: 'Clinical Protocol: Azadirachtin vs Hormonal Acne in Monsoon Pakistan',
+    tag: 'Acne Care',
+    description: 'Explore antimicrobial botanical actives, sebum balancing, and non-comedogenic acne healing for Pakistani climate conditions.'
+  },
+  {
+    keywords: ['rice'],
+    slug: 'rice-soap-benefits-skin-whitening-pakistan-glass-skin',
+    title: 'Dermatology Review: Fermented Inositol for Sunspot Correction & Glass Skin',
+    tag: 'Pigmentation Study',
+    description: 'Explore fermented rice peptides, melanin tyrosinase inhibition, and barrier-safe brightening protocols for Pakistani skin.'
+  },
+  {
+    keywords: ['shampoo', 'coconut'],
+    slug: 'hard-water-hair-fall-solution-pakistan-karachi-lahore',
+    title: 'Water Quality Protocol: Reversing Hard Bore-Water Damage in Karachi & Lahore',
+    tag: 'Hair Barrier Restoration',
+    description: 'Explore mineral chelation protocols, chlorine barrier repair, and anti-hairfall botanical remedies for Pakistani municipal water.'
+  },
+  {
+    keywords: ['kre-bio', 'sesame'],
+    slug: 'fixing-rebonded-bleached-frizzy-hair-pakistan-keratin-biotin',
+    title: 'Fixing Rebonded, Bleached & Frizzy Hair with Keratin, Biotin & Natural Oils',
+    tag: 'Keratin Repair',
+    description: 'Explore lipid-replenishing protocols, cuticle sealing, and porosity correction for chemically treated hair in Pakistan.'
+  },
+  {
+    keywords: ['almond'],
+    slug: 'almond-oil-dark-circles-pakistan-under-eye-treatment',
+    title: 'Dermatological Guide: Periorbital Hyperpigmentation & Sweet Almond Oil',
+    tag: 'Under-Eye Protocol',
+    description: 'Explore cold-pressed Vitamin E absorption, under-eye vascular tone improvement, and darkness reduction guidelines.'
+  },
+  {
+    keywords: ['castor'],
+    slug: 'castor-oil-eyelashes-eyebrows-hairline-pakistan',
+    title: 'Trichology Guide: Ricinoleic Acid for Eyebrow, Eyelash & Hairline Density',
+    tag: 'Follicular Research',
+    description: 'Explore prostaglandin D2 modulation, natural eyelash follicle stimulation, and overnight density application techniques.'
+  },
+  {
+    keywords: ['pumpkin', 'onion', '804', 'serum', 'blackseed'],
+    slug: 'pcos-hormonal-hair-thinning-pakistan-natural-dht-blocker',
+    title: 'Medical Protocol: PCOS Androgenetic Alopecia & Natural DHT Blockers',
+    tag: 'Hormonal Hair Health',
+    description: 'Explore delta-7-sterols, 5-alpha reductase enzyme inhibition, and hormonal hair thinning regrowth protocols.'
+  },
+  {
+    keywords: ['gluta fair', 'gluta shine', 'gluta wash', 'no frac'],
+    slug: 'melasma-chhaiyan-treatment-pakistan-without-steroids',
+    title: 'Clinical Guide: Melasma (Chhaiyan) & Hyperpigmentation Treatment Without Steroids',
+    tag: 'Melasma Protocol',
+    description: 'Explore medical protocols for stubborn facial pigmentation and post-inflammatory erythema without harmful bleaching agents.'
+  },
+  {
+    keywords: ['lotion', 'gluta care', 'olive'],
+    slug: 'dark-knuckles-hands-feet-whitening-pakistan-safe-routine',
+    title: 'Safe Routine: Dark Knuckles, Hands & Feet Whitening Without Chemical Peels',
+    tag: 'Barrier Whitening',
+    description: 'Explore deep stratum corneum exfoliation and occlusive botanical hydration for heavily tanned hands and feet.'
+  }
+];
 
 const Product = () => {
   const { slug } = useParams();
@@ -42,6 +118,17 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
+
+  const matchedClinicalGuide = useMemo(() => {
+    if (!productData) return null;
+    const nameStr = `${productData.name || ''} ${productData.slug || ''}`.toLowerCase();
+    for (const guide of CLINICAL_GUIDES_MAP) {
+      if (guide.keywords.some((k) => nameStr.includes(k))) {
+        return guide;
+      }
+    }
+    return null;
+  }, [productData]);
 
   // Categories & Variants State
   const [backendCategories, setBackendCategories] = useState([]);
@@ -914,9 +1001,8 @@ const Product = () => {
                 height="80"
                 loading="lazy"
                 decoding="async"
-                className={`w-[24%] shrink-0 cursor-pointer sm:mb-3 sm:w-full object-cover h-20 sm:h-24 rounded border transition-all ${
-                  (image === item || (!image && index === 0)) ? 'border-black' : 'border-gray-200 hover:border-gray-400'
-                }`}
+                className={`w-[24%] shrink-0 cursor-pointer sm:mb-3 sm:w-full object-cover h-20 sm:h-24 rounded border transition-all ${(image === item || (!image && index === 0)) ? 'border-black' : 'border-gray-200 hover:border-gray-400'
+                  }`}
                 onClick={() => setImage(item)}
                 onError={(e) => {
                   e.target.src = 'https://via.placeholder.com/150?text=Image+Error';
@@ -994,17 +1080,15 @@ const Product = () => {
                           setImage(v.image);
                         }
                       }}
-                      className={`flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-xl border transition-all duration-150 cursor-pointer w-full select-none ${
-                        isSelected
-                          ? 'border-[#587a3b] bg-[#587a3b] text-white shadow-md'
-                          : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
-                      }`}
+                      className={`flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-xl border transition-all duration-150 cursor-pointer w-full select-none ${isSelected
+                        ? 'border-[#587a3b] bg-[#587a3b] text-white shadow-md'
+                        : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
+                        }`}
                     >
                       {/* Left: Radio Indicator, Thumbnail & Variant Name */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isSelected ? 'border-white bg-[#587a3b]' : 'border-gray-400 bg-white'
-                        }`}>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'border-white bg-[#587a3b]' : 'border-gray-400 bg-white'
+                          }`}>
                           {isSelected && (
                             <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
                           )}
@@ -1013,9 +1097,8 @@ const Product = () => {
                           <img
                             src={v.image}
                             alt={v.name}
-                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0 border ${
-                              isSelected ? 'border-gray-600' : 'border-gray-200'
-                            }`}
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0 border ${isSelected ? 'border-gray-600' : 'border-gray-200'
+                              }`}
                           />
                         )}
                         <span className={`text-sm sm:text-base truncate ${isSelected ? 'font-bold text-white' : 'font-semibold text-gray-900'}`}>
@@ -1063,17 +1146,15 @@ const Product = () => {
                     <div
                       key={subcat.id}
                       onClick={() => handleSubcategoryChange(subcat.id)}
-                      className={`flex items-center justify-between px-4 py-3.5 sm:py-4 rounded-xl border transition-all duration-150 cursor-pointer w-full select-none ${
-                        isSelected
-                          ? 'border-[#587a3b] bg-[#587a3b] text-white shadow-md'
-                          : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
-                      }`}
+                      className={`flex items-center justify-between px-4 py-3.5 sm:py-4 rounded-xl border transition-all duration-150 cursor-pointer w-full select-none ${isSelected
+                        ? 'border-[#587a3b] bg-[#587a3b] text-white shadow-md'
+                        : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
+                        }`}
                     >
                       {/* Left: Radio Indicator & Variant Name */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isSelected ? 'border-white bg-[#587a3b]' : 'border-gray-400 bg-white'
-                        }`}>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'border-white bg-[#587a3b]' : 'border-gray-400 bg-white'
+                          }`}>
                           {isSelected && (
                             <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
                           )}
@@ -1110,9 +1191,8 @@ const Product = () => {
               <button
                 onClick={decrementQuantity}
                 disabled={quantity <= 1 || stock === 0}
-                className={`w-8 h-8 rounded-none border border-gray-300 flex items-center justify-center ${
-                  quantity <= 1 || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-                }`}
+                className={`w-8 h-8 rounded-none border border-gray-300 flex items-center justify-center ${quantity <= 1 || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                  }`}
               >
                 -
               </button>
@@ -1134,9 +1214,8 @@ const Product = () => {
               <button
                 onClick={incrementQuantity}
                 disabled={quantity >= stock || stock === 0}
-                className={`w-8 h-8 rounded-none border border-gray-300 flex items-center justify-center ${
-                  quantity >= stock || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-                }`}
+                className={`w-8 h-8 rounded-none border border-gray-300 flex items-center justify-center ${quantity >= stock || stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                  }`}
               >
                 +
               </button>
@@ -1150,11 +1229,10 @@ const Product = () => {
             {/* ADD TO CART - Brand Olive */}
             <button
               onClick={handleAddToCart}
-              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center text-white bg-[#587a3b] hover:bg-[#486530] active:bg-[#3b5327] shadow-sm uppercase ${
-                stock === 0 || isAddingToCart
-                  ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                  : ''
-              }`}
+              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center text-white bg-[#587a3b] hover:bg-[#486530] active:bg-[#3b5327] shadow-sm uppercase ${stock === 0 || isAddingToCart
+                ? 'opacity-50 cursor-not-allowed bg-gray-400'
+                : ''
+                }`}
               disabled={stock === 0 || isAddingToCart}
             >
               {isAddingToCart
@@ -1191,9 +1269,8 @@ const Product = () => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               disabled={stock === 0}
-              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center text-white bg-black hover:bg-neutral-800 active:bg-neutral-900 shadow-sm uppercase ${
-                stock === 0 ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''
-              }`}
+              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center text-white bg-black hover:bg-neutral-800 active:bg-neutral-900 shadow-sm uppercase ${stock === 0 ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''
+                }`}
             >
               PLACE ORDER
             </button>
@@ -1203,13 +1280,34 @@ const Product = () => {
               ref={whatsappButtonRef}
               onClick={handleOrderOnWhatsApp}
               disabled={stock === 0}
-              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 text-white bg-[#25D366] hover:bg-[#1EBE5D] active:bg-[#1DA851] shadow-sm ${
-                stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`w-full py-3.5 px-6 rounded-none font-semibold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 text-white bg-[#25D366] hover:bg-[#1EBE5D] active:bg-[#1DA851] shadow-sm ${stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               <FaWhatsapp className="w-5 h-5" />
               <span>Order on WhatsApp</span>
             </button>
+          </div>
+
+          {/* TRUST BADGES */}
+          <div className="mt-6 border border-gray-200 bg-[#fbfdf9] p-4 text-xs sm:text-sm text-gray-800 rounded-none w-full max-w-sm sm:max-w-md shadow-xs">
+            <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
+              <div className="flex items-center gap-2">
+                <FaCheckCircle className="text-[#587a3b] text-sm flex-shrink-0" />
+                <span className="font-medium">Cash on Delivery (COD)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaTruck className="text-[#587a3b] text-sm flex-shrink-0" />
+                <span className="font-medium">Delivery within 2 - 4 Days</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaLeaf className="text-[#587a3b] text-sm flex-shrink-0" />
+                <span className="font-medium">100% Pure Cold-Pressed</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaMapMarkerAlt className="text-[#587a3b] text-sm flex-shrink-0" />
+                <span className="font-medium">Chakwal, PK Workshop</span>
+              </div>
+            </div>
           </div>
 
           <hr className="mt-8 sm:w-4/5 border-gray-200" />
@@ -1228,6 +1326,31 @@ const Product = () => {
               </>
             )}
           </ul>
+
+          {/* RELATED CLINICAL RESEARCH & PROTOCOL (Contextual Internal Link & E-E-A-T) */}
+          {matchedClinicalGuide && (
+            <div className="mt-6 border border-[#587a3b]/30 bg-[#f7faf4] p-4 text-xs sm:text-sm text-gray-800 rounded-none w-full max-w-sm sm:max-w-md shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#587a3b] bg-white px-2 py-0.5 border border-[#587a3b]/20">
+                  {matchedClinicalGuide.tag}
+                </span>
+                <span className="text-[11px] text-gray-500 font-mono font-medium">Verified Protocol</span>
+              </div>
+              <h4 className="font-semibold text-gray-900 mt-1 text-xs sm:text-sm leading-snug">
+                {matchedClinicalGuide.title}
+              </h4>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                {matchedClinicalGuide.description}
+              </p>
+              <Link
+                to={`/blog/${matchedClinicalGuide.slug}`}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#587a3b] hover:text-[#486530] hover:underline"
+              >
+                <span>Read Full Clinical Guide</span>
+                <span>&rarr;</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1251,9 +1374,8 @@ const Product = () => {
               {ratingBreakdown.map(({ star, count }) => (
                 <div
                   key={star}
-                  className={`flex cursor-pointer items-center gap-2 p-1.5 rounded transition-colors ${
-                    filterRating === star ? 'bg-yellow-50 font-medium' : 'hover:bg-gray-50'
-                  }`}
+                  className={`flex cursor-pointer items-center gap-2 p-1.5 rounded transition-colors ${filterRating === star ? 'bg-yellow-50 font-medium' : 'hover:bg-gray-50'
+                    }`}
                   onClick={() => filterReviewsByRating(star)}
                 >
                   <div className="flex gap-1 text-xs sm:text-sm">{renderRating(star)}</div>
@@ -1275,34 +1397,30 @@ const Product = () => {
       <div className="mt-12">
         <div className="flex overflow-x-auto border-b border-gray-200 gap-1">
           <button
-            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${
-              activeTab === 'description' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
-            }`}
+            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${activeTab === 'description' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
+              }`}
             onClick={() => setActiveTab('description')}
           >
             Description
           </button>
           <button
-            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md flex items-center gap-1.5 ${
-              activeTab === 'ingredients' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
-            }`}
+            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md flex items-center gap-1.5 ${activeTab === 'ingredients' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
+              }`}
             onClick={() => setActiveTab('ingredients')}
           >
             <FaLeaf className="text-[#587a3b] text-xs" />
             Ingredients {ingredientsList.length > 0 && `(${ingredientsList.length})`}
           </button>
           <button
-            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${
-              activeTab === 'howtouse' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
-            }`}
+            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${activeTab === 'howtouse' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
+              }`}
             onClick={() => setActiveTab('howtouse')}
           >
             How to Use
           </button>
           <button
-            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${
-              activeTab === 'reviews' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
-            }`}
+            className={`border px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors rounded-t-md ${activeTab === 'reviews' ? 'bg-olive-50/70 border-[#587a3b] text-[#587a3b] font-bold border-b-2' : 'bg-white border-transparent text-gray-500 hover:text-[#587a3b]'
+              }`}
             onClick={() => setActiveTab('reviews')}
           >
             Reviews ({reviews.length})
@@ -1483,22 +1601,20 @@ const Product = () => {
                           <span className="sm:hidden">Helpful?</span>
                           <button
                             onClick={() => handleLikeReview(review.id)}
-                            className={`flex items-center gap-1 transition-colors ${
-                              hasLiked
-                                ? 'text-green-600 font-semibold'
-                                : 'hover:text-green-600'
-                            }`}
+                            className={`flex items-center gap-1 transition-colors ${hasLiked
+                              ? 'text-green-600 font-semibold'
+                              : 'hover:text-green-600'
+                              }`}
                           >
                             <FaThumbsUp size={12} className="sm:size-[14px]" />
                             <span className="text-xs sm:text-sm">{review.likes}</span>
                           </button>
                           <button
                             onClick={() => handleDislikeReview(review.id)}
-                            className={`flex items-center gap-1 transition-colors ${
-                              hasDisliked
-                                ? 'text-red-600 font-semibold'
-                                : 'hover:text-red-600'
-                            }`}
+                            className={`flex items-center gap-1 transition-colors ${hasDisliked
+                              ? 'text-red-600 font-semibold'
+                              : 'hover:text-red-600'
+                              }`}
                           >
                             <FaThumbsDown size={12} className="sm:size-[14px]" />
                             <span className="text-xs sm:text-sm">{review.dislikes}</span>

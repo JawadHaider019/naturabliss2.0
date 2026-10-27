@@ -150,7 +150,7 @@ const Footer = () => {
                         <div className="space-y-3 text-gray-600 text-sm">
                             <div className="flex items-center space-x-2">
                                 <FontAwesomeIcon icon={faPhone} className="text-[#587a3b] w-4" />
-                                <span>{businessInfo.contact?.customerSupport?.phone || "+92-333-3333"}</span>
+                                <span>{businessInfo.contact?.customerSupport?.phone || "+92 324 1572294"}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <FontAwesomeIcon icon={faEnvelope} className="text-[#587a3b] w-4" />
@@ -158,7 +158,7 @@ const Footer = () => {
                             </div>
                             <div className="flex items-start space-x-2">
                                 <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[#587a3b] w-4 mt-1" />
-                                <span>{businessInfo.location?.displayAddress || "123 Natural Street, Green Valley, PK"}</span>
+                                <span>{businessInfo.location?.displayAddress || "Natura Bliss Workshop, Chakwal, Punjab, Pakistan (Postal Code: 48090)"}</span>
                             </div>
 
                         </div>
@@ -200,6 +200,26 @@ const Footer = () => {
                         </div>
                     </div>
 
+                </div>
+
+                {/* Pakistan Express Delivery & Local Neighborhood Coverage Bar */}
+                <div className="border-t border-gray-200 py-6 text-xs text-gray-500">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="inline-block w-2 h-2 rounded-full bg-[#587a3b] flex-shrink-0"></span>
+                            <span className="font-semibold text-gray-800 tracking-wide uppercase text-[11px]">Nationwide Express Delivery & COD Coverage:</span>
+                        </div>
+                        <div className="text-gray-600 leading-relaxed text-xs">
+                            <strong className="text-gray-800">Karachi</strong> (DHA, Clifton, Gulshan, PECHS) &bull;{' '}
+                            <strong className="text-gray-800">Lahore</strong> (Gulberg, DHA, Johar Town, Bahria) &bull;{' '}
+                            <strong className="text-gray-800">Islamabad & Rawalpindi</strong> (F/G/E Sectors, Bahria, DHA) &bull;{' '}
+                            <strong className="text-gray-800">Faisalabad</strong> &bull;{' '}
+                            <strong className="text-gray-800">Multan</strong> &bull;{' '}
+                            <strong className="text-gray-800">Peshawar</strong> &bull;{' '}
+                            <strong className="text-gray-800">Quetta</strong> &bull;{' '}
+                            <strong className="text-gray-800">Chakwal</strong> (Origin Workshop)
+                        </div>
+                    </div>
                 </div>
 
                 {/* Bottom Footer */}
