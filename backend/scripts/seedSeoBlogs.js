@@ -13,6 +13,16 @@ import { blog7 } from './data/blog7_neem_soap.js';
 import { blog8 } from './data/blog8_castor_oil.js';
 import { blog9 } from './data/blog9_pcos_hair.js';
 import { blog10 } from './data/blog10_keratin_repair.js';
+import { blog11 } from './data/blog11_charcoal_smog.js';
+import { blog12 } from './data/blog12_male_hair_beard.js';
+import { blog13 } from './data/blog13_acne_scars_bridal.js';
+import { blog14 } from './data/blog14_postpartum_hair.js';
+import { blog15 } from './data/blog15_cracked_heels.js';
+import { blog16 } from './data/blog16_dandruff_folliculitis.js';
+import { blog17 } from './data/blog17_premature_greying.js';
+import { blog18 } from './data/blog18_sun_tan_two_tone.js';
+import { blog19 } from './data/blog19_split_ends_heat.js';
+import { blog20 } from './data/blog20_dry_skin_barrier.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,7 +76,17 @@ export const SEO_BLOGS = [
     blog7,
     blog8,
     blog9,
-    blog10
+    blog10,
+    blog11,
+    blog12,
+    blog13,
+    blog14,
+    blog15,
+    blog16,
+    blog17,
+    blog18,
+    blog19,
+    blog20
 ];
 
 async function seedBlogs() {
