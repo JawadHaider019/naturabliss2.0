@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   cacheDir: 'node_modules/.vite_cache',
-  base: "./",
+  base: "/",
   server: { port: 5174 },
   build: {
     target: 'es2020',
