@@ -8,6 +8,8 @@ Disallow: /orders
 Disallow: /place-order
 Disallow: /login
 Disallow: /admin
+Disallow: /*?search=*
+Disallow: /*?*search_term_string*
 
 # ==========================================
 # 1. ChatGPT & OpenAI Bots (ChatGPT Search)

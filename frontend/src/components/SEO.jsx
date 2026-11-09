@@ -41,7 +41,8 @@ const SEO = ({
     // 2. Primary Meta Description & Robots
     const finalDesc = description || DEFAULT_DESC;
     setMeta('description', finalDesc);
-    setMeta('robots', noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');
+    const hasSearchQuery = !!location.search;
+    setMeta('robots', (noindex || hasSearchQuery) ? 'noindex, follow' : 'index, follow, max-image-preview:large');
 
     // 3. Canonical Link
     const finalCanonical = canonical || `${BASE_URL}${location.pathname}`;

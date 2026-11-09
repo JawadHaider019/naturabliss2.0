@@ -934,8 +934,8 @@ const Product = () => {
       {/* Dynamic SEO & Structured Data */}
       {productData && (
         <SEO
-          title={`${productData.name} - 100% Pure Organic`}
-          description={`Buy authentic ${productData.name} online in Pakistan at PKR ${(productData.discountprice && productData.discountprice < productData.price) ? productData.discountprice : productData.price}. Extra-virgin, chemical-free. Cash on delivery available.`}
+          title={`${productData.name} Price in Pakistan (100% Pure Organic) | Natura Bliss`}
+          description={`Buy authentic ${productData.name} online in Pakistan at Rs. ${(productData.discountprice && productData.discountprice < productData.price) ? productData.discountprice : productData.price}. 100% Pure, chemical-free with nationwide Cash on Delivery.`}
           canonical={`https://naturabliss.pk/product/${productData.slug || slug}`}
           ogType="product"
           ogImage={productData.image?.[0]}

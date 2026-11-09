@@ -14,7 +14,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="theme-color" content="#587a3b" />
   <meta name="msapplication-TileColor" content="#587a3b" />
-  <link rel="canonical" href="https://naturabliss.pk/" />
+  <!-- Canonical is set dynamically per route by SEO.jsx to prevent duplicate/alternate canonical mismatch -->
 
   <!-- Geo-Targeting Signals for Pakistan -->
   <link rel="alternate" hreflang="en-PK" href="https://naturabliss.pk/" />
@@ -126,7 +126,10 @@
           },
           "potentialAction": {
             "@type": "SearchAction",
-            "target": "https://naturabliss.pk/collection?search={search_term_string}",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://naturabliss.pk/collection?search={search_term_string}"
+            },
             "query-input": "required name=search_term_string"
           }
         },
