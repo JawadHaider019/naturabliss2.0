@@ -351,8 +351,8 @@ export default function BlogPost() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2">
                 <Breadcrumbs
                     items={[
-                        { label: 'Blog', href: '/blog' },
-                        { label: category, href: `/blog?category=${encodeURIComponent(category)}` },
+                        { label: 'Blog', path: '/blog' },
+                        { label: category, path: `/blog?category=${encodeURIComponent(category)}` },
                         { label: title }
                     ]}
                 />
