@@ -3,6 +3,7 @@ import userModel from "../models/userModel.js";
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { verifyUserToken, USER_TOKEN_TTL } from '../middleware/auth.js';
 import validator from 'validator';
 import Setting from "../models/settingModel.js";
 import { sendPasswordResetEmail, sendPasswordResetSuccessEmail } from "../services/emailService.js";
@@ -17,7 +18,7 @@ const createToken = (user) => {
         id: user._id,
         name: user.name,
         email: user.email
-    }, process.env.JWT_SECRET);
+    }, process.env.JWT_SECRET, { expiresIn: USER_TOKEN_TTL });
 }
 
 // Route for user login 
@@ -310,7 +311,7 @@ const getUserData = async (req, res) => {
             return res.json({ success: false, message: "Token is required" });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = verifyUserToken(token);
         const user = await userModel.findById(decoded.id).select('-password');
         
         if (!user) {

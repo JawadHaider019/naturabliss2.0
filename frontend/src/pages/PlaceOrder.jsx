@@ -947,6 +947,15 @@ const PlaceOrder = () => {
           const updatedGuestOrders = [completeGuestOrder, ...existingGuestOrders.filter(o => o._id !== completeGuestOrder._id)];
           localStorage.setItem('guestOrders', JSON.stringify(updatedGuestOrders));
           
+          // Save this order's access token: the backend only shows guest orders to the
+          // browser that holds their tokens (one per order)
+          if (response.data.guestToken) {
+            try {
+              const tokens = JSON.parse(localStorage.getItem('guestOrderTokens') || '[]');
+              localStorage.setItem('guestOrderTokens', JSON.stringify([response.data.guestToken, ...tokens.filter(t => t !== response.data.guestToken)].slice(0, 50)));
+            } catch { /* storage unavailable */ }
+          }
+
           // Save guest info for backend sync
           localStorage.setItem('guestOrderInfo', JSON.stringify({
             email: formData.email ? formData.email.trim() : '',

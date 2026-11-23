@@ -551,7 +551,11 @@ const ShopContextProvider = ({ children }) => {
         setToken(storedToken);
       } else {
         const decoded = decodeToken(storedToken);
-        if (decoded?.id) {
+        // Sessions expire after 30 days (older tokens without `exp`: 30 days after issue)
+        const expiresAt = decoded?.exp
+          ? decoded.exp * 1000
+          : (decoded?.iat ? decoded.iat * 1000 + 30 * 24 * 60 * 60 * 1000 : 0);
+        if (decoded?.id && expiresAt > Date.now()) {
           setUser({
             _id: decoded.id,
             name: decoded.name || 'User',

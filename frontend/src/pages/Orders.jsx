@@ -472,20 +472,24 @@ const Orders = () => {
           newOrders = response.data.orders || [];
         }
       } else if (guestInfo) {
-        // Guest user: Load orders from backend using email/phone
-        const response = await axios.post(
-          backendUrl + '/api/order/guest-orders',
-          { 
-            email: guestInfo.email,
-            phone: guestInfo.phone 
-          }
-        );
+        // Guest user: load the orders this browser holds access tokens for
+        let guestTokens = [];
+        try {
+          guestTokens = JSON.parse(localStorage.getItem('guestOrderTokens') || '[]');
+        } catch { /* storage unavailable */ }
+
+        const response = guestTokens.length
+          ? await axios.post(backendUrl + '/api/order/guest-orders', { guestTokens })
+          : { data: { success: false } };
 
         if (response.data.success) {
           newOrders = response.data.orders || [];
           try {
             localStorage.setItem('guestOrders', JSON.stringify(newOrders));
           } catch(e) {}
+        } else {
+          // Orders placed before guest tokens existed: show the copy saved at checkout
+          newOrders = loadGuestOrdersFromStorage();
         }
       } else {
         // Fallback to localStorage

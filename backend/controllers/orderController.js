@@ -6,6 +6,36 @@ import productModel from "../models/productModel.js";
 import notificationModel from "../models/notifcationModel.js";
 import Comment from "../models/commentModel.js";
 import couponModel from "../models/couponModel.js";
+import jwt from "jsonwebtoken";
+
+// ---------------------------------------------------------------------------------------------
+// Guest order access
+// Guests have no account, so at checkout we return a signed token for THAT order. The shop keeps
+// one token per order in the browser. Viewing or cancelling a guest order requires its token;
+// knowing someone's phone number, email or order ID is not enough. (A token bound to a phone
+// number would let anyone place a dummy order with a victim's number and then read their orders.)
+// ---------------------------------------------------------------------------------------------
+const issueGuestToken = (orderId) =>
+  jwt.sign({ guest: true, orderId: String(orderId) }, process.env.JWT_SECRET, { expiresIn: '365d' });
+
+/** Order IDs this request holds valid guest tokens for. */
+const guestOrderIdsFromRequest = (req) => {
+  const raw = [].concat(req.body?.guestTokens || [], req.body?.guestToken || [], req.headers.guesttoken || []);
+  const ids = new Set();
+  for (const t of raw.slice(0, 50)) {
+    try {
+      const d = jwt.verify(String(t), process.env.JWT_SECRET);
+      if (d.guest === true && d.orderId) ids.add(d.orderId);
+    } catch { /* invalid or expired token: ignore */ }
+  }
+  return ids;
+};
+
+const GUEST_TOKEN_REQUIRED = {
+  success: false,
+  code: 'GUEST_TOKEN_REQUIRED',
+  message: 'For your privacy, guest orders can only be viewed from the browser you ordered on. Contact us on WhatsApp for help with an order.',
+};
 
 // 🆕 Notification Types
 const NOTIFICATION_TYPES = {
@@ -566,7 +596,8 @@ const placeOrder = async (req, res) => {
       orderId: newOrder._id,
       deliveryCharges: newOrder.deliveryCharges,
       customerDetails: newOrder.customerDetails,
-      isGuest: isGuest
+      isGuest: isGuest,
+      ...(isGuest ? { guestToken: issueGuestToken(newOrder._id) } : {})
     });
 
   } catch (error) {
@@ -618,41 +649,10 @@ const userOrders = async (req, res) => {
 // 🆕 Get Guest Orders by Email/Phone - Match EITHER email OR phone
 const getGuestOrders = async (req, res) => {
   try {
-    const { email, phone } = req.body;
-    
-    if (!email && !phone) {
-      return res.json({ 
-        success: false, 
-        message: "Email or phone is required to find guest orders" 
-      });
-    }
-    
-    // Build OR conditions array
-    let orConditions = [];
-    
-    if (email) {
-      orConditions.push({ 
-        'customerDetails.email': email.trim().toLowerCase() 
-      });
-    }
-    
-    if (phone) {
-      const phoneDigits = phone.replace(/\D/g, '');
-      orConditions.push({ 
-        'customerDetails.phone': { 
-          $regex: phoneDigits, 
-          $options: 'i' 
-        } 
-      });
-    }
-    
-    // Query with OR condition
-    const query = {
-      isGuest: true,
-      $or: orConditions
-    };
-    
-    const orders = await orderModel.find(query).sort({ date: -1 });
+    const ids = [...guestOrderIdsFromRequest(req)];
+    if (!ids.length) return res.json(GUEST_TOKEN_REQUIRED);
+
+    const orders = await orderModel.find({ _id: { $in: ids }, isGuest: true }).sort({ date: -1 });
     
     // Return full order details including category and subcategory
     const safeOrders = orders.map(order => ({
@@ -752,17 +752,11 @@ const getOrderDetails = async (req, res) => {
 // 🆕 NEW: Get Guest Order Details by Email/Phone Verification
 const getGuestOrderDetails = async (req, res) => {
   try {
-    const { orderId, email, phone } = req.body;
-    
+    const { orderId } = req.body;
+    if (!orderId || !guestOrderIdsFromRequest(req).has(String(orderId))) return res.json(GUEST_TOKEN_REQUIRED);
+
     if (!orderId) {
       return res.json({ success: false, message: "Order ID is required" });
-    }
-    
-    if (!email && !phone) {
-      return res.json({ 
-        success: false, 
-        message: "Email or phone is required to verify guest order" 
-      });
     }
     
     const order = await orderModel.findById(orderId);
@@ -775,27 +769,6 @@ const getGuestOrderDetails = async (req, res) => {
         success: false, 
         message: "This is not a guest order" 
       });
-    }
-    
-    // Verify with email
-    if (email && order.customerDetails?.email && order.customerDetails.email.toLowerCase() !== email.trim().toLowerCase()) {
-      return res.json({ 
-        success: false, 
-        message: "Email does not match this order" 
-      });
-    }
-    
-    // Verify with phone (last 4 digits for privacy)
-    if (phone) {
-      const orderPhoneDigits = order.customerDetails.phone.replace(/\D/g, '');
-      const inputPhoneDigits = phone.replace(/\D/g, '');
-      
-      if (!orderPhoneDigits.includes(inputPhoneDigits.slice(-4))) {
-        return res.json({ 
-          success: false, 
-          message: "Phone number does not match this order" 
-        });
-      }
     }
     
     // Return order details (hide sensitive info)
@@ -984,7 +957,8 @@ const cancelOrder = async (req, res) => {
 // 🆕 Cancel Guest Order
 const cancelGuestOrder = async (req, res) => {
   try {
-    const { orderId, cancellationReason, email, phone } = req.body;
+    const { orderId, cancellationReason } = req.body;
+    if (!orderId || !guestOrderIdsFromRequest(req).has(String(orderId))) return res.json(GUEST_TOKEN_REQUIRED);
 
     if (!orderId) {
       return res.json({ success: false, message: "Order ID is required" });
@@ -994,12 +968,6 @@ const cancelGuestOrder = async (req, res) => {
       return res.json({ success: false, message: "Cancellation reason is required" });
     }
 
-    if (!email && !phone) {
-      return res.json({ 
-        success: false, 
-        message: "Email or phone is required to cancel guest order" 
-      });
-    }
 
     const order = await orderModel.findById(orderId);
     
@@ -1011,28 +979,6 @@ const cancelGuestOrder = async (req, res) => {
       return res.json({ success: false, message: "This is not a guest order" });
     }
 
-    // Verify guest identity
-    let isVerified = false;
-    
-    if (email && order.customerDetails?.email && order.customerDetails.email.toLowerCase() === email.trim().toLowerCase()) {
-      isVerified = true;
-    }
-    
-    if (phone && !isVerified) {
-      const orderPhoneDigits = order.customerDetails.phone.replace(/\D/g, '');
-      const inputPhoneDigits = phone.replace(/\D/g, '');
-      
-      if (orderPhoneDigits.includes(inputPhoneDigits.slice(-4))) {
-        isVerified = true;
-      }
-    }
-    
-    if (!isVerified) {
-      return res.json({ 
-        success: false, 
-        message: "Unable to verify your identity. Please check your email/phone." 
-      });
-    }
 
     const nonCancellableStatuses = ["Shipped", "Out for delivery", "Delivered", "Cancelled"];
     if (nonCancellableStatuses.includes(order.status)) {
