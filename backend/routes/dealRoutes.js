@@ -1,4 +1,5 @@
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import { 
   addDeal, 
   listDeals, 
@@ -13,7 +14,7 @@ import multer from 'multer';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
-router.post('/add', upload.fields([
+router.post('/add', adminAuth, upload.fields([
   { name: 'dealImage1', maxCount: 1 },
   { name: 'dealImage2', maxCount: 1 },
   { name: 'dealImage3', maxCount: 1 },
@@ -21,15 +22,15 @@ router.post('/add', upload.fields([
 ]), addDeal);
 
 router.get('/list', listDeals);
-router.post('/remove', removeDeal);
+router.post('/remove', adminAuth, removeDeal);
 router.post('/single', singleDeal);
-router.post('/update', upload.fields([
+router.post('/update', adminAuth, upload.fields([
   { name: 'dealImage1', maxCount: 1 },
   { name: 'dealImage2', maxCount: 1 },
   { name: 'dealImage3', maxCount: 1 },
   { name: 'dealImage4', maxCount: 1 }
 ]), updateDeal);
-router.post('/update-status', updateDealStatus);
+router.post('/update-status', adminAuth, updateDealStatus);
 
 
 export default router;

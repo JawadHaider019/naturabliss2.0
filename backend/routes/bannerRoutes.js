@@ -1,4 +1,5 @@
 import express from "express";
+import adminAuth from '../middleware/adminAuth.js';
 import {
   getAllBanners,
   getActiveBanners,
@@ -17,9 +18,9 @@ const router = express.Router();
 router.get("/", getAllBanners);
 router.get("/active", getActiveBanners);
 router.get("/:id", getBannerById);
-router.post("/", bannerUpload, createBanner);
-router.put("/:id", bannerUpload, updateBanner);
-router.delete("/:id", deleteBanner);
-router.put("/order/update", updateBannerOrder);
+router.post("/", adminAuth, bannerUpload, createBanner);
+router.put("/:id", adminAuth, bannerUpload, updateBanner);
+router.delete("/:id", adminAuth, deleteBanner);
+router.put("/order/update", adminAuth, updateBannerOrder);
 
 export default router;

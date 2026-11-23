@@ -1,4 +1,5 @@
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import { 
   addProduct, 
   listProducts, 
@@ -12,14 +13,14 @@ import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-router.post('/add', upload.any(), addProduct);
+router.post('/add', adminAuth, upload.any(), addProduct);
 
 router.get('/list', listProducts);
-router.post('/remove', removeProduct);
+router.post('/remove', adminAuth, removeProduct);
 router.post('/single', singleProduct);
-router.post('/update', upload.any(), updateProduct);
+router.post('/update', adminAuth, upload.any(), updateProduct);
 
-router.post('/update-status', updateProductStatus);
+router.post('/update-status', adminAuth, updateProductStatus);
 
 
 

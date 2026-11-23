@@ -5,6 +5,7 @@ import User from "../models/userModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import mongoose from "mongoose";
+import { getAdminFromRequest } from "../middleware/adminAuth.js";
 
 export const getComments = async (req, res) => {
   try {
@@ -61,6 +62,23 @@ export const getComments = async (req, res) => {
         dealId: comment.dealId?._id?.toString() || comment.dealId,
       };
     });
+
+    // Public (shop) requests: never expose reviewers' or likers' email addresses.
+    if (!getAdminFromRequest(req)) {
+      const mask = (e) => {
+        if (!e || !e.includes("@")) return e;
+        const [local, domain] = e.split("@");
+        return `${local.slice(0, 2)}***@${domain}`;
+      };
+      const ids = (list) => (list || []).map((u) => (u && u._id ? u._id.toString() : u));
+      return res.json(transformedComments.map((c) => ({
+        ...c,
+        email: mask(c.email),
+        author: c.author && c.author.includes("@") ? mask(c.author) : c.author,
+        likedBy: ids(c.likedBy),
+        dislikedBy: ids(c.dislikedBy),
+      })));
+    }
 
     res.json(transformedComments);
   } catch (err) {

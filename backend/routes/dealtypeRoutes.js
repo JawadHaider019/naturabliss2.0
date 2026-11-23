@@ -1,5 +1,6 @@
 // routes/dealTypes.js
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import {
   getAllDealTypes,
   createDealType,
@@ -11,8 +12,8 @@ const router = express.Router();
 
 // Routes
 router.get('/', getAllDealTypes);
-router.post('/', createDealType);
-router.put('/:id', updateDealType);
-router.delete('/:id', deleteDealType);
+router.post('/', adminAuth, createDealType);
+router.put('/:id', adminAuth, updateDealType);
+router.delete('/:id', adminAuth, deleteDealType);
 
 export default router;

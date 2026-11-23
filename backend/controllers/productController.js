@@ -2,6 +2,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 import productModel from '../models/productModel.js';
 import { notifyNewProduct } from '../controllers/newsletterController.js'; // ADDED IMPORT
+import { getAdminFromRequest } from '../middleware/adminAuth.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -172,7 +173,11 @@ const listProducts = async (req, res) => {
     }
     // If status is 'all' or not provided, no status filter (get all products)
 
-    const products = await productModel.find(query);
+    // Public (shop) requests: published products only, and never the cost price.
+    const isAdmin = !!getAdminFromRequest(req);
+    if (!isAdmin) query.status = 'published';
+
+    const products = await productModel.find(query).select(isAdmin ? {} : { cost: 0 });
 
     console.log('📦 Products found:', products.length);
     console.log('🔍 Query used:', query);
@@ -227,8 +232,15 @@ const singleProduct = async (req, res) => {
       product = await productModel.findOne({ slug: productId });
     }
 
-    if (!product) {
+    const isAdmin = !!getAdminFromRequest(req);
+    if (!product || (!isAdmin && product.status !== 'published')) {
       return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    if (!isAdmin) {
+      const publicProduct = product.toObject();
+      delete publicProduct.cost;
+      return res.json({ success: true, product: publicProduct });
     }
 
     res.json({ success: true, product });

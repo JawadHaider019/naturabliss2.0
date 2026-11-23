@@ -3,6 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from 'fs';
 import { notifyNewBlog } from '../controllers/newsletterController.js'; // ADDED IMPORT
 import mongoose from 'mongoose';
+import { getAdminFromRequest } from '../middleware/adminAuth.js';
 
 // Helper function to generate slug from title
 const generateSlug = (title) => {
@@ -32,6 +33,8 @@ export const getAllBlogs = async (req, res) => {
     }
 
     if (status) filter.status = status;
+    // Only the admin panel may list drafts
+    if (!getAdminFromRequest(req)) filter.status = 'published';
     if (category) filter.category = { $in: category.split(',').map(c => c.trim()) };
     if (tags) filter.tags = { $in: tags.split(',').map(t => t.trim()) };
 
@@ -98,10 +101,14 @@ export const getBlogById = async (req, res) => {
       }
     }
 
-    if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+    // Drafts are only visible to the admin panel
+    if (!blog || (blog.status !== 'published' && !getAdminFromRequest(req))) {
+      return res.status(404).json({ success: false, message: 'Blog not found' });
+    }
 
+    // Count the view without touching updatedAt (it drives dateModified and sitemap lastmod)
+    await Blog.updateOne({ _id: blog._id }, { $inc: { views: 1 } }, { timestamps: false });
     blog.views += 1;
-    await blog.save();
 
     // Fetch up to 3 related published blogs
     let relatedBlogs = [];

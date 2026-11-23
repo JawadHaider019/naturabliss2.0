@@ -1,4 +1,5 @@
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import {
   subscribe,
   unsubscribe,
@@ -15,10 +16,10 @@ router.post('/subscribe', subscribe);
 router.post('/unsubscribe', unsubscribe);
 
 // Admin routes
-router.get('/subscribers', getSubscribers);
-router.get('/stats', getStats);
-router.get('/preferences-stats', checkSubscriberPreferences);
-router.post('/notify', sendNotification);
+router.get('/subscribers', adminAuth, getSubscribers);
+router.get('/stats', adminAuth, getStats);
+router.get('/preferences-stats', adminAuth, checkSubscriberPreferences);
+router.post('/notify', adminAuth, sendNotification);
 
 
 export default router;

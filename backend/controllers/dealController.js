@@ -2,6 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import dealModel from "../models/dealModel.js";
 import DealType from "../models/DealtypeModel.js";
 import { notifyNewDeal } from '../controllers/newsletterController.js'; // CORRECTED IMPORT
+import { getAdminFromRequest } from '../middleware/adminAuth.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -395,7 +396,9 @@ const updateDealStatus = async (req, res) => {
 // ---------------- List Deals ----------------
 const listDeals = async (req, res) => {
   try {
+    // Public (shop) requests never receive cost prices
     const deals = await dealModel.find({})
+      .select(getAdminFromRequest(req) ? {} : { cost: 0 })
       .populate('dealType')
       .sort({ date: -1 });
     
@@ -483,6 +486,7 @@ const singleDeal = async (req, res) => {
     }
 
     const deal = await dealModel.findById(dealId)
+      .select(getAdminFromRequest(req) ? {} : { cost: 0 })
       .populate('dealType');
     
     if (!deal) {

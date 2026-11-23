@@ -1,5 +1,6 @@
 // routes/dashboardRoutes.js
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import {
   getDashboardStats,
   getSalesTrend,
@@ -12,6 +13,7 @@ import {
 } from '../controllers/dashboardController.js';
 
 const router = express.Router();
+router.use(adminAuth); // all dashboard data is admin-only
 
 router.get('/stats', getDashboardStats);
 router.get('/sales-trend', getSalesTrend);

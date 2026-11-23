@@ -1,4 +1,5 @@
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import { 
   loginUser, 
   registerUser, 
@@ -20,6 +21,6 @@ userRoutes.post('/forgot-password', forgotPassword);
 userRoutes.post('/reset-password', resetPassword);
 userRoutes.post('/resend-otp', resendOtp);
 userRoutes.get('/data', getUserData);
-userRoutes.get('/:userId', getUserById);  
+userRoutes.get('/:userId', adminAuth, getUserById);  
 
 export default userRoutes;

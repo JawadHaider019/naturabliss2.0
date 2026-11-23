@@ -1,14 +1,15 @@
 import express from "express";
+import adminAuth from '../middleware/adminAuth.js';
 import { getSettings, updateSettings ,changeEmail,changePassword} from "../controllers/settingController.js";
 
 const settingRoutes = express.Router();
 
-settingRoutes.get("/", getSettings);
-settingRoutes.put("/", updateSettings);
+settingRoutes.get("/", adminAuth, getSettings);
+settingRoutes.put("/", adminAuth, updateSettings);
 
-settingRoutes.put("/change-email", changeEmail);
+settingRoutes.put("/change-email", adminAuth, changeEmail);
 
-settingRoutes.put("/change-password", changePassword);
+settingRoutes.put("/change-password", adminAuth, changePassword);
 
 
 

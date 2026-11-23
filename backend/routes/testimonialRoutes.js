@@ -1,4 +1,5 @@
 import express from 'express';
+import adminAuth from '../middleware/adminAuth.js';
 import { 
   getTestimonials, 
   addTestimonial, 
@@ -9,8 +10,8 @@ import {
 const router = express.Router();
 
 router.get('/', getTestimonials);
-router.post('/', addTestimonial);
-router.put('/:id', updateTestimonial);
-router.delete('/:id', deleteTestimonial);
+router.post('/', adminAuth, addTestimonial);
+router.put('/:id', adminAuth, updateTestimonial);
+router.delete('/:id', adminAuth, deleteTestimonial);
 
 export default router;
