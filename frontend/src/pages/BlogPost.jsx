@@ -221,8 +221,8 @@ export default function BlogPost() {
             />
 
             <SEO
-                title={`${title} | Natura Bliss Journal`}
-                description={excerpt}
+                title={blog.metaTitle || `${title} | Natura Bliss`}
+                description={blog.metaDescription || excerpt}
                 canonical={`https://naturabliss.pk/blog/${blog.slug}`}
                 ogType="article"
                 ogImage={cover}

@@ -1,5 +1,23 @@
 {
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/collection/product/:slug", "destination": "/product/:slug", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/cart", "destination": "/_app" },
+    { "source": "/login", "destination": "/_app" },
+    { "source": "/orders", "destination": "/_app" },
+    { "source": "/place-order", "destination": "/_app" },
+    { "source": "/deal/:id", "destination": "/_app" }
+  ],
   "headers": [
+    {
+      "source": "/(cart|login|orders|place-order|_app)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, follow" }
+      ]
+    },
     {
       "source": "/.well-known/(.*)",
       "headers": [
@@ -23,12 +41,6 @@
         { "key": "Content-Type", "value": "text/markdown; charset=utf-8" },
         { "key": "Cache-Control", "value": "public, max-age=3600" }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/"
     }
   ]
 }

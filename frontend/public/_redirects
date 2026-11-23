@@ -1,0 +1,3 @@
+# Netlify only (ignored by Vercel). If the old naturabliss.netlify.app site still deploys from this
+# repo, this sends every URL on it to the real domain with a 301.
+https://naturabliss.netlify.app/*  https://naturabliss.pk/:splat  301!

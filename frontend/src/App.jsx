@@ -27,6 +27,7 @@ const Orders = lazy(() => import('./pages/Orders'))
 const PlaceOrder = lazy(() => import('./pages/PlaceOrder'))
 const Blog = lazy(() => import('./pages/Blog'))
 const BlogPost = lazy(() => import('./pages/BlogPost'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Loading Spinner - Using loader
 const LoadingSpinner = () => (
@@ -153,6 +154,7 @@ const App = () => {
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path='/orders' element={<Orders />} />
             <Route path='/place-order' element={<PlaceOrder />} />
+            <Route path='*' element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>

@@ -1000,46 +1000,29 @@ const Product = () => {
                 "returnFees": "https://schema.org/FreeReturn"
               }
             },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": reviews.length > 0
-                ? (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1)
-                : "4.9",
-              "reviewCount": reviews.length > 0 ? reviews.length : 12
-            },
+            // Rating/review markup only from real reviews. Invented ratings or reviews violate
+            // Google's review-snippet policy and can lead to a manual action.
             ...(reviews.length > 0 ? {
-              "review": reviews.slice(0, 5).map(r => ({
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1),
+                "reviewCount": reviews.length
+              },
+              "review": reviews.slice(0, 5).filter(r => r.comment).map(r => ({
                 "@type": "Review",
                 "author": {
                   "@type": "Person",
                   "name": r.name || r.userName || "Verified Customer"
                 },
-                "datePublished": r.date ? new Date(r.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                ...((r.date || r.createdAt) ? { "datePublished": new Date(r.date || r.createdAt).toISOString().split('T')[0] } : {}),
                 "reviewRating": {
                   "@type": "Rating",
                   "ratingValue": (r.rating || 5).toString(),
                   "bestRating": "5"
                 },
-                "reviewBody": r.comment || "Authentic and pure product, very satisfied."
+                "reviewBody": r.comment
               }))
-            } : {
-              "review": [
-                {
-                  "@type": "Review",
-                  "author": {
-                    "@type": "Person",
-                    "name": "Verified Buyer"
-                  },
-                  "datePublished": new Date().toISOString().split('T')[0],
-                  "reviewRating": {
-                    "@type": "Rating",
-                    "ratingValue": "5",
-                    "bestRating": "5"
-                  },
-                  "reviewBody": "100% authentic and pure cold-pressed oil. Great quality and fast nationwide delivery."
-                }
-              ]
-            })
+            } : {})
           }}
         />
       )}
