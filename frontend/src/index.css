@@ -21,8 +21,33 @@ html {
   }
 }
 
+/* Fallback faces with Outfit/Prata-like vertical metrics: text renders in these until the web
+   fonts arrive (they load after the first paint, see main.jsx), so the swap barely shifts lines. */
+@font-face {
+  font-family: "Outfit Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Roboto");
+  ascent-override: 100%;
+  descent-override: 26%;
+  line-gap-override: 0%;
+  size-adjust: 100%;
+}
+@font-face {
+  font-family: "Prata Fallback";
+  src: local("Georgia"), local("Times New Roman");
+  ascent-override: 96%;
+  descent-override: 27%;
+  line-gap-override: 0%;
+  size-adjust: 106%;
+}
+
 * {
-  font-family: Outfit;
+  font-family: Outfit, "Outfit Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Long articles: let the browser skip layout of paragraphs far off screen */
+.article-body > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
 }
 
 /* Brand Theme: Clean Sharp Edges - Strictly No Rounded Corners on Buttons, Divs, Sections, Tabs, Modals, Inputs */
@@ -41,7 +66,7 @@ a.active hr {
 }
 
 .prata-regular {
-  font-family: "Prata", serif;
+  font-family: "Prata", "Prata Fallback", Georgia, serif;
   font-weight: 400;
   font-style: normal;
 }

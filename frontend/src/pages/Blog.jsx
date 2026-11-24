@@ -15,7 +15,6 @@ import {
     Tag,
     Star
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // Safe JSON-LD Serializer
 function safeJsonLd(obj) {
@@ -39,18 +38,13 @@ function formatPostDate(dateStr) {
 }
 
 // Memoized Blog Card Component matching Campuna architecture with Natura Bliss aesthetic
-const BlogCard = memo(function BlogCard({ post, index }) {
+const BlogCard = memo(function BlogCard({ post }) {
     const postImage = post.imageUrl || 'https://images.unsplash.com/photo-1608248597359-58348259e86c?auto=format&fit=crop&w=800&q=80';
     const postSlug = post.slug || post._id;
     const category = Array.isArray(post.category) ? (post.category[0] || 'Holistic Care') : (post.category || 'Holistic Care');
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-30px' }}
-            transition={{ duration: 0.4, delay: (index % 3) * 0.08 }}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+        <div
             className="group bg-white border border-gray-200 hover:border-[#587a3b]/50 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden select-none h-full"
         >
             <Link to={`/blog/${postSlug}`} className="flex flex-col flex-1">
@@ -117,7 +111,7 @@ const BlogCard = memo(function BlogCard({ post, index }) {
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 });
 

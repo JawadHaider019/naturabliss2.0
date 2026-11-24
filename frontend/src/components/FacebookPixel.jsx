@@ -1,6 +1,7 @@
 // src/components/FacebookPixel.jsx
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { runAfterInteraction } from '../utils/thirdParty';
 
 const FacebookPixel = () => {
   const location = useLocation();
@@ -19,8 +20,8 @@ const FacebookPixel = () => {
         .catch(() => {});
     };
 
-    const timer = setTimeout(initPixel, 3500);
-    return () => clearTimeout(timer);
+    // Loaded after the first interaction so it does not compete with the page load
+    runAfterInteraction(initPixel);
   }, []);
 
   // Track page views on route change

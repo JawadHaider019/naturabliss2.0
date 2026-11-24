@@ -7,6 +7,16 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getPreloadedData } from '../utils/preloadedData';
+import { markAppReady } from '../utils/appReady';
+
+// Banners embedded in the prerendered home page (same order and URLs as the static hero), so the
+// first render needs no API round trip and the hero image is already in the browser cache.
+const getPreloadedBanners = () => {
+  const banners = getPreloadedData()?.banners;
+  return Array.isArray(banners) && banners.length > 0 ? banners : null;
+};
+const bannerKey = (list) => list.map(b => `${b._id}|${b.desktopImageUrl}|${b.mobileImageUrl}|${b.linkUrl || ''}`).join(',');
 
 // Pre-loaded default banner from local assets - ALWAYS AVAILABLE INSTANTLY
 const defaultBanner = {
@@ -32,8 +42,8 @@ const preloadImage = (url) => {
 };
 
 const Hero = () => {
-  const [banners, setBanners] = useState([defaultBanner]);
-  const [isDbLoaded, setIsDbLoaded] = useState(false);
+  const [banners, setBanners] = useState(() => getPreloadedBanners() || [defaultBanner]);
+  const [isDbLoaded, setIsDbLoaded] = useState(() => !!getPreloadedBanners());
   const [screenSize, setScreenSize] = useState(() => 
     (typeof window !== 'undefined' && window.innerWidth < 1024) ? 'mobile' : 'desktop'
   );
@@ -67,6 +77,10 @@ const Hero = () => {
           
           if (validBanners.length > 0) {
             const sortedBanners = validBanners.sort((a, b) => a.order - b.order);
+
+            // Same banners as the prerendered page: nothing to do
+            const preloaded = getPreloadedBanners();
+            if (preloaded && bannerKey(preloaded) === bannerKey(sortedBanners)) return;
             
             // PRELOAD all banner images into browser cache first!
             // This prevents ANY blank / white / black gap during state switch
@@ -209,10 +223,12 @@ const Hero = () => {
             width={screenSize === 'mobile' ? 750 : 1400}
             height={screenSize === 'mobile' ? 1000 : 700}
             className={`w-full ${screenSize === 'mobile' ? 'h-auto aspect-[3/4] object-cover block' : 'h-full object-cover'}`}
-            loading="eager"
-            fetchpriority="high"
-            decoding="sync"
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchpriority={index === 0 ? "high" : "low"}
+            decoding={index === 0 ? "sync" : "async"}
+            onLoad={index === 0 ? markAppReady : undefined}
             onError={(e) => {
+              if (index === 0) markAppReady();
               e.currentTarget.onerror = null;
               e.currentTarget.src = fallbackImage;
             }}

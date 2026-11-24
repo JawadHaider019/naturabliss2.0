@@ -1,6 +1,7 @@
 // src/components/TikTokPixel.jsx
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { runAfterInteraction } from "../utils/thirdParty";
 
 const TikTokPixel = () => {
   const location = useLocation();
@@ -9,7 +10,7 @@ const TikTokPixel = () => {
   useEffect(() => {
     if (window.ttq) return;
 
-    const timer = setTimeout(() => {
+    runAfterInteraction(() => {
       const script = document.createElement("script");
       script.innerHTML = `
         !function (w, d, t) {
@@ -21,9 +22,7 @@ const TikTokPixel = () => {
         }(window, document, 'ttq');
       `;
       document.head.appendChild(script);
-    }, 3500);
-
-    return () => clearTimeout(timer);
+    });
   }, []);
 
   // Track page views on route change

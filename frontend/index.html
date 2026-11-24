@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-  <!-- Google tag (gtag.js) & Google Analytics (GA4) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JM0ETEQWHD"></script>
+  <!-- Google tag (gtag.js) & Google Analytics (GA4). Calls are queued here; the gtag library
+       itself is loaded by the app after the first user interaction (src/App.jsx). -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -71,12 +71,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- Google Fonts: Outfit & Prata with swap display -->
-  <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" />
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" media="print"
-    onload="this.media='all'" />
+  <!-- Google Fonts (Outfit & Prata) are requested by src/main.jsx when the app starts, i.e. after
+       the static page and its hero image have painted. Until then text uses the size-matched
+       fallback faces in src/index.css, so the switch barely moves anything. -->
   <noscript>
     <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Prata&display=swap" />

@@ -14,6 +14,26 @@ import Home from './pages/Home'
 import FacebookPixel from './components/FacebookPixel'
 import TikTokPixel from './components/TiktokPixel'
 import { initSlickAriaObserver, sanitizeSlickAria } from './utils/slickAriaFix'
+import { markAppReady } from './utils/appReady'
+import { runAfterInteraction } from './utils/thirdParty'
+
+// Pages without their own "ready" condition: swap the static HTML for the app as soon as the
+// route has rendered. Home, product and blog-post pages call markAppReady() themselves once
+// their main content is painted.
+const Ready = () => {
+  useEffect(() => { markAppReady() }, [])
+  return null
+}
+const withReady = (el) => <>{el}<Ready /></>
+
+// Google Analytics (gtag), loaded after the first interaction; index.html queues the config
+const loadGoogleAnalytics = () => {
+  if (document.querySelector('script[src*="googletagmanager.com/gtag/js"]')) return
+  const s = document.createElement('script')
+  s.async = true
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-JM0ETEQWHD'
+  document.head.appendChild(s)
+}
 
 // Lazy load secondary pages
 const Collection = lazy(() => import('./pages/Collection'))
@@ -63,9 +83,7 @@ const preloadRoutes = () => {
     () => import('./pages/Cart')
   ]
 
-  setTimeout(() => {
-    routes.forEach(preload => preload())
-  }, 2000)
+  runAfterInteraction(() => routes.forEach(preload => preload()))
 }
 
 const App = () => {
@@ -75,15 +93,15 @@ const App = () => {
   useEffect(() => {
     preloadRoutes()
 
-    const timer = setTimeout(() => {
+    // Analytics after the first interaction, so they don't compete with the page load
+    runAfterInteraction(() => {
+      loadGoogleAnalytics()
       try {
         Clarity.init("vmajox80q2")
-      } catch (err) {
+      } catch {
         // Silent error
       }
-    }, 3500)
-
-    return () => clearTimeout(timer)
+    })
   }, [])
 
   // Initialize Slick Carousel ARIA Sanitizer for Agentic Accessibility
@@ -138,23 +156,23 @@ const App = () => {
       <Navbar />
       <SearchBar />
 
-      <main id="main-content" role="main" className="flex-grow">
+      <main id="main-content" role="main" className="flex-grow min-h-[100svh]">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path='/' element={<Home />} />
-            <Route path='/collection' element={<Collection />} />
-            <Route path='/about' element={<About />} />
-            <Route path='/contact' element={<Contact />} />
+            <Route path='/collection' element={withReady(<Collection />)} />
+            <Route path='/about' element={withReady(<About />)} />
+            <Route path='/contact' element={withReady(<Contact />)} />
             <Route path='/product/:slug' element={<Product />} />
-            <Route path="/deal/:dealId" element={<Deal />} />
+            <Route path="/deal/:dealId" element={withReady(<Deal />)} />
             <Route path="/collection/product/:slug" element={<Product />} />
-            <Route path='/login' element={<Login />} />
-            <Route path='/cart' element={<Cart />} />
-            <Route path='/blog' element={<Blog />} />
+            <Route path='/login' element={withReady(<Login />)} />
+            <Route path='/cart' element={withReady(<Cart />)} />
+            <Route path='/blog' element={withReady(<Blog />)} />
             <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path='/orders' element={<Orders />} />
-            <Route path='/place-order' element={<PlaceOrder />} />
-            <Route path='*' element={<NotFound />} />
+            <Route path='/orders' element={withReady(<Orders />)} />
+            <Route path='/place-order' element={withReady(<PlaceOrder />)} />
+            <Route path='*' element={withReady(<NotFound />)} />
           </Routes>
         </Suspense>
       </main>

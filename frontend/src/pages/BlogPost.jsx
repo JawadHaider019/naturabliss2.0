@@ -16,8 +16,9 @@ import {
     User,
     BookOpen
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../components/SEO';
+import { getPreloadedData } from '../utils/preloadedData';
+import { markAppReady } from '../utils/appReady';
 import Loader from '../components/Loader';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { parseArticleMarkdown, formatInlineText, stripMarkdown } from '../utils/articleParser';
@@ -35,9 +36,13 @@ function safeJsonLd(obj) {
 export default function BlogPost() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const [blog, setBlog] = useState(null);
+    // Article embedded in the prerendered page: render it immediately, refresh from the API after
+    const [blog, setBlog] = useState(() => {
+        const pre = getPreloadedData()?.blog;
+        return pre && pre.slug === slug ? pre : null;
+    });
     const [relatedBlogs, setRelatedBlogs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !blog);
     const [error, setError] = useState(null);
 
     // Reading progress & active TOC heading
@@ -53,7 +58,8 @@ export default function BlogPost() {
     useEffect(() => {
         const fetchBlogPost = async () => {
             try {
-                setLoading(true);
+                const pre = getPreloadedData()?.blog;
+                if (!(pre && pre.slug === slug)) setLoading(true);
                 setError(null);
 
                 const response = await fetch(`${backendUrl}/api/blogs/${slug}`);
@@ -98,6 +104,11 @@ export default function BlogPost() {
             fetchBlogPost();
         }
     }, [slug, backendUrl]);
+
+    // Article (or error) rendered: swap the static page for the app
+    useEffect(() => {
+        if (!loading) markAppReady();
+    }, [loading]);
 
     // Parse Markdown content into rich HTML and Table of Contents headings
     const parsedContent = useMemo(() => {
@@ -298,51 +309,57 @@ export default function BlogPost() {
 
                 {/* Hero Background with zoom effect */}
                 <div className="absolute inset-0 z-0">
-                    <motion.div
-                        initial={{ scale: 1.06, opacity: 0 }}
-                        animate={{ scale: 1.0, opacity: 1 }}
-                        transition={{ duration: 1.2, ease: 'easeOut' }}
+                    <div
                         className="w-full h-full"
                     >
-                        <img
-                            src={cover}
-                            alt={title}
-                            className="w-full h-full object-cover opacity-30"
-                        />
-                    </motion.div>
+                        {/* Same WebP set as the prerendered page (already cached); covers uploaded
+                            without variants fall back to the original file */}
+                        <picture>
+                            {/^\/blogs\/[\w-]+\.jpe?g$/i.test(cover) && (
+                                <source
+                                    type="image/webp"
+                                    srcSet={`${cover.replace(/\.jpe?g$/i, '')}-800.webp 800w, ${cover.replace(/\.jpe?g$/i, '')}.webp 1200w`}
+                                    sizes="100vw"
+                                />
+                            )}
+                            <img
+                                src={cover}
+                                alt={title}
+                                className="w-full h-full object-cover opacity-30"
+                                onError={(e) => {
+                                    const source = e.currentTarget.parentNode?.querySelector('source');
+                                    if (source) {
+                                        source.remove();
+                                        e.currentTarget.src = cover;
+                                    }
+                                }}
+                            />
+                        </picture>
+                    </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-[#17220e] via-[#17220e]/85 to-transparent" />
                 </div>
 
                 {/* Hero Content */}
                 <div className="relative z-10 max-w-4xl mx-auto px-6 py-16 text-center space-y-4">
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
+                    <div
                     >
                         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.3em] text-[#c5a880] block">
                             {category}
                         </span>
-                    </motion.div>
+                    </div>
 
-                    <motion.h1
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.1 }}
+                    <h1
                         className="font-display text-2xl sm:text-3xl md:text-5xl font-extrabold text-white leading-tight"
                     >
                         {title}
-                    </motion.h1>
+                    </h1>
 
                     {excerpt && (
-                        <motion.p
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.2 }}
+                        <p
                             className="text-xs sm:text-sm md:text-base text-gray-200 max-w-2xl mx-auto font-light leading-relaxed"
                         >
                             {excerpt}
-                        </motion.p>
+                        </p>
                     )}
                 </div>
             </section>
@@ -510,7 +527,7 @@ export default function BlogPost() {
                 <main className="lg:col-span-8 space-y-10">
                     {/* Rendered HTML with custom block styling */}
                     <article
-                        className="prose max-w-none text-gray-800"
+                        className="prose max-w-none text-gray-800 article-body"
                         dangerouslySetInnerHTML={{ __html: parsedContent.html }}
                     />
 
@@ -608,6 +625,8 @@ export default function BlogPost() {
                                         <img
                                             src={rel.imageUrl || 'https://images.unsplash.com/photo-1608248597359-58348259e86c?auto=format&fit=crop&w=800&q=80'}
                                             alt={rel.title}
+                                            loading="lazy"
+                                            decoding="async"
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                         <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-white/90 text-[#3b5327]">

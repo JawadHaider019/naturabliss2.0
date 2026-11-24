@@ -2,6 +2,8 @@ import { createContext, useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Loader from '../components/Loader';
+import { runAfterInteraction } from '../utils/thirdParty';
+import { getPreloadedData } from '../utils/preloadedData';
 
 export const ShopContext = createContext();
 
@@ -385,7 +387,10 @@ const ShopContextProvider = ({ children }) => {
       if (!itemId || quantity < 1) return;
 
       const [productId, variantName] = itemId.split('__');
-      const product = products.find(p => p._id === productId);
+      // The catalogue may still be loading on pages that embed their product (nb-data)
+      const preloadedProduct = getPreloadedData()?.product;
+      const product = products.find(p => p._id === productId)
+        || (preloadedProduct?._id === productId ? preloadedProduct : undefined);
       const currentQuantity = cartItems[itemId] || 0;
 
       let availableStock = product?.quantity || product?.stock;
@@ -717,46 +722,31 @@ const ShopContextProvider = ({ children }) => {
         dataCache.timestamp = now;
         setProducts(productsWithBasicData);
 
-        // Load reviews in background only after page is idle and painted
-        const loadReviewsDelayed = () => {
-          setTimeout(async () => {
-            try {
-              // Process in small chunks to avoid saturating network
-              const results = [];
-              for (let i = 0; i < productsData.length; i += 4) {
-                const chunk = productsData.slice(i, i + 4);
-                const chunkRatings = await Promise.all(
-                  chunk.map(async (product) => {
-                    try {
-                      const reviews = await fetchProductReviews(product._id);
-                      const averageRating = calculateAverageRating(reviews);
-                      return {
-                        ...product,
-                        rating: averageRating,
-                        reviewCount: reviews.length,
-                        stock: product.stock || 0
-                      };
-                    } catch {
-                      return product;
-                    }
-                  })
-                );
-                results.push(...chunkRatings);
-              }
-              dataCache.products = results;
-              dataCache.timestamp = Date.now();
-              setProducts(results);
-            } catch {
-              // Silent fail
+        // Ratings for every product from ONE request, after the first interaction. (This used to
+        // fire 23 per-product requests ~4.5 s into every page load, each followed by a state update
+        // that re-rendered the whole app.)
+        runAfterInteraction(async () => {
+          try {
+            const res = await axios.get(`${BACKEND_URL}/api/comments`, { timeout: 10000 });
+            const comments = Array.isArray(res.data) ? res.data : [];
+            const byProduct = {};
+            for (const c of comments) {
+              if (c.productId) (byProduct[c.productId] ||= []).push(c);
             }
-          }, 4500);
-        };
-
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          window.requestIdleCallback(loadReviewsDelayed, { timeout: 6000 });
-        } else {
-          loadReviewsDelayed();
-        }
+            const reviewsByProduct = {};
+            const results = productsWithBasicData.map((product) => {
+              const reviews = processReviews(byProduct[product._id] || []);
+              reviewsByProduct[product._id] = reviews;
+              return { ...product, rating: calculateAverageRating(reviews), reviewCount: reviews.length };
+            });
+            dataCache.products = results;
+            dataCache.timestamp = Date.now();
+            setProductReviews(prev => ({ ...reviewsByProduct, ...prev }));
+            setProducts(results);
+          } catch {
+            // Silent fail: ratings are an enhancement
+          }
+        });
       }
     } catch (error) {
       toast.error("Failed to fetch products");
@@ -764,7 +754,7 @@ const ShopContextProvider = ({ children }) => {
       setIsLoading(false);
       setLoadingState('products', false);
     }
-  }, [BACKEND_URL, fetchProductReviews, calculateAverageRating, setLoadingState]);
+  }, [BACKEND_URL, processReviews, calculateAverageRating, setLoadingState]);
 
   // Optimized deals fetching with caching
   const fetchDeals = useCallback(async () => {
@@ -1086,9 +1076,16 @@ const ShopContextProvider = ({ children }) => {
   }, [fetchUserData]);
 
   useEffect(() => {
-    fetchProducts();
-    fetchDeals();
-    fetchDeliverySettings();
+    const loadCatalog = () => {
+      fetchProducts();
+      fetchDeals();
+      fetchDeliverySettings();
+    };
+    // Home, product and blog pages ship their above-the-fold data in the HTML (nb-data), so the
+    // full catalogue can wait for the first interaction instead of re-rendering the whole app
+    // during page load. Every other page (collection, cart, checkout, deals) needs it right away.
+    if (getPreloadedData()) runAfterInteraction(loadCatalog);
+    else loadCatalog();
   }, [fetchProducts, fetchDeals, fetchDeliverySettings]);
 
   useEffect(() => {

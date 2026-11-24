@@ -6,6 +6,8 @@ import RelatedProduct from '../components/RelatedProduct';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getPreloadedData } from '../utils/preloadedData';
+import { markAppReady } from '../utils/appReady';
 import {
   FaStar,
   FaStarHalf,
@@ -115,6 +117,11 @@ const Product = () => {
   const [uploading, setUploading] = useState(false);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [error, setError] = useState(null);
+
+  // Error states have no main image to wait for: show the app right away
+  useEffect(() => {
+    if (error) markAppReady();
+  }, [error]);
   const [loading, setLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -204,8 +211,10 @@ const Product = () => {
         return;
       }
 
-      // 1. Try finding in context first
-      const product = products.find((item) => item.slug === slug || item._id === slug);
+      // 1. Try the product list in context, then the product embedded in the prerendered page
+      const preloaded = getPreloadedData()?.product;
+      const product = products.find((item) => item.slug === slug || item._id === slug)
+        || (preloaded && (preloaded.slug === slug || preloaded._id === slug) ? preloaded : null);
 
       if (product) {
         setProductData(product);
@@ -1076,7 +1085,11 @@ const Product = () => {
               width="600"
               height="600"
               className="h-auto w-full object-cover max-h-[480px] rounded-lg shadow-sm"
+              // eslint-disable-next-line react/no-unknown-property -- lowercase attribute works in React 18 and Preact
+              fetchpriority="high"
+              onLoad={markAppReady}
               onError={(e) => {
+                markAppReady();
                 e.target.src = 'https://via.placeholder.com/500?text=Product+Image';
               }}
             />
@@ -1147,8 +1160,11 @@ const Product = () => {
                         </div>
                         {v.image && (
                           <img
-                            src={v.image}
+                            src={getOptimizedImageUrl(v.image, { width: 96, quality: 'auto' })}
                             alt={v.name}
+                            width="40"
+                            height="40"
+                            loading="lazy"
                             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0 border ${isSelected ? 'border-gray-600' : 'border-gray-200'
                               }`}
                           />

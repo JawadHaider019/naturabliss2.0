@@ -17,9 +17,11 @@
  * instead of publishing a site where every product URL 404s.
  */
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArticleMarkdown, stripMarkdown } from '../src/utils/articleParser.js';
+import { getOptimizedImageUrl } from '../src/utils/imageOptimizer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.resolve(__dirname, '../dist');
@@ -99,18 +101,23 @@ const salePrice = (p) => (p.discountprice && p.discountprice < p.price ? p.disco
 // Fetch data
 // ---------------------------------------------------------------------------------------------
 console.log(`[prerender] API: ${API}`);
-let products, blogs, categories, business;
+let products, blogs, categories, business, banners;
 try {
-  const [p, b, c, biz] = await Promise.all([
+  const [p, b, c, biz, bn] = await Promise.all([
     getJson(`${API}/api/product/list?status=published`),
     getJson(`${API}/api/blogs?status=published&limit=500`),
     getJson(`${API}/api/categories`).catch(() => []),
     getJson(`${API}/api/business-details`).catch(() => null),
+    getJson(`${API}/api/banners/active`).catch(() => null),
   ]);
   products = (p.products || []).filter(x => x.status === 'published' && x.slug);
   blogs = (b.data || []).filter(x => x.status === 'published' && x.slug);
   categories = Array.isArray(c) ? c : (c.categories || c.data || []);
   business = biz?.data || {};
+  // Same filtering/sorting as components/Hero.jsx
+  banners = (Array.isArray(bn?.data) ? bn.data : [])
+    .filter(x => x.desktopImageUrl && x.mobileImageUrl)
+    .sort((x, y) => x.order - y.order);
 } catch (err) {
   fail(`could not fetch data from ${API}: ${err.message}`);
 }
@@ -245,8 +252,37 @@ function renderPage(o) {
       `  <script type="application/ld+json" data-prerender>${jsonLd({ '@context': 'https://schema.org', '@graph': graph })}</script>\n</head>`);
   }
 
+  // Largest image of the page: fetch it first (same URL React requests, so it is reused)
+  for (const p of o.preload || []) {
+    const src = p.srcset
+      ? `imagesrcset="${esc(p.srcset)}" imagesizes="${p.sizes}"${p.type ? ` type="${p.type}"` : ''}`
+      : `href="${esc(p.href)}"`;
+    html = html.replace('</head>', `  <link rel="preload" as="image" ${src} fetchpriority="high"${p.media ? ` media="${p.media}"` : ''} />\n</head>`);
+  }
+  // Page data for the first React render (utils/preloadedData.js)
+  if (o.data) {
+    html = html.replace('</head>', `  <script id="nb-data" type="application/json">${jsonLd(o.data)}</script>
+</head>`);
+  }
+
+  // Start loading the app script once the static page has finished loading (window load: HTML,
+  // CSS, hero image), instead of alongside it. The static HTML doesn't
+  // need JavaScript to render, so on slow phones the document, CSS and hero image get the bandwidth
+  // and the main thread first; React then builds the app invisibly and swaps it in. (Pages without static content keep Vite's normal script tags.)
+  if (o.body) {
+    const entry = html.match(/<script type="module" crossorigin src="([^"]+)"><\/script>\s*/);
+    if (!entry) fail('could not find the Vite entry script in the template');
+    const preloads = [...html.matchAll(/<link rel="modulepreload" crossorigin href="([^"]+)">\s*/g)];
+    html = html.replace(entry[0], '');
+    for (const m of preloads) html = html.replace(m[0], '');
+    // Only the vendor chunk is needed by every page; the slick chunk only by the home hero
+    const early = preloads.map(m => m[1]).filter(u => /vendor/.test(u) || (o.path === '/' && /slick/.test(u)));
+    const loader = `<script>(function(){var done=false,d0=document;function go(){if(done)return;done=true;var d=document,h=d.head;${JSON.stringify(early)}.forEach(function(u){var l=d.createElement('link');l.rel='modulepreload';l.crossOrigin='';l.href=u;h.appendChild(l)});var s=d.createElement('script');s.type='module';s.crossOrigin='';s.src=${JSON.stringify(entry[1])};h.appendChild(s)}function afterPaint(){requestAnimationFrame(function(){setTimeout(go,0)})}if(d0.readyState==='complete')afterPaint();else window.addEventListener('load',afterPaint);setTimeout(go,3000)})();</script>`;
+    html = html.replace('</body>', `${loader}\n</body>`);
+  }
+
   if (!html.includes('<div id="root"></div>')) fail('template has no empty <div id="root"></div>');
-  html = html.replace('<div id="root"></div>', () => `<div id="root">${o.body ? shell(o.body) : ''}</div>`);
+  html = html.replace('<div id="root"></div>', () => `<div id="root">${o.body ? shell(o.body, o.hero) : ''}</div>`);
   return html;
 }
 
@@ -254,8 +290,8 @@ function renderPage(o) {
 // Static body markup (plain HTML + small scoped stylesheet; React replaces it on boot)
 // ---------------------------------------------------------------------------------------------
 const STYLE = `<style>
-.pr{font-family:Outfit,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;line-height:1.65;max-width:1200px;margin:0 auto;padding:16px}
-.pr a{color:#587a3b}.pr h1{font-family:Prata,Georgia,serif;font-size:clamp(26px,4vw,38px);line-height:1.2;color:#17220e;margin:.4em 0}
+.pr{font-family:Outfit,'Outfit Fallback',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;line-height:1.65;max-width:1200px;margin:0 auto;padding:16px}
+.pr a{color:#587a3b}.pr h1{font-family:Prata,'Prata Fallback',Georgia,serif;font-size:clamp(26px,4vw,38px);line-height:1.2;color:#17220e;margin:.4em 0}
 .pr h2{font-size:22px;color:#17220e;margin:1.6em 0 .5em}.pr img{max-width:100%;height:auto}
 .pr-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;border-bottom:2px solid #587a3b;padding-bottom:12px;margin-bottom:16px}
 .pr-head nav ul,.pr-foot ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}
@@ -265,13 +301,20 @@ const STYLE = `<style>
 .pr-price{font-size:22px;font-weight:600;color:#17220e}.pr-price s{color:#9ca3af;font-weight:400;font-size:16px;margin-left:8px}
 .pr-foot{border-top:2px solid #e5e7eb;margin-top:48px;padding-top:24px;font-size:14px;color:#6b7280;display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .pr-foot ul{flex-direction:column}.pr-foot h2{font-size:15px;margin:0 0 8px}
+.pr-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid #e5e7eb;background:#fff;font-family:Outfit,'Outfit Fallback',system-ui,sans-serif}
+.pr-top nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}.pr-top nav a{color:#374151;text-decoration:none}
+.pr-hero{background:#FAF8F5}.pr-hero img{display:block;width:100%;height:auto;object-fit:cover}
+.pr-hero--banner img{aspect-ratio:3/4}.pr-hero--product img{aspect-ratio:1/1;max-width:640px;margin:0 auto}
+.pr-hero--cover img{height:440px}
+@media (min-width:1024px){.pr-hero--banner img{aspect-ratio:auto;height:90vh}.pr-hero--cover img{height:480px}}
+.pr-foot,.pr main>h2~*,.pr article>*:nth-child(n+6),.pr article .article-body>*{content-visibility:auto;contain-intrinsic-size:auto 500px}
 </style>`;
 
 const NAV = [['/', 'Home'], ['/collection', 'Shop'], ['/blog', 'Guides'], ['/about', 'About'], ['/contact', 'Contact']];
 
 function header() {
-  return `<header class="pr-head">
-  <a href="/"><img src="/logo.png" alt="Natura Bliss logo" width="56" height="56" /></a>
+  return `<header class="pr-top">
+  <a href="/"><img src="/logo-96.png" alt="Natura Bliss logo" width="48" height="48" /></a>
   <nav aria-label="Main"><ul>${NAV.map(([h, t]) => `<li><a href="${h}">${t}</a></li>`).join('')}</ul></nav>
 </header>`;
 }
@@ -302,13 +345,33 @@ function footer() {
 </footer>`;
 }
 
-const shell = (main) => `${STYLE}<div class="pr">${header()}<main>${main}</main>${footer()}</div>`;
+const shell = (main, hero = '') => `${STYLE}${header()}${hero}<div class="pr"><main>${main}</main>${footer()}</div>`;
+
+// Image URLs exactly as the React components build them (cache hit when React renders)
+const heroBannerUrls = (b) => ({
+  mobile: getOptimizedImageUrl(b.mobileImageUrl, { width: 750, quality: 'auto' }),
+  desktop: getOptimizedImageUrl(b.desktopImageUrl, { width: 1400, quality: 'auto' }),
+});
+const productImageUrl = (src) => getOptimizedImageUrl(src, { width: 700, quality: 'auto' });
+
+// Blog covers in public/blogs have WebP variants (name-800.webp, name.webp) generated alongside
+// the JPEG. Use them when present; covers uploaded later without variants keep the JPEG.
+const PUBLIC_DIR = path.resolve(__dirname, '../public');
+const existsSync = (p) => { try { return fsSync.statSync(p).isFile(); } catch { return false; } };
+function coverSrcSet(url) {
+  const m = /^\/blogs\/([\w-]+)\.jpe?g$/i.exec(url || '');
+  if (!m) return null;
+  const base = `/blogs/${m[1]}`;
+  if (!existsSync(path.join(PUBLIC_DIR, `${base}-800.webp`)) || !existsSync(path.join(PUBLIC_DIR, `${base}.webp`))) return null;
+  return `${base}-800.webp 800w, ${base}.webp 1200w`;
+}
+const thumbUrl = (src) => getOptimizedImageUrl(src, { width: 400, quality: 'auto' });
 
 const crumbsHtml = (items) => `<nav class="pr-crumbs" aria-label="Breadcrumb">${items
   .map(([n, u], i) => (i < items.length - 1 ? `<a href="${u}">${esc(n)}</a> › ` : `<span>${esc(n)}</span>`)).join('')}</nav>`;
 
 const productCard = (p) => `<li class="pr-card"><a href="/product/${esc(p.slug)}">
-  ${p.image?.[0] ? `<img src="${esc(p.image[0])}" alt="${esc(`${BRAND} ${p.name}`)}" width="400" height="400" loading="lazy" />` : ''}
+  ${p.image?.[0] ? `<img src="${esc(thumbUrl(p.image[0]))}" alt="${esc(`${BRAND} ${p.name}`)}" width="400" height="400" loading="lazy" />` : ''}
   <strong>${esc(p.name)}</strong></a><br>${pkr(salePrice(p))}</li>`;
 
 const blogCard = (b) => `<li class="pr-card"><a href="/blog/${esc(b.slug)}"><strong>${esc(b.title)}</strong></a>
@@ -335,6 +398,15 @@ add('index.html', {
     name: 'Natura Bliss products',
     itemListElement: products.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/product/${p.slug}`, name: p.name })),
   }],
+  ...(banners.length ? (() => {
+    const u = heroBannerUrls(banners[0]);
+    return {
+      hero: `<div class="pr-hero pr-hero--banner"><picture><source media="(min-width: 1024px)" srcset="${esc(u.desktop)}" />
+<img src="${esc(u.mobile)}" alt="${esc(banners[0].altText || 'Natura Bliss banner')}" width="750" height="1000" fetchpriority="high" /></picture></div>`,
+      preload: [{ href: u.mobile, media: '(max-width: 1023px)' }, { href: u.desktop, media: '(min-width: 1024px)' }],
+      data: { banners },
+    };
+  })() : {}),
   body: `<h1>Pure Cold-Pressed Oils &amp; Herbal Skincare, Made in Talagang</h1>
 <p>${BRAND} makes cold-pressed oils, handmade soaps and herbal hair and skin care in small batches in Talagang, Punjab. No parabens, sulfates or mineral oil. Cash on delivery to every city in Pakistan.</p>
 <p><a href="/collection">Shop all products</a> · <a href="${esc(whatsapp)}" rel="noopener">Order on WhatsApp</a></p>
@@ -440,6 +512,11 @@ for (const p of products) {
     title: `${p.name} Price in Pakistan | ${BRAND}`,
     description: clip(`${p.name} by ${BRAND}, ${pkr(price)}. ${plain(p.description)}`, 158),
     image: images[0],
+    ...(images[0] ? {
+      hero: `<div class="pr-hero pr-hero--product"><img src="${esc(productImageUrl(images[0]))}" alt="${esc(p.name)}" width="700" height="700" fetchpriority="high" /></div>`,
+      preload: [{ href: productImageUrl(images[0]) }],
+    } : {}),
+    data: { product: p },
     ogType: 'product',
     graph: [
       breadcrumbs(crumbs),
@@ -460,7 +537,7 @@ for (const p of products) {
     body: `${crumbsHtml(crumbs)}
 <article>
   <h1>${esc(p.name)}</h1>
-  ${images.map((src, i) => `<img src="${esc(src)}" alt="${esc(`${BRAND} ${p.name}${i ? ` – photo ${i + 1}` : ''}`)}" width="600" height="600"${i ? ' loading="lazy"' : ''} />`).join('\n  ')}
+  ${images.slice(1).map((src, i) => `<img src="${esc(thumbUrl(src))}" alt="${esc(`${BRAND} ${p.name} – photo ${i + 2}`)}" width="400" height="400" loading="lazy" />`).join('\n  ')}
   <p class="pr-price">${pkr(price)}${price < p.price ? `<s>${pkr(p.price)}</s>` : ''}</p>
   <p>${inStock ? 'In stock' : 'Out of stock'} · Cash on delivery across Pakistan · 7-day returns on damaged items</p>
   ${(p.variants || []).length ? `<h2>Sizes</h2><ul>${p.variants.map(v => `<li>${esc(v.name)}: ${pkr(v.discountprice && v.discountprice < v.price ? v.discountprice : v.price)}</li>`).join('')}</ul>` : ''}
@@ -541,13 +618,22 @@ for (const b of blogs) {
     title: b.metaTitle && b.metaTitle.includes(BRAND) ? b.metaTitle : `${b.metaTitle || b.title} | ${BRAND}`,
     description: desc,
     image: abs(b.imageUrl) || undefined,
+    ...(b.imageUrl ? (() => {
+      const set = coverSrcSet(b.imageUrl);
+      return {
+        hero: set
+          ? `<div class="pr-hero pr-hero--cover"><picture><source type="image/webp" srcset="${set}" sizes="100vw" /><img src="${esc(b.imageUrl)}" alt="${esc(b.title)}" width="1200" height="630" fetchpriority="high" /></picture></div>`
+          : `<div class="pr-hero pr-hero--cover"><img src="${esc(b.imageUrl)}" alt="${esc(b.title)}" width="1200" height="630" fetchpriority="high" /></div>`,
+        preload: [set ? { srcset: set, sizes: '100vw', type: 'image/webp' } : { href: b.imageUrl }],
+      };
+    })() : {}),
+    data: { blog: b },
     ogType: 'article',
     graph,
     body: `${crumbsHtml(crumbs)}
 <article>
   <h1>${esc(b.title)}</h1>
   <p class="pr-crumbs">By ${esc(b.author || BRAND)}${b.authorRole ? `, ${esc(b.authorRole)}` : ''}${published ? ` · Published <time datetime="${published}">${fmt(published)}</time>` : ''}${modified && modified !== published ? ` · Updated <time datetime="${modified}">${fmt(modified)}</time>` : ''}</p>
-  ${b.imageUrl ? `<img src="${esc(b.imageUrl)}" alt="${esc(b.title)}" width="1200" height="630" />` : ''}
   ${parsed.html}
   ${b.authorBio ? `<h2>About the author</h2><p>${esc(b.authorBio)}</p>` : ''}
 </article>`,
