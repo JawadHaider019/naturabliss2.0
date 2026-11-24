@@ -47,7 +47,8 @@ html {
 /* Long articles: let the browser skip layout of paragraphs far off screen */
 .article-body > * {
   content-visibility: auto;
-  contain-intrinsic-size: auto 320px;
+  /* height only: the shorthand would also give off-screen blocks a 320px WIDTH */
+  contain-intrinsic-block-size: auto 320px;
 }
 
 /* Brand Theme: Clean Sharp Edges - Strictly No Rounded Corners on Buttons, Divs, Sections, Tabs, Modals, Inputs */

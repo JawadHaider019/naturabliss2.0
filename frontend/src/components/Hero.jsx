@@ -134,6 +134,10 @@ const Hero = () => {
     const fallbackImage = screenSize === 'mobile' ? assets.mobileBanner : assets.desktopBanner;
     if (!banner) return fallbackImage;
     
+    // Prerendered pages copy the first banner to our own origin (localMobileUrl/localDesktopUrl)
+    if (screenSize === 'mobile' && banner.localMobileUrl) return banner.localMobileUrl;
+    if (screenSize !== 'mobile' && banner.localDesktopUrl) return banner.localDesktopUrl;
+
     if (screenSize === 'mobile' && banner.mobileImageUrl) {
       return getOptimizedImageUrl(banner.mobileImageUrl, { width: 750, quality: 'auto' });
     }

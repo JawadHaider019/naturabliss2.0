@@ -2,44 +2,102 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/collection/product/:slug", "destination": "/product/:slug", "permanent": true }
+    {
+      "source": "/collection/product/:slug",
+      "destination": "/product/:slug",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    { "source": "/cart", "destination": "/_app" },
-    { "source": "/login", "destination": "/_app" },
-    { "source": "/orders", "destination": "/_app" },
-    { "source": "/place-order", "destination": "/_app" },
-    { "source": "/deal/:id", "destination": "/_app" }
+    {
+      "source": "/cart",
+      "destination": "/_app"
+    },
+    {
+      "source": "/login",
+      "destination": "/_app"
+    },
+    {
+      "source": "/orders",
+      "destination": "/_app"
+    },
+    {
+      "source": "/place-order",
+      "destination": "/_app"
+    },
+    {
+      "source": "/deal/:id",
+      "destination": "/_app"
+    }
   ],
   "headers": [
     {
+      "source": "/media/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
       "source": "/(cart|login|orders|place-order|_app)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, follow" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
       ]
     },
     {
       "source": "/.well-known/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
       ]
     },
     {
       "source": "/ai-catalog.json",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
       ]
     },
     {
       "source": "/llms.txt",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Content-Type", "value": "text/markdown; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
       ]
     }
   ]

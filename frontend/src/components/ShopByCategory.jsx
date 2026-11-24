@@ -2,19 +2,21 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Title from "./Title";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
+import { getPreloadedData } from "../utils/preloadedData";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?q=80&w=600&auto=format&fit=crop";
 
 const ShopByCategory = () => {
-  const [backendCategories, setBackendCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Categories embedded in the prerendered home page: render them immediately (no skeleton
+  // flash after the static page is swapped for the app), then refresh from the API.
+  const [backendCategories, setBackendCategories] = useState(() => getPreloadedData()?.categories || []);
+  const [loading, setLoading] = useState(() => !getPreloadedData()?.categories?.length);
   const backendURL = import.meta.env.VITE_BACKEND_URL;
 
   // Fetch only actual categories from backend database
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        setLoading(true);
         const res = await fetch(`${backendURL}/api/categories`);
         if (res.ok) {
           const data = await res.json();

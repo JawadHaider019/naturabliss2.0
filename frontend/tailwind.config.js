@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  // scripts/ holds the static page replicas (scripts/static-shell.mjs)
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "./scripts/**/*.mjs"],
   theme: {
     extend: {
       colors: {

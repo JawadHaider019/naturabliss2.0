@@ -18,10 +18,15 @@
  */
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArticleMarkdown, stripMarkdown } from '../src/utils/articleParser.js';
 import { getOptimizedImageUrl } from '../src/utils/imageOptimizer.js';
+import {
+  staticNavbar, staticHomeHero, heroBannerUrls, staticCategories, staticWhatsApp,
+  staticProductTop, productMainImageUrl as productImageUrl, staticBlogHero,
+} from './static-shell.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.resolve(__dirname, '../dist');
@@ -101,19 +106,21 @@ const salePrice = (p) => (p.discountprice && p.discountprice < p.price ? p.disco
 // Fetch data
 // ---------------------------------------------------------------------------------------------
 console.log(`[prerender] API: ${API}`);
-let products, blogs, categories, business, banners;
+let products, blogs, categories, business, banners, comments;
 try {
-  const [p, b, c, biz, bn] = await Promise.all([
+  const [p, b, c, biz, bn, cm] = await Promise.all([
     getJson(`${API}/api/product/list?status=published`),
     getJson(`${API}/api/blogs?status=published&limit=500`),
     getJson(`${API}/api/categories`).catch(() => []),
     getJson(`${API}/api/business-details`).catch(() => null),
     getJson(`${API}/api/banners/active`).catch(() => null),
+    getJson(`${API}/api/comments`).catch(() => []),
   ]);
   products = (p.products || []).filter(x => x.status === 'published' && x.slug);
   blogs = (b.data || []).filter(x => x.status === 'published' && x.slug);
   categories = Array.isArray(c) ? c : (c.categories || c.data || []);
   business = biz?.data || {};
+  comments = Array.isArray(cm) ? cm : [];
   // Same filtering/sorting as components/Hero.jsx
   banners = (Array.isArray(bn?.data) ? bn.data : [])
     .filter(x => x.desktopImageUrl && x.mobileImageUrl)
@@ -213,6 +220,16 @@ function setMetaTag(html, attr, key, value) {
  *   noindex
  *   canonical  false to omit (404 / app shell)
  */
+const cssCache = new Map();
+function mainCss(href) {
+  if (!cssCache.has(href)) {
+    const css = fsSync.readFileSync(path.join(DIST, href), 'utf8');
+    if (/<\/style/i.test(css)) fail(`${href} contains "</style", cannot inline it`);
+    cssCache.set(href, css);
+  }
+  return cssCache.get(href);
+}
+
 function renderPage(o) {
   let html = template;
   const url = `${SITE}${o.path === '/' ? '/' : o.path}`;
@@ -281,8 +298,19 @@ function renderPage(o) {
     html = html.replace('</body>', `${loader}\n</body>`);
   }
 
+  // Inline the main stylesheet on static-first pages. It was the only render-blocking request
+  // (PageSpeed: "Render-blocking requests, est. savings 320 ms"); inlined, the first paint needs
+  // nothing but the HTML. All url() references in it are absolute (/assets/...) or data: URIs.
+  if (o.body) {
+    const link = html.match(/<link rel="stylesheet" crossorigin href="(\/assets\/index-[^"]+\.css)">/);
+    if (link) {
+      const css = mainCss(link[1]);
+      html = html.replace(link[0], () => `<style data-inline-css="${link[1]}">${css}</style>`);
+    }
+  }
+
   if (!html.includes('<div id="root"></div>')) fail('template has no empty <div id="root"></div>');
-  html = html.replace('<div id="root"></div>', () => `<div id="root">${o.body ? shell(o.body, o.hero) : ''}</div>`);
+  html = html.replace('<div id="root"></div>', () => `<div id="root">${o.body ? shell(o.body, o.hero, o.path, o.extra) : ''}</div>`);
   return html;
 }
 
@@ -290,34 +318,18 @@ function renderPage(o) {
 // Static body markup (plain HTML + small scoped stylesheet; React replaces it on boot)
 // ---------------------------------------------------------------------------------------------
 const STYLE = `<style>
-.pr{font-family:Outfit,'Outfit Fallback',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;line-height:1.65;max-width:1200px;margin:0 auto;padding:16px}
+.pr{color:#1f2937;line-height:1.65;max-width:1200px;margin:0 auto;padding:16px 0}
 .pr a{color:#587a3b}.pr h1{font-family:Prata,'Prata Fallback',Georgia,serif;font-size:clamp(26px,4vw,38px);line-height:1.2;color:#17220e;margin:.4em 0}
 .pr h2{font-size:22px;color:#17220e;margin:1.6em 0 .5em}.pr img{max-width:100%;height:auto}
-.pr-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;border-bottom:2px solid #587a3b;padding-bottom:12px;margin-bottom:16px}
-.pr-head nav ul,.pr-foot ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}
-.pr-head nav a,.pr-foot a{text-decoration:none;color:#374151}.pr-crumbs{font-size:14px;color:#6b7280}
 .pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;padding:0;list-style:none}
 .pr-card{border:1px solid #e5e7eb;padding:12px;background:#fff}.pr-card a{text-decoration:none}
 .pr-price{font-size:22px;font-weight:600;color:#17220e}.pr-price s{color:#9ca3af;font-weight:400;font-size:16px;margin-left:8px}
 .pr-foot{border-top:2px solid #e5e7eb;margin-top:48px;padding-top:24px;font-size:14px;color:#6b7280;display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.pr-foot ul{flex-direction:column}.pr-foot h2{font-size:15px;margin:0 0 8px}
-.pr-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid #e5e7eb;background:#fff;font-family:Outfit,'Outfit Fallback',system-ui,sans-serif}
-.pr-top nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}.pr-top nav a{color:#374151;text-decoration:none}
-.pr-hero{background:#FAF8F5}.pr-hero img{display:block;width:100%;height:auto;object-fit:cover}
-.pr-hero--banner img{aspect-ratio:3/4}.pr-hero--product img{aspect-ratio:1/1;max-width:640px;margin:0 auto}
-.pr-hero--cover img{height:440px}
-@media (min-width:1024px){.pr-hero--banner img{aspect-ratio:auto;height:90vh}.pr-hero--cover img{height:480px}}
-.pr-foot,.pr main>h2~*,.pr article>*:nth-child(n+6),.pr article .article-body>*{content-visibility:auto;contain-intrinsic-size:auto 500px}
+.pr-foot ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.pr-foot a{text-decoration:none;color:#374151}.pr-foot h2{font-size:15px;margin:0 0 8px}.pr-crumbs{font-size:14px;color:#6b7280}
+.nb-hero-box{aspect-ratio:3/4}.nb-hero-img{height:auto;aspect-ratio:3/4;object-fit:cover;display:block}
+@media (min-width:1024px){.nb-hero-box{aspect-ratio:auto;height:90vh}.nb-hero-img{height:100%;aspect-ratio:auto}}
+.pr-foot,.pr main>h2~*,.pr article>*:nth-child(n+6),.pr article .article-body>*{content-visibility:auto;contain-intrinsic-block-size:auto 500px}
 </style>`;
-
-const NAV = [['/', 'Home'], ['/collection', 'Shop'], ['/blog', 'Guides'], ['/about', 'About'], ['/contact', 'Contact']];
-
-function header() {
-  return `<header class="pr-top">
-  <a href="/"><img src="/logo-96.png" alt="Natura Bliss logo" width="48" height="48" /></a>
-  <nav aria-label="Main"><ul>${NAV.map(([h, t]) => `<li><a href="${h}">${t}</a></li>`).join('')}</ul></nav>
-</header>`;
-}
 
 function footer() {
   const cats = [...new Set(products.map(categoryOf).filter(Boolean))];
@@ -345,14 +357,11 @@ function footer() {
 </footer>`;
 }
 
-const shell = (main, hero = '') => `${STYLE}${header()}${hero}<div class="pr"><main>${main}</main>${footer()}</div>`;
-
-// Image URLs exactly as the React components build them (cache hit when React renders)
-const heroBannerUrls = (b) => ({
-  mobile: getOptimizedImageUrl(b.mobileImageUrl, { width: 750, quality: 'auto' }),
-  desktop: getOptimizedImageUrl(b.desktopImageUrl, { width: 1400, quality: 'auto' }),
-});
-const productImageUrl = (src) => getOptimizedImageUrl(src, { width: 700, quality: 'auto' });
+// Same outer wrapper / navbar / <main> as App.jsx, so swapping in the app changes nothing visible
+const LOGO_URL = business.logos?.website?.url
+  ? getOptimizedImageUrl(business.logos.website.url, { width: 160, quality: 'auto' })
+  : '/logo-96.png';
+const shell = (main, hero = '', pagePath = '/', extra = '') => `${STYLE}<div class="px-4 sm:px-[1vw] md:px-[3vw] lg:px-[5vw] flex flex-col min-h-screen">${staticNavbar(pagePath, LOGO_URL)}<main id="main-content" role="main" class="flex-grow min-h-[100svh]">${hero}<div class="pr">${main}</div></main><div class="pr">${footer()}</div></div>${extra}`;
 
 // Blog covers in public/blogs have WebP variants (name-800.webp, name.webp) generated alongside
 // the JPEG. Use them when present; covers uploaded later without variants keep the JPEG.
@@ -380,6 +389,47 @@ const blogCard = (b) => `<li class="pr-card"><a href="/blog/${esc(b.slug)}"><str
 // ---------------------------------------------------------------------------------------------
 // Pages
 // ---------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------
+// LCP images served from our own origin
+// The hero banner and each product's main photo are the pages' largest paint. Fetched from
+// Cloudinary, the browser first has to open a new connection (DNS + TCP + TLS, ~3 round trips on
+// mobile). Copied into dist/media at build time (content-hashed, cached for a year via
+// vercel.json), they arrive over the connection the page already uses. The React components use
+// the same URL from the embedded page data, so nothing is downloaded twice.
+// ---------------------------------------------------------------------------------------------
+const MEDIA_DIR = path.join(DIST, 'media');
+async function localizeImage(src, { name, ...opts }) {
+  const url = getOptimizedImageUrl(src, { ...opts, format: 'webp' });
+  if (!/^https:\/\/res\.cloudinary\.com\//.test(url || '')) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const file = `${name}-${crypto.createHash('sha1').update(buf).digest('hex').slice(0, 10)}.webp`;
+    await fs.mkdir(MEDIA_DIR, { recursive: true });
+    await fs.writeFile(path.join(MEDIA_DIR, file), buf);
+    return `/media/${file}`;
+  } catch {
+    return null; // fall back to the Cloudinary URL
+  }
+}
+if (banners[0]) {
+  const [m, d] = await Promise.all([
+    localizeImage(banners[0].mobileImageUrl, { name: 'hero-mobile', width: 750, quality: 'auto' }),
+    localizeImage(banners[0].desktopImageUrl, { name: 'hero-desktop', width: 1400, quality: 'auto' }),
+  ]);
+  if (m) banners[0].localMobileUrl = m;
+  if (d) banners[0].localDesktopUrl = d;
+}
+for (let i = 0; i < products.length; i += 6) {
+  await Promise.all(products.slice(i, i + 6).map(async (p) => {
+    if (!p.image?.[0]) return;
+    const u = await localizeImage(p.image[0], { name: `product-${p.slug}`, width: 700, quality: 'auto' });
+    if (u) p.localImage = u;
+  }));
+}
+console.log(`[prerender] local LCP images: hero ${banners[0]?.localMobileUrl ? 'yes' : 'no'}, products ${products.filter(p => p.localImage).length}/${products.length}`);
+
 const pages = []; // { file, html, sitemap?: { loc, lastmod } }
 const add = (file, opts, sitemap) => pages.push({ file, html: renderPage(opts), sitemap });
 
@@ -398,15 +448,13 @@ add('index.html', {
     name: 'Natura Bliss products',
     itemListElement: products.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/product/${p.slug}`, name: p.name })),
   }],
+  hero: `${banners.length ? staticHomeHero(banners[0]) : ''}${staticCategories(categories)}`,
+  extra: staticWhatsApp(),
   ...(banners.length ? (() => {
     const u = heroBannerUrls(banners[0]);
-    return {
-      hero: `<div class="pr-hero pr-hero--banner"><picture><source media="(min-width: 1024px)" srcset="${esc(u.desktop)}" />
-<img src="${esc(u.mobile)}" alt="${esc(banners[0].altText || 'Natura Bliss banner')}" width="750" height="1000" fetchpriority="high" /></picture></div>`,
-      preload: [{ href: u.mobile, media: '(max-width: 1023px)' }, { href: u.desktop, media: '(min-width: 1024px)' }],
-      data: { banners },
-    };
+    return { preload: [{ href: u.mobile, media: '(max-width: 1023px)' }, { href: u.desktop, media: '(min-width: 1024px)' }] };
   })() : {}),
+  data: { banners, categories: categories.map(c => ({ _id: c._id, name: c.name, image: c.image })) },
   body: `<h1>Pure Cold-Pressed Oils &amp; Herbal Skincare, Made in Talagang</h1>
 <p>${BRAND} makes cold-pressed oils, handmade soaps and herbal hair and skin care in small batches in Talagang, Punjab. No parabens, sulfates or mineral oil. Cash on delivery to every city in Pakistan.</p>
 <p><a href="/collection">Shop all products</a> · <a href="${esc(whatsapp)}" rel="noopener">Order on WhatsApp</a></p>
@@ -513,9 +561,14 @@ for (const p of products) {
     description: clip(`${p.name} by ${BRAND}, ${pkr(price)}. ${plain(p.description)}`, 158),
     image: images[0],
     ...(images[0] ? {
-      hero: `<div class="pr-hero pr-hero--product"><img src="${esc(productImageUrl(images[0]))}" alt="${esc(p.name)}" width="700" height="700" fetchpriority="high" /></div>`,
-      preload: [{ href: productImageUrl(images[0]) }],
+      preload: [{ href: p.localImage || productImageUrl(images[0]) }],
     } : {}),
+    hero: (() => {
+      // Same rating figures Product.jsx shows once reviews load
+      const revs = comments.filter(c => String(c.productId) === String(p._id));
+      const rating = revs.length ? revs.reduce((sum, r) => sum + (r.rating || 0), 0) / revs.length : 0;
+      return staticProductTop(p, { categoryName: cat, rating, reviewCount: revs.length });
+    })(),
     data: { product: p },
     ogType: 'product',
     graph: [
@@ -534,14 +587,10 @@ for (const p of products) {
         // aggregateRating intentionally omitted: only add it from real, on-page reviews.
       },
     ],
-    body: `${crumbsHtml(crumbs)}
-<article>
-  <h1>${esc(p.name)}</h1>
-  ${images.slice(1).map((src, i) => `<img src="${esc(thumbUrl(src))}" alt="${esc(`${BRAND} ${p.name} – photo ${i + 2}`)}" width="400" height="400" loading="lazy" />`).join('\n  ')}
-  <p class="pr-price">${pkr(price)}${price < p.price ? `<s>${pkr(p.price)}</s>` : ''}</p>
+    // Title, photos, price and description are in the replica top section (hero) above
+    body: `<article>
   <p>${inStock ? 'In stock' : 'Out of stock'} · Cash on delivery across Pakistan · 7-day returns on damaged items</p>
   ${(p.variants || []).length ? `<h2>Sizes</h2><ul>${p.variants.map(v => `<li>${esc(v.name)}: ${pkr(v.discountprice && v.discountprice < v.price ? v.discountprice : v.price)}</li>`).join('')}</ul>` : ''}
-  <h2>Description</h2><p>${esc(plain(p.description))}</p>
   ${p.benefits?.length ? `<h2>Benefits</h2><ul>${list(p.benefits)}</ul>` : ''}
   ${p.ingredients?.length ? `<h2>Ingredients</h2><ul>${list(p.ingredients)}</ul>` : ''}
   ${p.howToUse ? `<h2>How to use</h2><p>${esc(plain(p.howToUse))}</p>` : ''}
@@ -621,18 +670,14 @@ for (const b of blogs) {
     ...(b.imageUrl ? (() => {
       const set = coverSrcSet(b.imageUrl);
       return {
-        hero: set
-          ? `<div class="pr-hero pr-hero--cover"><picture><source type="image/webp" srcset="${set}" sizes="100vw" /><img src="${esc(b.imageUrl)}" alt="${esc(b.title)}" width="1200" height="630" fetchpriority="high" /></picture></div>`
-          : `<div class="pr-hero pr-hero--cover"><img src="${esc(b.imageUrl)}" alt="${esc(b.title)}" width="1200" height="630" fetchpriority="high" /></div>`,
         preload: [set ? { srcset: set, sizes: '100vw', type: 'image/webp' } : { href: b.imageUrl }],
       };
     })() : {}),
+    hero: staticBlogHero(b, coverSrcSet(b.imageUrl)),
     data: { blog: b },
     ogType: 'article',
     graph,
-    body: `${crumbsHtml(crumbs)}
-<article>
-  <h1>${esc(b.title)}</h1>
+    body: `<article>
   <p class="pr-crumbs">By ${esc(b.author || BRAND)}${b.authorRole ? `, ${esc(b.authorRole)}` : ''}${published ? ` · Published <time datetime="${published}">${fmt(published)}</time>` : ''}${modified && modified !== published ? ` · Updated <time datetime="${modified}">${fmt(modified)}</time>` : ''}</p>
   ${parsed.html}
   ${b.authorBio ? `<h2>About the author</h2><p>${esc(b.authorBio)}</p>` : ''}

@@ -213,8 +213,12 @@ const Product = () => {
 
       // 1. Try the product list in context, then the product embedded in the prerendered page
       const preloaded = getPreloadedData()?.product;
-      const product = products.find((item) => item.slug === slug || item._id === slug)
-        || (preloaded && (preloaded.slug === slug || preloaded._id === slug) ? preloaded : null);
+      const preloadedMatch = preloaded && (preloaded.slug === slug || preloaded._id === slug) ? preloaded : null;
+      const fromList = products.find((item) => item.slug === slug || item._id === slug);
+      // Keep the prerendered page's locally served main photo (localImage) when the catalogue loads
+      const product = fromList
+        ? (preloadedMatch?.localImage ? { ...fromList, localImage: preloadedMatch.localImage } : fromList)
+        : preloadedMatch;
 
       if (product) {
         setProductData(product);
@@ -1080,7 +1084,9 @@ const Product = () => {
               </div>
             )}
             <img
-              src={getOptimizedImageUrl(image || productData.image?.[0], { width: 700, quality: 'auto' })}
+              src={(!image || image === productData.image?.[0]) && productData.localImage
+                ? productData.localImage
+                : getOptimizedImageUrl(image || productData.image?.[0], { width: 700, quality: 'auto' })}
               alt={productData.name}
               width="600"
               height="600"
